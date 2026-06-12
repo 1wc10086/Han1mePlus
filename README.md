@@ -3,7 +3,7 @@
 基于 Material Design 3 设计语言，使用 Kotlin + Jetpack Compose 构建的 Hanime1 第三方客户端
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/1wc10086/Han1mePlus?color=6750A4&label=版本&style=for-the-badge" alt="Release">
+  <img src="https://img.shields.io/github/v/release/1wc10086/Han1mePlus?include_prereleases&label=%E7%89%88%E6%9C%AC&style=for-the-badge&color=6750A4" alt="Release">
   <img src="https://img.shields.io/badge/License-AGPL--3.0-4CAF50?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/stars/1wc10086/Han1mePlus?color=FFB300&style=for-the-badge" alt="Stars">
   <img src="https://img.shields.io/github/issues/1wc10086/Han1mePlus?color=F4511E&style=for-the-badge" alt="Issues">
