@@ -37,4 +37,4 @@
 
 [Han1meViewer](https://github.com/misaka10032w/Han1meViewer) 一个优秀的开源项目。
 
-如果这个项目对你有所帮助，欢迎点亮一个 Star！
+如果这个项目对你有所帮助，欢迎点亮一个 Star！这是开发者开发的动力♥️
