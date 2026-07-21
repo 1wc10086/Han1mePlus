@@ -1,0 +1,18 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../data/han1me_repository.dart';
+import '../../domain/models/library.dart';
+import '../account/account_controller.dart';
+import '../settings/settings_controller.dart';
+
+final remoteLibraryProvider = FutureProvider.autoDispose<RemoteLibrary>((ref) async {
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(minutes: 5), link.close);
+  ref.onDispose(timer.cancel);
+  final account = ref.watch(accountProvider).valueOrNull;
+  if (account?.id == null) throw StateError('Not logged in');
+  final settings = await ref.watch(settingsProvider.future);
+  return ref.watch(han1meRepositoryProvider).library(settings.baseUrl, account!.id!);
+});
