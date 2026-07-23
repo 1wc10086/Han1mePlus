@@ -1,0 +1,444 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
+
+import '../../domain/models/account.dart';
+import '../../domain/models/library.dart';
+import '../../domain/models/video.dart';
+import 'han1me_http_client.dart';
+
+class CloudflareChallengeException implements Exception {
+  const CloudflareChallengeException(this.url);
+  final String url;
+
+  @override
+  String toString() => 'Cloudflare browser verification is required';
+}
+
+class SearchResult {
+  const SearchResult({required this.items, required this.page, required this.totalPages});
+  final List<VideoCard> items;
+  final int page;
+  final int totalPages;
+}
+
+class Han1meApi {
+  Han1meApi(this._http);
+
+  final Han1meHttpClient _http;
+  String? _cookie;
+
+  static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
+
+  void setCookie(String value) => _cookie = _mergeCookies(_cookie, value);
+  void replaceCookie(String value) => _cookie = value;
+
+  Future<HomeFeed> home(String baseUrl) async {
+    final document = await _document('$baseUrl/');
+    final sections = <HomeSection>[];
+    final rowsWrapper = document.querySelectorAll('#home-rows-wrapper > a.horizontal-row-title');
+    for (final titleAnchor in rowsWrapper) {
+      final title = titleAnchor
+          .querySelector('h3')
+          ?.nodes
+          .whereType<dom.Text>()
+          .map((node) => node.text.trim())
+          .where((text) => text.isNotEmpty)
+          .join(' ') ?? '';
+      final wrapper = titleAnchor.nextElementSibling;
+      final row = wrapper?.querySelector('.home-rows-videos-wrapper.horizontal-row');
+      if (row == null) continue;
+      final items = row.querySelectorAll('div.horizontal-card').map(_card).where((video) => video.id.isNotEmpty).toList();
+      if (items.isEmpty) continue;
+      final moreUrl = titleAnchor.attributes['href'] ?? '';
+      sections.add(HomeSection(title: title, moreUrl: moreUrl, videos: items));
+    }
+    final banner = document.querySelector('#home-banner-wrapper');
+    final bannerImage = document.querySelector('div[style*="aspect-ratio"] img');
+    final bannerTitle = banner?.querySelector('h1')?.text.trim();
+    final bannerMeta = banner?.querySelector('h4')?.text.trim();
+    final bannerCover = _absolute(baseUrl, bannerImage?.attributes['src']);
+    final bannerId = RegExp(r'thumbnail/(\d+)').firstMatch(bannerCover)?.group(1) ?? '';
+    final featured = bannerTitle == null || bannerTitle.isEmpty
+        ? null
+        : VideoCard(
+            id: bannerId,
+            title: bannerTitle,
+            coverUrl: bannerCover,
+            artist: bannerMeta?.split('•').first.trim(),
+            views: bannerMeta?.split('•').skip(1).firstOrNull?.trim(),
+          );
+    return HomeFeed(sections: sections, featured: featured);
+  }
+
+  Future<SearchResult> search({
+    required String baseUrl,
+    required String query,
+    required String genre,
+    required String sort,
+    required int page,
+  }) async {
+    final queryParameters = <String, dynamic>{
+      'page': '$page',
+      if (query.trim().isNotEmpty) 'query': query.trim(),
+      if (genre.isNotEmpty) 'genre': genre,
+      if (sort.isNotEmpty) 'sort': sort,
+    };
+    final document = await _document(Uri.parse('$baseUrl/search').replace(queryParameters: queryParameters).toString());
+    final normalCards = document.querySelectorAll('.content-padding-new div.horizontal-card, .content-padding div.horizontal-card');
+    final items = normalCards.isNotEmpty
+        ? normalCards.map(_card).where((video) => video.id.isNotEmpty).toList(growable: false)
+        : document.querySelectorAll('.home-rows-videos-wrapper').expand((wrapper) => wrapper.children).map(_simplifiedCard)
+            .where((video) => video.id.isNotEmpty)
+            .toList(growable: false);
+    final pagination = document.querySelectorAll('ul.pagination li.page-item > a.page-link');
+    var currentPage = page;
+    var totalPages = page;
+    final pageNumbers = pagination.map((node) => int.tryParse(node.text.trim()) ?? 0).where((value) => value > 0).toList();
+    if (pageNumbers.isNotEmpty) totalPages = pageNumbers.reduce((a, b) => a > b ? a : b);
+    final activeNode = document.querySelector('ul.pagination li.page-item.active > span.page-link');
+    if (activeNode != null) currentPage = int.tryParse(activeNode.text.trim()) ?? page;
+    return SearchResult(items: items, page: currentPage, totalPages: totalPages);
+  }
+
+  Future<PreviewFeed> previews(String baseUrl, String month) async {
+    final document = await _document('$baseUrl/previews/$month');
+    final header = document.querySelector('.preview-top-content');
+    final rows = document.querySelectorAll('.content-padding > div.row[id]');
+    final items = rows.map((row) {
+      final content = row.querySelector('.preview-info-content-padding');
+      return PreviewItem(
+        id: row.id,
+        title: row.querySelector('h4, h3')?.text.trim() ?? '',
+        coverUrl: _absolute(baseUrl, row.querySelector('.preview-info-cover > img')?.attributes['src']),
+        videoTitle: content?.querySelector('h4')?.text.trim(),
+        brand: content?.querySelector('h5 a')?.text.trim(),
+        releaseDate: content?.querySelectorAll('h5').skip(1).firstOrNull?.text.trim(),
+        description: content?.querySelector('h5.caption')?.text.trim(),
+        tags: content?.querySelectorAll('.single-video-tag > a').map((tag) => tag.text.trim()).where((tag) => tag.isNotEmpty).toList() ?? const [],
+      );
+    }).where((item) => item.title.isNotEmpty && item.coverUrl.isNotEmpty).toList(growable: false);
+    return PreviewFeed(
+      title: header?.querySelector('h1')?.text.trim() ?? '$month previews',
+      description: header?.querySelector('p')?.text.trim() ?? '',
+      coverUrl: _absolute(baseUrl, document.querySelector('#player-div-wrapper > img')?.attributes['src']),
+      items: items,
+    );
+  }
+
+  Future<VideoDetail> video(String baseUrl, String id) async {
+    final document = await _document('$baseUrl/watch?v=$id', referer: '$baseUrl/');
+    final player = document.querySelector('video#player');
+    final sources = (player == null ? const <dom.Element>[] : player.querySelectorAll('source'))
+        .map((source) => VideoSource(
+               quality: source.attributes['size'] ?? 'Default',
+              url: _absolute(baseUrl, source.attributes['src']),
+              type: source.attributes['type'],
+            ))
+        .where((source) => source.url.isNotEmpty)
+        .toList();
+    final title = (document.querySelector('meta[property="og:title"]')?.attributes['content'] ?? document.querySelector('title')?.text ?? '').trim();
+    final finalTitle = title.contains('- Hanime1.me') || title.contains('- H\u52d5\u6f2b/\u88cf\u756a') ? title.split(' - ').first.trim() : title;
+    final cover = _absolute(baseUrl, player?.attributes['poster'] ?? document.querySelector('meta[property="og:image"]')?.attributes['content']);
+    final downloadUrl = _absolute(baseUrl, document.querySelector('#downloadBtn')?.attributes['href']);
+    final description = document.querySelector('div.video-caption-text.caption-ellipsis')?.text.trim();
+    final tags = document.querySelectorAll('div.single-video-tag a')
+        .map((tag) => tag.text.split('(').first.trim().replaceFirst('#', ''))
+        .where((tag) => tag.isNotEmpty)
+        .fold<List<String>>([], (list, tag) => list.contains(tag) ? list : [...list, tag]);
+    final detail = document.querySelector('div.video-description-panel');
+    final artistAnchor = document.querySelector('#video-user-avatar + img') ?? document.querySelector('#video-user-avatar') ?? detail?.querySelector('a[href*="/user/"] img');
+    final artistName = document.querySelector('#video-artist-name')?.text.trim() ?? detail?.querySelector('a[href*="/user/"]')?.nextElementSibling?.querySelector('span')?.text.trim();
+    final artistAvatarUrl = _absolute(baseUrl, artistAnchor?.attributes['src']);
+    final viewsLine = detail?.querySelector('div.hidden-xs')?.text.trim() ?? '';
+    final views = _extractViews(viewsLine);
+    final uploadDate = _extractDate(viewsLine);
+    return VideoDetail(
+      id: id,
+       title: finalTitle.isEmpty ? 'Untitled' : finalTitle,
+      coverUrl: cover,
+      artist: artistName?.isEmpty == true ? null : artistName,
+      artistAvatarUrl: artistAvatarUrl,
+      genre: tags.isNotEmpty ? tags.first : null,
+      views: views,
+      uploadDate: uploadDate,
+      description: (description ?? '').isEmpty ? null : description,
+      downloadUrl: downloadUrl,
+      tags: tags,
+      sources: sources,
+       playlist: const [],
+       related: const [],
+     );
+  }
+
+  Future<Account> account(String baseUrl) async {
+    final home = await _document('$baseUrl/', referer: '$baseUrl/', skipCache: true);
+    final profile = home.querySelector('a[href*="/user/"][href*="/edit"], a[href*="/user/"]');
+    final id = RegExp(r'/user/(\d+)').firstMatch(profile?.attributes['href'] ?? '')?.group(1) ?? RegExp(r'@(\s*)(\d+)').firstMatch(home.querySelector('.profile-sub-stats-id')?.text ?? '')?.group(2);
+    if (id == null) throw StateError('Account profile is unavailable');
+    final document = await _document('$baseUrl/user/$id/edit', referer: '$baseUrl/', skipCache: true);
+    final stats = home.querySelector('.profile-sub-stats-new-line')?.text ?? '';
+    final numbers = RegExp(r'\d+').allMatches(stats).map((match) => int.parse(match.group(0)!)).toList();
+    final avatar = document.querySelector('img#playlist-avatar') ?? home.querySelector('#user-modal-dp-wrapper img, .profile-avatar-wrapper img');
+    return Account(
+      cookie: _cookie ?? '',
+      id: id,
+      name: document.querySelector('input[name="name"]')?.attributes['value']?.trim() ?? home.querySelector('#user-modal-name, .profile-display-name')?.text.trim(),
+      email: document.querySelector('input[name="email"]')?.attributes['value']?.trim(),
+      avatarUrl: _absolute(baseUrl, avatar?.attributes['src']),
+      csrfToken: document.querySelector('meta[name="csrf-token"]')?.attributes['content'] ?? document.querySelector('input[name="_token"]')?.attributes['value'],
+      joinedLabel: home.querySelector('#user-modal-created')?.text.trim(),
+      subscriberCount: numbers.isEmpty ? null : numbers.first,
+      videoCount: numbers.length < 2 ? null : numbers[1],
+    );
+  }
+
+  Future<void> updateProfile(String baseUrl, String userId, String token, String name, String email) => _form('$baseUrl/user/$userId', {'_token': token, '_method': 'patch', 'type': 'profile', 'name': name, 'email': email}, token);
+
+  Future<void> updatePassword(String baseUrl, String userId, String token, String oldPassword, String password, String confirmation) => _form('$baseUrl/user/$userId', {'_token': token, '_method': 'patch', 'type': 'password', 'password_old': oldPassword, 'password_new': password, 'password_new_confirm': confirmation}, token);
+
+  Future<RemoteLibrary> library(String baseUrl, String userId) async {
+    final pages = await Future.wait([
+      _document('$baseUrl/user/$userId/saves', skipCache: true),
+      _document('$baseUrl/user/$userId/likes', skipCache: true),
+      _document('$baseUrl/user/$userId/playlists', skipCache: true),
+      _document('$baseUrl/user/$userId/histories', skipCache: true),
+    ]);
+    final subscriptionPage = await _document('$baseUrl/subscriptions?page=1', skipCache: true);
+    final subscriptionArtists = _subscriptionArtists(baseUrl, subscriptionPage);
+    final subscriptionPages = _pageCount(subscriptionPage);
+    final subscriptionVideos = <FollowingVideo>[
+      ..._subscriptionVideos(baseUrl, subscriptionPage),
+      for (final page in await Future.wait([
+        for (var number = 2; number <= subscriptionPages; number++) _document('$baseUrl/subscriptions?page=$number', skipCache: true),
+      ]))
+        ..._subscriptionVideos(baseUrl, page),
+    ];
+    final playlistPage = pages[2];
+    final playlists = playlistPage.querySelectorAll('.user-tab-item-wrapper, .playlist-item-wrapper, .playlist-card').map((element) {
+      final href = element.querySelector('a.video-link, a[href*="playlist?list="]')?.attributes['href'] ?? '';
+      return Playlist(id: Uri.tryParse(href)?.queryParameters['list'] ?? RegExp(r'[?&]list=([^&]+)').firstMatch(href)?.group(1) ?? '', title: element.querySelector('.title, .playlist-title')?.text.trim() ?? '', count: int.tryParse(RegExp(r'\d+').firstMatch(element.querySelector('.stat-item, .playlist-count')?.text ?? '')?.group(0) ?? '') ?? 0, coverUrl: _absolute(baseUrl, element.querySelector('img.main-thumb, img')?.attributes['src']));
+    }).where((item) => item.id.isNotEmpty && item.title.isNotEmpty).toList(growable: false);
+    return RemoteLibrary(watchLater: _libraryVideos(baseUrl, pages[0]), favorites: _libraryVideos(baseUrl, pages[1]), playlists: playlists, subscriptionArtists: subscriptionArtists, subscriptions: subscriptionVideos, history: _libraryVideos(baseUrl, pages[3]), csrfToken: playlistPage.querySelector('input[name="_token"]')?.attributes['value'] ?? pages[0].querySelector('input[name="_token"]')?.attributes['value']);
+  }
+
+  Future<void> saveToPlaylist(String baseUrl, String token, String listId, String videoId, bool checked) => _form('$baseUrl/save', {'_token': token, 'input_id': listId, 'video_id': videoId, 'is_checked': '$checked', 'user_id': ''}, token);
+  Future<void> createPlaylist(String baseUrl, String token, String videoId, String title, String description) => _form('$baseUrl/createPlaylist', {'_token': token, 'create-playlist-video-id': videoId, 'playlist-title': title, 'playlist-description': description}, token);
+  Future<void> setFavorite(String baseUrl, String token, String userId, String videoId, bool enabled) => _form('$baseUrl/like', {'like-foreign-id': videoId, 'like-status': enabled ? '' : '1', '_token': token, 'like-user-id': userId, 'like-is-positive': '1'}, token);
+  Future<List<FollowingVideo>> playlistItems(String baseUrl, String playlistId) async => _libraryVideos(baseUrl, await _document('$baseUrl/playlist?list=$playlistId', skipCache: true));
+  Future<void> deletePlaylist(String baseUrl, String token, String playlistId) => _form('$baseUrl/playlist/$playlistId', {'_token': token, '_method': 'PUT', 'playlist-title': '', 'playlist-description': '', 'playlist-delete': 'on'}, token);
+
+  Future<List<VideoCard>> related(String baseUrl, String id) async {
+    final document = await _document('$baseUrl/watch?v=$id', referer: '$baseUrl/');
+    return [
+      ...document.querySelectorAll('#playlist-scroll .playlist-hover-wrap'),
+      ...document.querySelectorAll('div#related-tabcontent .horizontal-card, .related-video-margin-bottom .horizontal-card'),
+    ].map(_card).where((video) => video.id.isNotEmpty).toList(growable: false);
+  }
+
+  Future<CommentPage> comments(String baseUrl, String videoId, {String type = 'video'}) async {
+    final base = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final response = await _http.get(Uri.parse('$base/loadComment').replace(queryParameters: {'type': type, 'id': videoId}).toString());
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException('$base/watch?v=$videoId');
+    if (response.statusCode >= 400) {
+       throw DioException(requestOptions: RequestOptions(path: '$base/loadComment'), message: 'Comment request failed: HTTP ${response.statusCode}');
+    }
+    var body = response.body;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['comments'] is String) body = decoded['comments'] as String;
+    } catch (_) {}
+    final document = html_parser.parse(body);
+    final root = document.querySelector('#comment-start');
+    final csrfToken = document.querySelector('input[name="_token"]')?.attributes['value'];
+    final currentUserId = document.querySelector('input[name="comment-user-id"]')?.attributes['value'];
+    final children = root?.children ?? const <dom.Element>[];
+    final comments = <Comment>[];
+
+    for (var index = 0; index < children.length; index += 4) {
+      final group = children.skip(index).take(4).toList();
+      if (group.isEmpty) continue;
+      final wrapper = dom.Element.tag('div')
+        ..nodes.addAll(group.map((element) => element.clone(true)));
+      final fields = wrapper.querySelectorAll('.comment-index-text');
+      if (fields.length < 2) continue;
+
+      final username = fields.first.querySelector('a')?.text.trim() ?? '';
+      final content = fields[1].text.trim();
+      if (username.isEmpty || content.isEmpty) continue;
+
+      final avatarUrl = _absolute(base, wrapper.querySelector('img')?.attributes['src']);
+      final timeAgo = fields.first.querySelector('span')?.text.trim();
+      final likes = wrapper.querySelectorAll('#comment-like-form-wrapper span[style]');
+      final replyWrapper = wrapper.querySelector('div[id^="reply-section-wrapper"]');
+      final replyButtonText = wrapper.querySelectorAll('div.load-replies-btn').map((item) => item.text).join(' ');
+      final replyCount = int.tryParse(RegExp(r'\d+').firstMatch(replyButtonText)?.group(0) ?? '');
+
+      comments.add(Comment(
+        id: replyWrapper?.id.split('-').last ?? '${username}_${_javaStringHash(content)}',
+        username: username,
+        content: content,
+        avatarUrl: avatarUrl.isEmpty ? null : avatarUrl,
+        timeAgo: timeAgo == null || timeAgo.isEmpty ? null : timeAgo,
+        likeCount: likes.length > 1 ? likes[1].text.trim() : null,
+        replyCount: replyCount,
+        hasMoreReplies: wrapper.querySelector('div[class^="load-replies-btn"]') != null,
+        foreignId: wrapper.querySelector('#foreign_id')?.attributes['value'],
+        likeUserId: wrapper.querySelector('input[name="comment-like-user-id"]')?.attributes['value'],
+        likesCount: int.tryParse(wrapper.querySelector('input[name="comment-likes-count"]')?.attributes['value'] ?? ''),
+        likesSum: int.tryParse(wrapper.querySelector('input[name="comment-likes-sum"]')?.attributes['value'] ?? ''),
+        liked: wrapper.querySelector('input[name="like-comment-status"]')?.attributes['value'] == '1',
+        disliked: wrapper.querySelector('input[name="unlike-comment-status"]')?.attributes['value'] == '1',
+      ));
+    }
+    return CommentPage(comments: comments, csrfToken: csrfToken, currentUserId: currentUserId);
+  }
+
+  Future<CommentPage> replies(String baseUrl, String commentId) async {
+    final response = await _http.get(Uri.parse('$baseUrl/loadReplies').replace(queryParameters: {'id': commentId}).toString());
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException('$baseUrl/loadReplies');
+    final decoded = jsonDecode(response.body) as Map;
+    final document = html_parser.parse(decoded['replies'] as String? ?? '');
+    final root = document.querySelector('div[id^="reply-start"]');
+    final comments = <Comment>[];
+    final children = root?.children ?? const <dom.Element>[];
+    for (var index = 0; index + 1 < children.length; index += 2) {
+      final body = children[index];
+      final post = children[index + 1];
+      final fields = body.querySelectorAll('.comment-index-text');
+      if (fields.length < 2) continue;
+      comments.add(Comment(id: '', username: fields.first.querySelector('a')?.text.trim() ?? '', content: fields[1].text.trim(), avatarUrl: _absolute(baseUrl, body.querySelector('img')?.attributes['src']), timeAgo: fields.first.querySelector('span')?.text.trim(), likeCount: post.querySelectorAll('span[style]').skip(1).firstOrNull?.text.trim(), foreignId: post.querySelector('#foreign_id')?.attributes['value'], likeUserId: post.querySelector('input[name="comment-like-user-id"]')?.attributes['value'], likesCount: int.tryParse(post.querySelector('input[name="comment-likes-count"]')?.attributes['value'] ?? ''), likesSum: int.tryParse(post.querySelector('input[name="comment-likes-sum"]')?.attributes['value'] ?? ''), liked: post.querySelector('input[name="like-comment-status"]')?.attributes['value'] == '1', disliked: post.querySelector('input[name="unlike-comment-status"]')?.attributes['value'] == '1'));
+    }
+    return CommentPage(comments: comments);
+  }
+
+  Future<void> postComment(String baseUrl, String token, String userId, String type, String targetId, String text) => _form('$baseUrl/createComment', {'_token': token, 'comment-user-id': userId, 'comment-type': type, 'comment-foreign-id': targetId, 'comment-text': text, 'comment-count': '1', 'comment-is-political': '0'}, token);
+  Future<void> replyComment(String baseUrl, String token, String commentId, String text) => _form('$baseUrl/replyComment', {'_token': token, 'reply-comment-id': commentId, 'reply-comment-text': text}, token);
+  Future<void> voteComment(String baseUrl, String token, Comment comment, bool positive) => _form('$baseUrl/commentLike', {'_token': token, 'foreign_type': comment.id.isEmpty ? 'reply' : 'comment', 'foreign_id': comment.foreignId ?? '', 'is_positive': positive ? '1' : '0', 'comment-like-user-id': comment.likeUserId ?? '', 'comment-likes-count': '${comment.likesCount ?? 0}', 'comment-likes-sum': '${comment.likesSum ?? 0}', 'like-comment-status': comment.liked ? '1' : '0', 'unlike-comment-status': comment.disliked ? '1' : '0'}, token);
+
+  Future<dom.Document> _document(String url, {String? referer, bool skipCache = false}) async {
+    final response = await _http.get(url);
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(url);
+    if (response.statusCode >= 400) {
+      throw DioException(requestOptions: RequestOptions(path: url), message: 'Request failed: HTTP ${response.statusCode}');
+    }
+    return html_parser.parse(response.body);
+  }
+
+  Future<void> _form(String url, Map<String, String> data, String token) async {
+    final response = await _http.post(url, data);
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(url);
+    if (response.statusCode >= 400 && response.statusCode != 302) throw DioException(requestOptions: RequestOptions(path: url), message: 'Request failed: HTTP ${response.statusCode}');
+  }
+
+  List<FollowingVideo> _libraryVideos(String baseUrl, dom.Document document) => document.querySelectorAll('div.user-tab-item-wrapper, .playlist-video-list > div').map((wrapper) {
+        final card = wrapper.querySelector('.video-item-container, .horizontal-card') ?? wrapper;
+        final link = card.querySelector('a[href*="watch"]')?.attributes['href'] ?? '';
+        final image = card.querySelector('img.main-thumb');
+        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.title')?.text.trim() ?? image?.attributes['alt']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a')?.text.trim(), addedAt: 0);
+      }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
+
+  List<SubscribedArtist> _subscriptionArtists(String baseUrl, dom.Document document) => document.querySelectorAll('.subscriptions-nav .subscriptions-artist-card').map((card) {
+        final images = card.querySelectorAll('img');
+        final name = card.querySelector('.card-mobile-title')?.text.trim() ?? '';
+        return SubscribedArtist(id: name, name: name, avatarUrl: _absolute(baseUrl, images.length > 1 ? images[1].attributes['src'] : images.firstOrNull?.attributes['src']), addedAt: 0);
+      }).where((artist) => artist.name.isNotEmpty).toList(growable: false);
+
+  List<FollowingVideo> _subscriptionVideos(String baseUrl, dom.Document document) => document.querySelectorAll('.content-padding-new div[class^="video-item-container"]').map((card) {
+        final link = card.querySelector('a[class^="video-link"]')?.attributes['href'] ?? '';
+        final image = card.querySelector('img[class^="main-thumb"]');
+        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.attributes['title']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a')?.text.trim(), addedAt: 0);
+      }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
+
+  int _pageCount(dom.Document document) => document.querySelectorAll('ul.pagination a.page-link[href]').map((link) => int.tryParse(Uri.tryParse(link.attributes['href'] ?? '')?.queryParameters['page'] ?? '') ?? 1).fold(1, (count, page) => page > count ? page : count);
+
+  static bool isCloudflareResponse(int? statusCode, Map<String, List<String>> headers, String body) => statusCode == 403 &&
+      ((headers['cf-mitigated'] ?? headers['CF-Mitigated'] ?? const <String>[]).any((value) => value.toLowerCase() == 'challenge') ||
+          body.contains('cf-chl-') ||
+          body.contains('challenge-form') ||
+          body.contains('Just a moment') ||
+          body.contains('Attention Required'));
+
+  VideoCard _card(dom.Element element) {
+    final dataHref = element.attributes['data-href'] ?? '';
+    final link = element.querySelector('a.video-link[href*="watch"], a[href*="watch?v="]');
+    final href = link?.attributes['href'] ?? dataHref;
+    final id = Uri.tryParse(href)?.queryParameters['v'] ?? '';
+    final image = element.querySelector('img.main-thumb');
+    final rating = _statText(element.querySelector('.stats-container .stat-item'));
+    final views = element.querySelectorAll('.stats-container .stat-item').length > 1
+        ? _statText(element.querySelectorAll('.stats-container .stat-item')[1])
+        : null;
+    final duration = element.querySelector('.duration')?.text.trim();
+    final titleNode = element.querySelector('.title, .video-title');
+    final title = titleNode?.text.trim() ?? image?.attributes['alt']?.trim() ?? '';
+    final artistNode = element.querySelector('.subtitle a, .meta-author a');
+    return VideoCard(
+      id: id,
+      title: title,
+      coverUrl: image?.attributes['src'] ?? '',
+      duration: duration,
+      views: views,
+      rating: rating,
+      artist: artistNode?.text.trim(),
+      uploadTime: element.querySelector('.meta-stats span')?.text.trim(),
+    );
+  }
+
+  String? _statText(dom.Element? element) {
+    if (element == null) return null;
+    final text = element.nodes.whereType<dom.Text>().map((node) => node.text.trim()).join(' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return text.isEmpty ? element.text.trim() : text;
+  }
+
+  VideoCard _simplifiedCard(dom.Element element) {
+    final href = element.attributes['href'] ?? element.attributes['data-href'] ?? element.querySelector('a')?.attributes['href'] ?? element.parent?.attributes['href'] ?? element.parent?.attributes['data-href'] ?? '';
+    final id = Uri.tryParse(href)?.queryParameters['v'] ?? element.attributes['data-id'] ?? element.querySelector('[data-id]')?.attributes['data-id'] ?? '';
+    final image = element.querySelector('img');
+    return VideoCard(
+      id: id,
+      title: element.querySelector('.home-rows-videos-title, .owl-home-rows-title')?.text.trim() ?? element.parent?.querySelector('.home-rows-videos-title, .owl-home-rows-title')?.text.trim() ?? image?.attributes['alt']?.trim() ?? '',
+      coverUrl: image?.attributes['src'] ?? '',
+    );
+  }
+
+  String _absolute(String baseUrl, String? path) {
+    if (path == null || path.isEmpty) return '';
+    return Uri.parse(baseUrl).resolve(path).toString();
+  }
+
+  String _mergeCookies(String? current, String next) {
+    final values = <String, String>{};
+    for (final value in [current, next].whereType<String>().expand((cookie) => cookie.split(';'))) {
+      final pair = value.trim();
+      final index = pair.indexOf('=');
+      if (index <= 0) continue;
+      final name = pair.substring(0, index).trim();
+      if (const {'domain', 'expires', 'httponly', 'max-age', 'partitioned', 'path', 'priority', 'samesite', 'secure'}.contains(name.toLowerCase())) continue;
+      values[name] = pair.substring(index + 1).trim();
+    }
+    return values.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
+  }
+
+  String? _extractViews(String text) {
+    final match = RegExp('\u89c2\u770b\u6b21\u6570\\s*[:\uff1a]?\\s*([^\\s&]+\u6b21?)').firstMatch(text);
+    return match?.group(1)?.trim();
+  }
+
+  String? _extractDate(String text) {
+    final match = RegExp(r'(\d{4}-\d{2}-\d{2})').firstMatch(text);
+    return match?.group(1);
+  }
+
+  int _javaStringHash(String text) {
+    var hash = 0;
+    for (final codeUnit in text.codeUnits) {
+      hash = (31 * hash + codeUnit) & 0xffffffff;
+    }
+    return hash >= 0x80000000 ? hash - 0x100000000 : hash;
+  }
+}
+
+extension<T> on Iterable<T> { T? get firstOrNull => isEmpty ? null : first; }
