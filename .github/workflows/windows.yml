@@ -1,0 +1,41 @@
+name: Build Windows App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          cache: false
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build Windows app
+        run: flutter build windows --release
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress --yes
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9]+(?:\.[0-9]+)*)').Matches[0].Groups[1].Value
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" windows\installer.iss
+      - name: Package Windows app
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/Han1mePlus-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: build/Han1mePlus-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-installer
+          path: build/Han1mePlus-Setup.exe
