@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/settings.dart';
+import '../../core/platform_paths.dart';
 import '../../data/han1me_repository.dart';
 import '../../domain/models/download.dart';
 import '../../domain/models/video.dart';
@@ -43,8 +44,8 @@ class DownloadController extends AsyncNotifier<DownloadState> {
       }
     });
     final settings = await ref.read(settingsProvider.future);
-    final defaultRoot = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    _root = Directory(settings.downloadPath.isEmpty ? '${defaultRoot.path}/Download' : settings.downloadPath);
+    final downloadPath = await normalizeDownloadPath(settings.downloadPath);
+    _root = Directory(downloadPath);
     await _root.create(recursive: true);
     final file = File('${_root.path}/download_store.json');
     try {

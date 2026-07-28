@@ -40,7 +40,23 @@ import 'core/platform_service.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final _router = GoRouter(navigatorKey: _rootNavigatorKey, routes: [
+String? _deepLinkRedirect(GoRouterState state) {
+  final uri = state.uri;
+  if (uri.scheme != 'https' && uri.scheme != 'http') return null;
+  const hosts = {'hanime1.com', 'hanimeone.me', 'hanime1.me', 'javchu.com'};
+  if (!hosts.contains(uri.host)) return null;
+  final videoId = uri.queryParameters['v'];
+  if (videoId != null && uri.path.contains('watch')) return '/video/$videoId';
+  final segments = uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+  if (segments.length >= 3 && segments[0] == 'videos' && segments[1] == 'hentai') return '/video/${segments[2]}';
+  if (uri.path.contains('search')) return '/search';
+  return null;
+}
+
+final _router = GoRouter(
+  navigatorKey: _rootNavigatorKey,
+  redirect: (context, state) => _deepLinkRedirect(state),
+  routes: [
   StatefulShellRoute.indexedStack(
     builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
     branches: [
@@ -86,7 +102,8 @@ final _router = GoRouter(navigatorKey: _rootNavigatorKey, routes: [
   GoRoute(path: '/comics/browse', builder: (context, state) => ComicBrowsePage(target: state.extra as ComicBrowseTarget? ?? const ComicBrowseTarget('/comics'))),
   GoRoute(path: '/comics/:id/read', builder: (context, state) => ComicReaderPage(comic: state.extra! as ComicDetail)),
   GoRoute(path: '/comics/:id', builder: (context, state) => ComicDetailPage(id: state.pathParameters['id']!)),
-]);
+],
+);
 
 class Han1meApp extends ConsumerStatefulWidget {
   const Han1meApp({super.key});

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
+import '../../core/platform_paths.dart';
 
 class JsonStore {
   Future<Map<String, dynamic>> read(String fileName) async {
@@ -19,7 +19,7 @@ class JsonStore {
       (await _file(fileName)).writeAsString(jsonEncode(value), flush: true);
 
   Future<File> _file(String fileName) async {
-    final directory = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+    final directory = await appStorageDirectory();
     return File('${directory.path}/$fileName');
   }
 }

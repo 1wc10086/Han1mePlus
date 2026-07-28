@@ -40,6 +40,13 @@ flutter:
   assets:
     - assets/logo.png
 
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/logo.png
+  adaptive_icon_background: '#101114'
+  adaptive_icon_foreground: assets/logo.png
+
 flutter_native_splash:
   color: '#f7f7fb'
   color_dark: '#101114'
@@ -50,12 +57,7 @@ flutter_native_splash:
     color_dark: '#101114'
     image: assets/logo.png
     image_dark: assets/logo.png
-
-flutter_launcher_icons:
-  android: true
-  image_path: assets/logo.png
-  adaptive_icon_background: '#101114'
-  adaptive_icon_foreground: assets/logo.png
+  ios: true
   
   # assets:
   #   - images/

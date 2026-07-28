@@ -68,8 +68,8 @@ class ComicCacheController extends AsyncNotifier<List<ComicCacheEntry>> {
   static const _categoriesKey = 'comic_cache_categories.json';
   @override Future<List<ComicCacheEntry>> build() async => ((await _store.read('comic_cache.json'))['items'] as List? ?? const []).whereType<Map>().map((item) => ComicCacheEntry.fromJson(Map<String, dynamic>.from(item))).toList();
   Future<void> cache(ComicDetail detail, {String category = '默认'}) async {
-    final root = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final rootDirectory = Directory('${root.path}/Comic');
+    final documents = await getApplicationDocumentsDirectory();
+    final rootDirectory = Directory('${documents.path}/Comic');
     await rootDirectory.create(recursive: true);
     final directory = Directory('${rootDirectory.path}/.${detail.id}');
     final archiveFile = File('${rootDirectory.path}/${detail.id}.zip');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/local/json_store.dart';
+import 'platform_paths.dart';
 
 enum AppThemeMode { system, light, dark }
 
@@ -10,7 +11,7 @@ enum AppLanguage { system, simplifiedChinese, traditionalChinese }
 
 enum PlayerEngine { exoPlayer }
 
-const defaultDownloadPath = '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
+const defaultDownloadPath = androidDefaultDownloadPath;
 
 class AppSettings {
   const AppSettings({
@@ -279,6 +280,13 @@ class SettingsStore {
   final JsonStore _store;
   static const _fileName = 'setting.json';
 
-  Future<AppSettings> load() async => AppSettings.fromJson(await _store.read(_fileName));
+  Future<AppSettings> load() async {
+    final settings = AppSettings.fromJson(await _store.read(_fileName));
+    final downloadPath = await normalizeDownloadPath(settings.downloadPath);
+    if (downloadPath == settings.downloadPath) return settings;
+    final normalized = settings.copyWith(downloadPath: downloadPath);
+    await save(normalized);
+    return normalized;
+  }
   Future<void> save(AppSettings value) async => _store.write(_fileName, value.toJson());
 }

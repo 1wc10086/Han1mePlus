@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/settings.dart';
+import '../../core/platform_paths.dart';
 import '../../data/local/download_repository.dart';
 import '../account/account_controller.dart';
 import '../explore/explore_controller.dart';
@@ -78,7 +79,7 @@ class _DohSettingsDialogState extends State<_DohSettingsDialog> {
 }
 
 class _PathDialog extends StatefulWidget { const _PathDialog({required this.title, required this.initialPath}); final String title; final String initialPath; @override State<_PathDialog> createState() => _PathDialogState(); }
-class _PathDialogState extends State<_PathDialog> { late final _controller = TextEditingController(text: widget.initialPath); @override void dispose() { _controller.dispose(); super.dispose(); } @override Widget build(BuildContext context) { final l10n = AppLocalizations.of(context)!; return AlertDialog(title: Text(widget.title), content: TextField(controller: _controller, autofocus: true, keyboardType: TextInputType.url, decoration: InputDecoration(labelText: l10n.downloadPath, hintText: l10n.defaultDownloadPath)), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: Text(l10n.save))]); } }
+class _PathDialogState extends State<_PathDialog> { late final _controller = TextEditingController(text: widget.initialPath); @override void dispose() { _controller.dispose(); super.dispose(); } @override Widget build(BuildContext context) { final l10n = AppLocalizations.of(context)!; return AlertDialog(title: Text(widget.title), content: TextField(controller: _controller, autofocus: true, keyboardType: TextInputType.url, decoration: InputDecoration(labelText: l10n.downloadPath, hintText: platformDownloadPathHint(l10n.defaultDownloadPath))), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: Text(l10n.save))]); } }
 
 class _SliderTile extends StatelessWidget { const _SliderTile({required this.icon, required this.title, this.subtitle, required this.value, required this.min, required this.max, required this.divisions, required this.label, required this.onChanged}); final IconData icon; final String title; final String? subtitle; final double value; final double min; final double max; final int divisions; final String label; final ValueChanged<double> onChanged; @override Widget build(BuildContext context) => ListTile(leading: Icon(icon), title: Text(title), subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [if (subtitle != null) Text(subtitle!), Slider(value: value, min: min, max: max, divisions: divisions, label: label, onChanged: onChanged)]), trailing: Text(label)); }
 
