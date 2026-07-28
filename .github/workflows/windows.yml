@@ -19,6 +19,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Build Windows app
+        env:
+          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
         run: flutter build windows --release
       - name: Install Inno Setup
         shell: pwsh
