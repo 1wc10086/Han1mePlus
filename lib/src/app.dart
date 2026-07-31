@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show AppExitResponse;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +43,7 @@ import 'features/account/account_controller.dart';
 import 'features/account/account_page.dart';
 import 'domain/models/account.dart';
 import 'core/platform_service.dart';
+import 'core/video_player_shutdown.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -120,6 +124,24 @@ class Han1meApp extends ConsumerStatefulWidget {
 class _Han1meAppState extends ConsumerState<Han1meApp> {
   var _checkedForUpdate = false;
   var _appliedPrivacySettings = false;
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onExitRequested: () async {
+        await VideoPlayerShutdown.shutdownAll();
+        return AppExitResponse.exit;
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
