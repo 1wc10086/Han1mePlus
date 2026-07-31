@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/platform_service.dart';
+import '../../core/video_player_shutdown.dart';
 import '../../data/local/keyframe_repository.dart';
 import '../../data/local/watch_repository.dart';
 import '../../data/remote/han1me_api.dart';
@@ -109,6 +110,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> {
             },
           );
     _loadedQuality = source.quality;
+    VideoPlayerShutdown.track(controller);
     setState(() {
       _controller = controller;
       _loadError = null;
@@ -137,6 +139,14 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> {
   }
 
   Future<void> _disposeController(VideoPlayerController controller) async {
+    VideoPlayerShutdown.untrack(controller);
+    try {
+      controller.removeListener(_saveProgress);
+      if (controller.value.isInitialized && controller.value.isPlaying) {
+        await controller.pause();
+        await Future<void>.delayed(const Duration(milliseconds: 64));
+      }
+    } catch (_) {}
     try {
       await controller.dispose();
     } catch (_) {}
