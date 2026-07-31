@@ -8,6 +8,7 @@ import 'package:path/path.dart' as path;
 import '../../core/settings.dart';
 import '../../core/platform_paths.dart';
 import '../../data/han1me_repository.dart';
+import '../../data/remote/han1me_http_client.dart';
 import '../../domain/models/download.dart';
 import '../../domain/models/video.dart';
 import '../../features/settings/settings_controller.dart';

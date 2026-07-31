@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 
+import '../../core/desktop_platform.dart';
 import 'windows_http_overrides.dart';
 
 class Han1meHttpResponse {
@@ -18,7 +19,7 @@ class Han1meHttpResponse {
 class Han1meHttpClient {
   static const _channel = MethodChannel('com.liar.han1meplus/http');
   static final _desktopCookies = <String, String>{};
-  static bool get _isDesktop => Platform.isWindows;
+  static bool get _isDesktop => isDesktopHttpPlatform;
 
   static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
 
