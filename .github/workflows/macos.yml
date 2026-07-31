@@ -23,8 +23,8 @@ jobs:
       - name: Build macOS app
         run: flutter build macos --release
       - name: Package macOS app
-        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/Runner.app build/Han1mePlus-macos.zip
+        run: hdiutil create -volname "Han1me+" -srcfolder build/macos/Build/Products/Release/Han1me+.app -ov -format UDZO build/Han1mePlus-macos.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos
-          path: build/Han1mePlus-macos.zip
+          path: build/Han1mePlus-macos.dmg
