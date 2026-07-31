@@ -167,7 +167,7 @@ class AppSettings {
         blockedCommentKeywords: (json['blockedCommentKeywords'] as List? ?? const []).whereType<String>().toList(),
         comicMode: json['comicMode'] as bool? ?? false,
         videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.com' : json['baseUrl'] as String? ?? 'https://hanime1.com'),
-        useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows,
+        useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows || Platform.isMacOS,
         useDoh: json['useDoh'] as bool? ?? false,
         dohPreset: _dohPreset(json['dohPreset'] as String?),
         dohCustomUrl: json['dohCustomUrl'] as String? ?? '',

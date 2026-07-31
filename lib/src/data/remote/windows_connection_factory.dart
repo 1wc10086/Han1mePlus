@@ -4,12 +4,19 @@ import 'dart:io';
 class WindowsConnectionFactory {
   static var _nextAddress = 0;
 
-  static const _addresses = {
-    'hanime1.com': ['172.67.167.30', '104.21.42.221'],
-    'hanime1.me': ['172.67.74.156', '104.26.8.104', '104.26.9.104'],
-    'hanimeone.me': ['104.21.43.14', '172.67.215.214'],
-    'javchu.com': ['104.21.7.70', '172.67.187.141'],
-  };
+  static const hanimeHosts = {'hanime1.me', 'hanime1.com', 'hanimeone.me', 'javchu.com'};
+
+  /// 与 iOS / Android 原生层一致的内置 Cloudflare 边缘地址。
+  static const builtInAddresses = [
+    '172.64.229.154',
+    '162.159.0.1',
+    '108.162.192.1',
+    '172.64.33.1',
+    '104.19.0.1',
+    '2606:4700:3035::ac43:bb8d',
+    '2606:4700:3030::6815:746',
+    '2606:4700:3030::6815:714',
+  ];
 
   WindowsConnectionFactory({
     required this.useBuiltInHosts,
@@ -27,41 +34,56 @@ class WindowsConnectionFactory {
   final String dohBootstrapIps;
   final int dohTimeoutSeconds;
 
+  Duration get _timeout => Duration(seconds: dohTimeoutSeconds);
+
   Future<ConnectionTask<Socket>> call(Uri uri, String? proxyHost, int? proxyPort) async {
     if (proxyHost != null) return Socket.startConnect(proxyHost, proxyPort ?? uri.port);
-    if (useBuiltInHosts && _addresses.containsKey(uri.host)) return _connect([..._addresses[uri.host]!, uri.host], uri.port);
-    if (!useDoh) return Socket.startConnect(uri.host, uri.port);
+    final port = uri.hasPort ? uri.port : (uri.isScheme('https') ? 443 : 80);
+    if (useBuiltInHosts && hanimeHosts.contains(uri.host)) {
+      return _connect(uri, [...builtInAddresses, uri.host], port);
+    }
+    if (!useDoh) return _startConnect(uri.host, port);
     try {
       final addresses = await _DohResolver(
         preset: dohPreset,
         customUrl: dohCustomUrl,
         bootstrapIps: dohBootstrapIps,
-        timeout: Duration(seconds: dohTimeoutSeconds),
+        timeout: _timeout,
       ).resolve(uri.host);
-      if (addresses.isNotEmpty) return _connect([...addresses, uri.host], uri.port);
+      if (addresses.isNotEmpty) return _connect(uri, [...addresses, uri.host], port);
     } catch (_) {}
-    return _connect([uri.host], uri.port);
+    return _connect(uri, [uri.host], port);
   }
 
-  Future<ConnectionTask<Socket>> _connect(List<String> addresses, int port) async {
+  /// Dart 的 [HttpClient.connectionFactory] 只建立 TCP，不会自动 TLS。
+  /// HTTPS 必须在此手动 [SecureSocket.secure]，否则会向 443 端口发送明文 HTTP 并收到 400。
+  Future<ConnectionTask<Socket>> _connect(Uri uri, List<String> addresses, int port) async {
+    final allowBadCertificate = useBuiltInHosts && hanimeHosts.contains(uri.host);
     final start = _nextAddress++ % addresses.length;
     Object? lastError;
     StackTrace? lastStackTrace;
     for (var offset = 0; offset < addresses.length; offset++) {
       final address = addresses[(start + offset) % addresses.length];
-      ConnectionTask<Socket>? task;
+      Socket? plain;
       try {
-        task = await Socket.startConnect(address, port);
-        await task.socket.timeout(Duration(seconds: dohTimeoutSeconds));
-        return task;
+        if (address == uri.host) return _startConnect(uri.host, port);
+        plain = await Socket.connect(address, port, timeout: _timeout);
+        final secure = await SecureSocket.secure(
+          plain,
+          host: uri.host,
+          onBadCertificate: allowBadCertificate ? (_) => true : null,
+        );
+        return ConnectionTask.fromSocket(Future.value(secure), secure.destroy);
       } catch (error, stackTrace) {
-        task?.cancel();
+        plain?.destroy();
         lastError = error;
         lastStackTrace = stackTrace;
       }
     }
     Error.throwWithStackTrace(lastError!, lastStackTrace!);
   }
+
+  Future<ConnectionTask<Socket>> _startConnect(String host, int port) => SecureSocket.startConnect(host, port);
 }
 
 class _DohResolver {
@@ -103,10 +125,18 @@ class _DohResolver {
     final client = HttpClient()..connectionTimeout = timeout;
     final bootstrap = _bootstrapIps;
     if (bootstrap.isNotEmpty) {
-      client.connectionFactory = (uri, proxyHost, proxyPort) => Socket.startConnect(
-            proxyHost ?? (uri.host == endpoint.host ? bootstrap.first : uri.host),
-            proxyPort ?? uri.port,
-          );
+      client.connectionFactory = (uri, proxyHost, proxyPort) async {
+        if (proxyHost != null) return Socket.startConnect(proxyHost, proxyPort ?? uri.port);
+        if (uri.host != endpoint.host) return SecureSocket.startConnect(uri.host, uri.port);
+        final plain = await Socket.connect(bootstrap.first, uri.port, timeout: timeout);
+        try {
+          final secure = await SecureSocket.secure(plain, host: uri.host);
+          return ConnectionTask.fromSocket(Future.value(secure), secure.destroy);
+        } catch (error) {
+          plain.destroy();
+          rethrow;
+        }
+      };
     }
     try {
       final request = await client.getUrl(endpoint.replace(queryParameters: {'name': host, 'type': type}));

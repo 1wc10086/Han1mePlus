@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'desktop_platform.dart';
+
 class PlatformService {
   static const _channel = MethodChannel('com.liar.han1meplus/platform');
-  static bool get _isDesktop => Platform.isWindows;
+  static bool get _isDesktop => isDesktopPlatformService;
 
   static Future<void> setScreenBrightness(double value) => _isDesktop ? Future.value() : _channel.invokeMethod<void>('setScreenBrightness', {'value': value});
   static Future<double> screenBrightness() async => _isDesktop ? 1 : await _channel.invokeMethod<double>('screenBrightness') ?? 1;

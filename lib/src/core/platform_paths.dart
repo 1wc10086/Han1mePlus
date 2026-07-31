@@ -46,5 +46,9 @@ Future<String> normalizeDownloadPath(String value) async {
   return Directory(resolved).absolute.path;
 }
 
-String platformDownloadPathHint(String fallbackHint) =>
-    Platform.isWindows ? r'%USERPROFILE%\Downloads\Han1me+' : Platform.isIOS ? '~/Documents/Download' : fallbackHint;
+String platformDownloadPathHint(String fallbackHint) {
+  if (Platform.isWindows) return r'%USERPROFILE%\Downloads\Han1me+';
+  if (Platform.isMacOS) return '~/Downloads/Han1me+';
+  if (Platform.isIOS) return '~/Documents/Download';
+  return fallbackHint;
+}
