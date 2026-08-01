@@ -4,7 +4,7 @@
   <img src="assets/logo.png" alt="Han1mePlus Logo" width="160">
 </p>
 
-基于 Material Design 3 设计语言，使用 Dart + Flutter 构建的 Hanime1 第三方客户端
+基于 Material Design 3 设计语言，使用 Dart & Flutter 构建的 Hanime1 第三方客户端
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/1wc10086/Han1mePlus?include_prereleases&label=%E7%89%88%E6%9C%AC&style=for-the-badge&color=6750A4" alt="Release">
