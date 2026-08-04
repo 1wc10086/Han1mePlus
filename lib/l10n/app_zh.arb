@@ -185,6 +185,7 @@
   "moveGroupCacheToDefault": "该分组中的缓存将移至默认分组。",
   "groupName": "分组名称",
   "confirm": "确定",
+  "confirmExitTitle": "真的要退出吗?",
   "queued": "等待中",
   "downloading": "下载中",
   "completed": "已完成",
@@ -453,8 +454,6 @@
   "appLocked": "应用已锁定",
   "unlocking": "解锁中…",
   "unlock": "解锁",
-  "minimizeOnExit": "退出时最小化",
-  "minimizeOnExitDescription": "返回至桌面时保持应用继续运行",
   "homeCategoryTabs": "首页使用 Tab 栏分类",
   "homeCategoryTabsDescription": "以可滑动 Tab 展示首页分类，并展开影片卡片",
   "recommendationFilters": "推荐流设置",
@@ -503,5 +502,10 @@
   "aspectCrop": "裁切填充",
   "aspectStretch": "拉伸填充",
   "aspectFourThree": "4:3",
-  "externalPlayback": "外部播放"
+  "externalPlayback": "外部播放",
+  "addTags": "添加标签",
+  "removeTags": "移除标签",
+  "translate": "翻译",
+  "translating": "翻译中...",
+  "translationFailed": "翻译失败"
 }

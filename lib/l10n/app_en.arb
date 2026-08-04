@@ -185,6 +185,7 @@
   "moveGroupCacheToDefault": "Caches in this group will move to the default group.",
   "groupName": "Group Name",
   "confirm": "Confirm",
+  "confirmExitTitle": "Exit app?",
   "queued": "Queued",
   "downloading": "Downloading",
   "completed": "Completed",
@@ -453,8 +454,6 @@
   "appLocked": "App Locked",
   "unlocking": "Unlocking…",
   "unlock": "Unlock",
-  "minimizeOnExit": "Minimize on Exit",
-  "minimizeOnExitDescription": "Keep the app running when Back returns to the home screen",
   "homeCategoryTabs": "Use Home Category Tabs",
   "homeCategoryTabsDescription": "Show home categories as swipeable tabs and expand their video cards",
   "recommendationFilters": "Recommendation Filters",
@@ -503,5 +502,10 @@
   "aspectCrop": "Crop to Fill",
   "aspectStretch": "Stretch to Fill",
   "aspectFourThree": "4:3",
-  "externalPlayback": "External Playback"
+  "externalPlayback": "External Playback",
+  "addTags": "Add Tags",
+  "removeTags": "Remove Tags",
+  "translate": "Translate",
+  "translating": "Translating...",
+  "translationFailed": "Translation failed"
 }

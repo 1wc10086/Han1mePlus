@@ -19,6 +19,7 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
         appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null, title: Text(l10n.settings)),
       body: SettingsList(
+        contentPadding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         sections: [
           SettingsSection(title: sectionTitle(l10n.appearance), tiles: [
             _NavigationTile(icon: Icons.palette_outlined, title: l10n.themeAndColor, onTap: () => context.push('/settings/theme')).tile,

@@ -35,47 +35,50 @@ class AndroidCastButton extends ConsumerWidget {
 
   Future<void> _showDevices(BuildContext context, String url) async {
     final manager = DLNAManager();
-    final session = await manager.start();
     StreamSubscription? subscription;
-    var devices = <dynamic>[];
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          subscription ??= session.devices.stream.listen((items) {
-            devices = items.values.toList();
-            setState(() {});
-          });
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!.castToDevice),
-            content: SizedBox(
-              width: 360,
-              child: devices.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: devices.length,
-                      itemBuilder: (context, index) {
-                        final device = devices[index];
-                        return ListTile(
-                          leading: const Icon(Icons.cast_connected),
-                          title: Text(device.info.friendlyName),
-                          subtitle: Text(device.info.deviceType.split(':').last),
-                          onTap: () async {
-                            DLNADevice(device.info).setUrl(url);
-                            DLNADevice(device.info).play();
-                            if (context.mounted) Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.cancel))],
-          );
-        },
-      ),
-    );
-    await subscription?.cancel();
-    manager.stop();
+    try {
+      final session = await manager.start();
+      var devices = <dynamic>[];
+      await showDialog<void>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            subscription ??= session.devices.stream.listen((items) {
+              devices = items.values.toList();
+              setState(() {});
+            });
+            return AlertDialog(
+              title: Text(AppLocalizations.of(context)!.castToDevice),
+              content: SizedBox(
+                width: 360,
+                child: devices.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: devices.length,
+                        itemBuilder: (context, index) {
+                          final device = devices[index];
+                          return ListTile(
+                            leading: const Icon(Icons.cast_connected),
+                            title: Text(device.info.friendlyName),
+                            subtitle: Text(device.info.deviceType.split(':').last),
+                            onTap: () async {
+                              DLNADevice(device.info).setUrl(url);
+                              DLNADevice(device.info).play();
+                              if (context.mounted) Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+              actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.cancel))],
+            );
+          },
+        ),
+      );
+    } finally {
+      await subscription?.cancel();
+      manager.stop();
+    }
   }
 }

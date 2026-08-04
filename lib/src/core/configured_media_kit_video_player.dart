@@ -13,6 +13,7 @@ import 'shader_service.dart';
 
 class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   static AppSettings settings = const AppSettings();
+  static final ConfiguredMediaKitVideoPlayer _instance = ConfiguredMediaKitVideoPlayer();
 
   final _players = HashMap<int, Player>();
   final _completers = HashMap<int, Completer<void>>();
@@ -21,15 +22,17 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   final _streamSubscriptions = HashMap<int, List<StreamSubscription>>();
 
   static void registerWith() {
-    VideoPlayerPlatform.instance = ConfiguredMediaKitVideoPlayer();
+    VideoPlayerPlatform.instance = _instance;
   }
 
   @override
   Future<void> init() async {
-    for (final textureId in _players.keys) {
+    final textureIds = _players.keys.toList(growable: false);
+    for (final textureId in textureIds) {
       await dispose(textureId);
     }
     _players.clear();
+    _completers.clear();
     _videoControllers.clear();
     _streamControllers.clear();
     _streamSubscriptions.clear();
@@ -37,52 +40,85 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
 
   @override
   Future<void> dispose(int textureId) async {
-    await _players[textureId]?.dispose();
-    await _streamControllers[textureId]?.close();
-    await Future.wait(_streamSubscriptions[textureId]?.map((e) => e.cancel()) ?? []);
-    _players.remove(textureId);
+    final player = _players.remove(textureId);
+    final streamController = _streamControllers.remove(textureId);
+    final subscriptions = _streamSubscriptions.remove(textureId);
     _videoControllers.remove(textureId);
-    _streamControllers.remove(textureId);
-    _streamSubscriptions.remove(textureId);
+    final completer = _completers.remove(textureId);
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+    for (final subscription in subscriptions ?? const <StreamSubscription>[]) {
+      try {
+        await subscription.cancel();
+      } catch (_) {}
+    }
+    if (streamController != null) {
+      try {
+        await streamController.close();
+      } catch (_) {}
+    }
+    if (player != null) {
+      try {
+        await player.pause().timeout(const Duration(seconds: 1));
+      } catch (_) {}
+      try {
+        await player.stop().timeout(const Duration(seconds: 1));
+      } catch (_) {}
+      try {
+        await player.dispose().timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }
   }
 
   @override
   Future<int?> create(DataSource dataSource) async {
     final player = Player();
-    final native = player.platform as NativePlayer;
-    await native.waitForPlayerInitialization;
-    await _applyCustomParameters(native, settings);
-    final videoController = VideoController(
-      player,
-      configuration: _videoConfiguration(settings),
-    );
-    await _applyShaders(native, settings);
-    final completer = Completer<void>();
-    final streamController = StreamController<VideoEvent>();
-    final streamSubscriptions = <StreamSubscription>[];
-    final textureId = player.hashCode;
+    int? textureId;
+    try {
+      final native = player.platform as NativePlayer;
+      await native.waitForPlayerInitialization;
+      await _applyCustomParameters(native, settings);
+      final videoController = VideoController(
+        player,
+        configuration: _videoConfiguration(settings),
+      );
+      await _applyShaders(native, settings);
+      final completer = Completer<void>();
+      final streamController = StreamController<VideoEvent>();
+      final streamSubscriptions = <StreamSubscription>[];
+      textureId = player.hashCode;
 
-    _players[textureId] = player;
-    _completers[textureId] = completer;
-    _videoControllers[textureId] = videoController;
-    _streamControllers[textureId] = streamController;
-    _streamSubscriptions[textureId] = streamSubscriptions;
+      _players[textureId] = player;
+      _completers[textureId] = completer;
+      _videoControllers[textureId] = videoController;
+      _streamControllers[textureId] = streamController;
+      _streamSubscriptions[textureId] = streamSubscriptions;
 
-    _initialize(textureId);
+      _initialize(textureId);
 
-    final resource = switch (dataSource.sourceType) {
-      DataSourceType.asset => dataSource.package == null
-          ? 'asset:///${dataSource.asset}'
-          : 'asset:///packages/${dataSource.package}/${dataSource.asset}',
-      DataSourceType.network || DataSourceType.file || DataSourceType.contentUri => dataSource.uri!,
-    };
+      final resource = switch (dataSource.sourceType) {
+        DataSourceType.asset => dataSource.package == null
+            ? 'asset:///${dataSource.asset}'
+            : 'asset:///packages/${dataSource.package}/${dataSource.asset}',
+        DataSourceType.network || DataSourceType.file || DataSourceType.contentUri => dataSource.uri!,
+      };
 
-    await player.open(
-      Media(resource, httpHeaders: dataSource.httpHeaders),
-      play: false,
-    );
-
-    return textureId;
+      await player.open(
+        Media(resource, httpHeaders: dataSource.httpHeaders),
+        play: false,
+      );
+      return textureId;
+    } catch (_) {
+      if (textureId != null && identical(_players[textureId], player)) {
+        await dispose(textureId);
+      } else {
+        try {
+          await player.dispose().timeout(const Duration(seconds: 2));
+        } catch (_) {}
+      }
+      rethrow;
+    }
   }
 
   Future<void> _applyCustomParameters(NativePlayer native, AppSettings settings) async {
@@ -212,8 +248,11 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     int? height;
     Duration? duration;
 
+    bool isActive() => identical(_streamControllers[textureId], streamController) &&
+        !streamController.isClosed;
+
     void notify() {
-      if (!completer.isCompleted) {
+      if (isActive() && !completer.isCompleted) {
         if (width != null && height != null && duration != null) {
           streamController.add(
             VideoEvent(
@@ -254,38 +293,48 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     streamSubscriptions.add(
       player.stream.playing.listen((event) async {
         await completer.future;
-        streamController.add(VideoEvent(eventType: VideoEventType.isPlayingStateUpdate, isPlaying: event));
+        if (isActive()) {
+          streamController.add(VideoEvent(eventType: VideoEventType.isPlayingStateUpdate, isPlaying: event));
+        }
       }),
     );
     streamSubscriptions.add(
       player.stream.completed.listen((event) async {
         await completer.future;
-        if (event) streamController.add(VideoEvent(eventType: VideoEventType.completed));
+        if (event && isActive()) {
+          streamController.add(VideoEvent(eventType: VideoEventType.completed));
+        }
       }),
     );
     streamSubscriptions.add(
       player.stream.buffering.listen((event) async {
         await completer.future;
-        streamController.add(
-          VideoEvent(eventType: event ? VideoEventType.bufferingStart : VideoEventType.bufferingEnd),
-        );
+        if (isActive()) {
+          streamController.add(
+            VideoEvent(eventType: event ? VideoEventType.bufferingStart : VideoEventType.bufferingEnd),
+          );
+        }
       }),
     );
     streamSubscriptions.add(
       player.stream.buffer.listen((event) async {
         await completer.future;
-        streamController.add(
-          VideoEvent(
-            eventType: VideoEventType.bufferingUpdate,
-            buffered: [DurationRange(Duration.zero, event)],
-          ),
-        );
+        if (isActive()) {
+          streamController.add(
+            VideoEvent(
+              eventType: VideoEventType.bufferingUpdate,
+              buffered: [DurationRange(Duration.zero, event)],
+            ),
+          );
+        }
       }),
     );
     streamSubscriptions.add(
       player.stream.error.listen((event) async {
         await completer.future;
-        streamController.addError(PlatformException(code: '', message: event));
+        if (isActive()) {
+          streamController.addError(PlatformException(code: '', message: event));
+        }
       }),
     );
   }

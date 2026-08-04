@@ -1,5 +1,6 @@
 package com.liar.han1meplus
 
+import androidx.annotation.Keep;
 import android.content.Context
 import android.os.Build
 import android.util.Base64
@@ -11,6 +12,7 @@ import java.util.Date
 import java.util.ArrayDeque
 import java.util.Locale
 
+@Keep
 internal object EchHttpClient {
     private const val maxLogEntries = 100
     private val logEntries = ArrayDeque<String>()

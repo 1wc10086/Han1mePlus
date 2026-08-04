@@ -20,7 +20,7 @@ final keyframeVideosProvider = FutureProvider<List<KeyframeVideo>>((ref) async {
   return videos;
 });
 
-final keyframesProvider = AsyncNotifierProviderFamily<KeyframesController, List<int>, String>(KeyframesController.new);
+final keyframesProvider = AsyncNotifierProvider.autoDispose.family<KeyframesController, List<int>, String>(KeyframesController.new);
 
 class KeyframeVideo {
   const KeyframeVideo({required this.id, required this.title, required this.positions});
@@ -30,7 +30,7 @@ class KeyframeVideo {
   final List<int> positions;
 }
 
-class KeyframesController extends FamilyAsyncNotifier<List<int>, String> {
+class KeyframesController extends AutoDisposeFamilyAsyncNotifier<List<int>, String> {
   final _store = JsonStore();
 
   @override

@@ -8,6 +8,7 @@ import 'package:m3e_core/m3e_core.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/app_shell.dart';
+import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/video.dart';
 import '../account/account_page.dart';
@@ -65,8 +66,18 @@ class _HomeFeedBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).valueOrNull;
+    final catalog = ref.watch(searchOptionCatalogProvider).valueOrNull;
+    final locale = searchOptionLocaleKey(Localizations.localeOf(context));
     final subscribed = ref.watch(libraryProvider).valueOrNull?.artists.map((artist) => artist.name.toLowerCase()).toSet() ?? <String>{};
-    final sections = feed.sections.map((section) => HomeSection(title: section.title, videos: section.videos.where((video) => _visible(video, settings, subscribed)).toList(), moreUrl: section.moreUrl)).where((section) => section.videos.isNotEmpty).toList();
+    final sections = feed.sections
+        .map((section) => HomeSection(
+              title: _localizedSectionTitle(section, catalog, locale),
+              videos: section.videos.where((video) => _visible(video, settings, subscribed)).toList(),
+              moreUrl: section.moreUrl,
+              isFeatured: section.isFeatured,
+            ))
+        .where((section) => section.videos.isNotEmpty)
+        .toList();
     Future<void> refresh() => ref.read(homeSectionsProvider.notifier).refresh();
     if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return RefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: sections));
     return DefaultTabController(length: sections.length, child: Column(children: [
@@ -88,6 +99,18 @@ class _HomeFeedBody extends ConsumerWidget {
 
   int _duration(String? text) => (text?.split(':').map(int.tryParse).toList() ?? const <int?>[]).fold<int>(0, (total, unit) => unit == null ? total : total * 60 + unit);
   int _views(String? text) => int.tryParse(RegExp(r'[\d,.]+').firstMatch(text ?? '')?.group(0)?.replaceAll(',', '') ?? '') ?? 0;
+}
+
+String _localizedSectionTitle(HomeSection section, SearchOptionCatalog? catalog, String locale) {
+  if (catalog == null) return section.title;
+  final uri = Uri.tryParse(section.moreUrl ?? '');
+  final genre = uri?.queryParameters['genre'];
+  final sort = uri?.queryParameters['sort'];
+  return (genre == null ? null : catalog.genres.localize(genre, locale)) ??
+      (sort == null ? null : catalog.sorts.localize(sort, locale)) ??
+      catalog.genres.localize(section.title, locale) ??
+      catalog.sorts.localize(section.title, locale) ??
+      section.title;
 }
 
 class _HomeScroll extends StatelessWidget {

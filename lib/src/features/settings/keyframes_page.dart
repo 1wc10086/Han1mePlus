@@ -117,9 +117,11 @@ class _KeyframeVideoTile extends ConsumerWidget {
   Future<void> _editTitle(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: video.title);
-    final title = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
+    String? title;
+    try {
+      title = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
         title: Text(l10n.editVideoTitle),
         content: TextField(
           controller: controller,
@@ -130,8 +132,11 @@ class _KeyframeVideoTile extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
           FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: Text(l10n.save)),
         ],
-      ),
-    );
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
     if (title != null && title.isNotEmpty) {
       await ref.read(keyframesProvider(video.id).notifier).setTitle(title);
     }
@@ -140,9 +145,11 @@ class _KeyframeVideoTile extends ConsumerWidget {
   Future<void> _editPosition(BuildContext context, WidgetRef ref, int position) async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: position.toString());
-    final next = await showDialog<int>(
-      context: context,
-      builder: (context) => AlertDialog(
+    int? next;
+    try {
+      next = await showDialog<int>(
+        context: context,
+        builder: (context) => AlertDialog(
         title: Text(l10n.editKeyframe),
         content: TextField(
           controller: controller,
@@ -153,8 +160,11 @@ class _KeyframeVideoTile extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
           FilledButton(onPressed: () => Navigator.pop(context, int.tryParse(controller.text)), child: Text(l10n.save)),
         ],
-      ),
-    );
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
     if (next == null || next == position) return;
     final updated = await ref.read(keyframesProvider(video.id).notifier).updatePosition(position, next);
     if (context.mounted && !updated) {

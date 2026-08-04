@@ -1,13 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../data/han1me_repository.dart';
-import '../../data/remote/han1me_api.dart';
 import '../../domain/models/account.dart';
-import '../settings/settings_controller.dart';
 import 'account_controller.dart';
 
 class AccountDrawer extends ConsumerWidget {
@@ -130,9 +127,9 @@ class _AccountSheet extends ConsumerWidget {
               leading: const Icon(Icons.person_add_alt_1_outlined),
               title: Text(AppLocalizations.of(context)!.addAccount),
               onTap: () {
-                final navigator = Navigator.of(context, rootNavigator: true);
-                navigator.pop();
-                navigator.push(MaterialPageRoute<void>(builder: (_) => const LoginPage()));
+                final router = GoRouter.of(context);
+                Navigator.pop(context);
+                router.push('/login');
               },
             ),
           ],
@@ -152,8 +149,9 @@ class _AccountCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
+          final router = GoRouter.of(context);
           Navigator.pop(context);
-          if (!loggedIn) Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LoginPage()));
+          if (!loggedIn) router.push('/login');
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -161,7 +159,14 @@ class _AccountCard extends StatelessWidget {
             children: [
               InkWell(
                 borderRadius: BorderRadius.circular(28),
-                onTap: loggedIn ? () async { await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => AccountWebPage(url: '/user/${account!.id}/edit', title: AppLocalizations.of(context)!.accountProfile))); onRefresh(); } : null,
+                onTap: loggedIn
+                    ? () async {
+                        final router = GoRouter.of(context);
+                        Navigator.pop(context);
+                        await router.push('/account/profile/${account!.id}');
+                        onRefresh();
+                      }
+                    : null,
                 child: CircleAvatar(radius: 28, backgroundImage: account?.avatarUrl?.isNotEmpty == true ? CachedNetworkImageProvider(account!.avatarUrl!) : null, child: account?.avatarUrl?.isNotEmpty == true ? null : Icon(loggedIn ? Icons.person : Icons.person_outline, size: 30)),
               ),
               const SizedBox(width: 12),
@@ -227,80 +232,4 @@ class _PasswordFormState extends ConsumerState<_PasswordForm> {
   void dispose() { _old.dispose(); _password.dispose(); _confirmation.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Column(children: [TextField(controller: _old, obscureText: true, decoration: InputDecoration(labelText: AppLocalizations.of(context)!.oldPassword)), TextField(controller: _password, obscureText: true, decoration: InputDecoration(labelText: AppLocalizations.of(context)!.newPassword)), TextField(controller: _confirmation, obscureText: true, decoration: InputDecoration(labelText: AppLocalizations.of(context)!.confirmNewPassword)), const SizedBox(height: 12), FilledButton(onPressed: () => ref.read(accountProvider.notifier).updatePassword(_old.text, _password.text, _confirmation.text), child: Text(AppLocalizations.of(context)!.changePassword))]);
-}
-
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
-
-  @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
-}
-
-class AccountWebPage extends ConsumerWidget {
-  const AccountWebPage({super.key, required this.url, required this.title});
-  final String url;
-  final String title;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
-    return Scaffold(appBar: AppBar(title: Text(title)), body: InAppWebView(initialUrlRequest: URLRequest(url: WebUri('$baseUrl$url')), initialSettings: InAppWebViewSettings(javaScriptEnabled: true, domStorageEnabled: true, thirdPartyCookiesEnabled: true, userAgent: Han1meApi.userAgent)));
-  }
-}
-
-class _LoginPageState extends ConsumerState<LoginPage> {
-  var _saving = false;
-  Object? _error;
-
-  Future<void> _saveCookies() async {
-    if (_saving) return;
-    final settings = await ref.read(settingsProvider.future);
-    final cookie = await ref.read(han1meHttpClientProvider).webViewCookies(settings.resolvedBaseUrl);
-    if (cookie.isEmpty || !mounted) return;
-    setState(() => _saving = true);
-    try {
-      await ref.read(accountProvider.notifier).saveCookie(cookie);
-      if (mounted) Navigator.pop(context);
-    } catch (error) {
-      if (mounted) setState(() {
-        _saving = false;
-        _error = error;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.login),
-      ),
-      body: Stack(
-        children: [
-          InAppWebView(
-            initialSettings: InAppWebViewSettings(javaScriptEnabled: true, domStorageEnabled: true, thirdPartyCookiesEnabled: true, userAgent: Han1meApi.userAgent),
-            onWebViewCreated: (controller) async {
-              await ref.read(han1meHttpClientProvider).clearWebViewCookies();
-              await controller.loadUrl(urlRequest: URLRequest(url: WebUri('$baseUrl/login')));
-            },
-            onLoadStop: (_, url) {
-              final loginUrl = Uri.parse('$baseUrl/login');
-              if (url != null && url.host == loginUrl.host && url.path != loginUrl.path) _saveCookies();
-            },
-          ),
-          if (_error != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: MaterialBanner(
-                content: Text('$_error'),
-                actions: [TextButton(onPressed: () => setState(() => _error = null), child: Text(AppLocalizations.of(context)!.close))],
-              ),
-            ),
-          if (_saving) const LinearProgressIndicator(),
-        ],
-      ),
-    );
-  }
 }

@@ -27,26 +27,26 @@ class _CloudflarePageState extends ConsumerState<CloudflarePage> {
 
   Future<void> _completeVerification(String requestUrl) async {
     if (_saving) return;
-    final cookies = await ref.read(han1meHttpClientProvider).webViewCookies(requestUrl);
-    final clearance = _clearanceCookie(cookies);
-    if (clearance == null || clearance == _initialClearance || !mounted) return;
     _saving = true;
     try {
-      await ref
-          .read(accountProvider.notifier)
-          .saveCloudflareCookie(cookies);
+      final cookies = await ref.read(han1meHttpClientProvider).webViewCookies(requestUrl);
+      final clearance = _clearanceCookie(cookies);
+      if (clearance == null || clearance == _initialClearance || !mounted) return;
+      await ref.read(accountProvider.notifier).saveCloudflareCookie(cookies);
+      if (!mounted) return;
+      _verificationTimer?.cancel();
+      Navigator.pop(context, true);
     } catch (_) {
+    } finally {
       _saving = false;
-      return;
     }
-    if (!mounted) return;
-    _verificationTimer?.cancel();
-    Navigator.pop(context, true);
   }
 
   void _startVerification(String requestUrl) {
     if (_verificationTimer != null) return;
-    _verificationTimer = Timer.periodic(const Duration(seconds: 1), (_) => _completeVerification(requestUrl));
+    _verificationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!_saving) _completeVerification(requestUrl);
+    });
   }
 
   String? _clearanceCookie(String cookies) {

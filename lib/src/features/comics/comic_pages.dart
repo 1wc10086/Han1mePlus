@@ -38,8 +38,8 @@ class ComicHomeController extends AsyncNotifier<ComicHome> {
     return feed;
   }
 }
-final comicDetailProvider = FutureProvider.family((ref, String id) => ref.watch(comicRepositoryProvider).detail(id));
-final _browseProvider = FutureProvider.family<ComicSearchResult, (String, int)>((ref, value) => ref.watch(comicRepositoryProvider).browse(value.$1, value.$2));
+final comicDetailProvider = FutureProvider.autoDispose.family((ref, String id) => ref.watch(comicRepositoryProvider).detail(id));
+final _browseProvider = FutureProvider.autoDispose.family<ComicSearchResult, (String, int)>((ref, value) => ref.watch(comicRepositoryProvider).browse(value.$1, value.$2));
 
 class ComicExplorePage extends ConsumerWidget {
   const ComicExplorePage({super.key});
@@ -422,15 +422,16 @@ class _ComicReaderPageState extends State<ComicReaderPage> {
 
   void _selectPage() {
     var value = (_page + 1).toDouble();
+    final controller = TextEditingController(text: '${_page + 1}');
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheet) => Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [Slider(value: value, min: 1, max: widget.comic.pageCount.toDouble(), divisions: widget.comic.pageCount > 1 ? widget.comic.pageCount - 1 : null, onChanged: (next) => setSheet(() => value = next.roundToDouble()), onChangeEnd: (next) { _jump(next.round()); Navigator.pop(context); }), TextField(controller: TextEditingController(text: '${_page + 1}'), keyboardType: TextInputType.number, decoration: InputDecoration(labelText: AppLocalizations.of(context)!.pageNumber), onSubmitted: (text) { final page = int.tryParse(text); if (page != null) _jump(page); Navigator.pop(context); })]),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [Slider(value: value, min: 1, max: widget.comic.pageCount.toDouble(), divisions: widget.comic.pageCount > 1 ? widget.comic.pageCount - 1 : null, onChanged: (next) => setSheet(() => value = next.roundToDouble()), onChangeEnd: (next) { _jump(next.round()); Navigator.pop(context); }), TextField(controller: controller, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: AppLocalizations.of(context)!.pageNumber), onSubmitted: (text) { final page = int.tryParse(text); if (page != null) _jump(page); Navigator.pop(context); })]),
         ),
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 
   void _settings() {
@@ -585,10 +586,11 @@ class _ComicCachePageState extends ConsumerState<ComicCachePage> {
   Future<void> _manageCategories() async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => StatefulBuilder(
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => StatefulBuilder(
         builder: (sheetContext, setSheet) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -628,8 +630,11 @@ class _ComicCachePageState extends ConsumerState<ComicCachePage> {
             ),
           ),
         ),
-      ),
-    );
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 }
 

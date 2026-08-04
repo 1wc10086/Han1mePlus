@@ -185,6 +185,7 @@
   "moveGroupCacheToDefault": "該群組中的快取將移至預設群組。",
   "groupName": "群組名稱",
   "confirm": "確定",
+  "confirmExitTitle": "真的要退出嗎?",
   "queued": "等待中",
   "downloading": "下載中",
   "completed": "已完成",
@@ -453,8 +454,6 @@
   "appLocked": "應用程式已鎖定",
   "unlocking": "解鎖中…",
   "unlock": "解鎖",
-  "minimizeOnExit": "退出時最小化",
-  "minimizeOnExitDescription": "返回桌面時保持應用程式繼續運行",
   "homeCategoryTabs": "首頁使用 Tab 分類",
   "homeCategoryTabsDescription": "以可滑動 Tab 顯示首頁分類，並展開影片卡片",
   "recommendationFilters": "推薦流設定",
@@ -503,5 +502,10 @@
   "aspectCrop": "裁切填充",
   "aspectStretch": "拉伸填充",
   "aspectFourThree": "4:3",
-  "externalPlayback": "外部播放"
+  "externalPlayback": "外部播放",
+  "addTags": "新增標籤",
+  "removeTags": "移除標籤",
+  "translate": "翻譯",
+  "translating": "翻譯中...",
+  "translationFailed": "翻譯失敗"
 }

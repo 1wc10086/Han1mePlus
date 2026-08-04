@@ -1,5 +1,6 @@
 package com.liar.han1meplus
 
+import androidx.annotation.Keep;
 import android.content.Context
 import android.content.Intent
 import android.app.KeyguardManager
@@ -33,6 +34,7 @@ import java.nio.charset.Charset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+@Keep
 class MainActivity : FlutterActivity() {
     companion object {
         const val preferencesName = "han1meplus_http"
@@ -210,7 +212,7 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     } else result.success(false)
                 }
-                "androidAbi" -> result.success(currentAbi())
+                "androidUpdateAbi" -> result.success(androidUpdateAbi())
                 "openAppLinksSettings" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) startActivity(Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:$packageName")))
                     else startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")))
@@ -250,11 +252,10 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun currentAbi(): String? = when (File(applicationInfo.nativeLibraryDir).name) {
-        "arm64", "arm64-v8a" -> "arm64-v8a"
-        "arm", "armeabi-v7a" -> "armeabi-v7a"
-        "x86_64" -> "x86_64"
-        else -> null
+    private fun androidUpdateAbi(): String? {
+        val releaseAbis = setOf("arm64-v8a", "x86_64", "armeabi-v7a")
+        return Build.SUPPORTED_64_BIT_ABIS.firstOrNull(releaseAbis::contains)
+            ?: Build.SUPPORTED_ABIS.firstOrNull(releaseAbis::contains)
     }
 
     private fun request(call: MethodCall, result: MethodChannel.Result, httpClient: OkHttpClient) {

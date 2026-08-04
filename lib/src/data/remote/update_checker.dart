@@ -66,7 +66,7 @@ class UpdateChecker {
 
   Future<Map?> _selectAsset(Iterable<Map> assets) async {
     if (Platform.isAndroid) {
-      final abi = await PlatformService.androidAbi();
+      final abi = await PlatformService.androidUpdateAbi();
       final variant = switch (abi) {
         'arm64-v8a' => 'arm64',
         'armeabi-v7a' => 'arm32',

@@ -25,11 +25,11 @@ class AboutPage extends ConsumerWidget {
             Center(child: Text(AppLocalizations.of(context)!.thirdPartyClient, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.outline))),
             const SizedBox(height: 28),
              SettingsCardList(children: [
-               SettingsCardItem(title: AppLocalizations.of(context)!.version, subtitle: '1.1.2', leading: const Icon(Icons.code_outlined)),
+               SettingsCardItem(title: AppLocalizations.of(context)!.version, subtitle: '1.1.3', leading: const Icon(Icons.code_outlined)),
                SettingsCardItem(title: AppLocalizations.of(context)!.dataSource, subtitle: AppLocalizations.of(context)!.dataSourceDescription, leading: const Icon(Icons.language_outlined)),
                SettingsCardItem(title: AppLocalizations.of(context)!.githubRepository, subtitle: 'github.com/1wc10086/Han1mePlus', leading: const Icon(Icons.code_outlined), trailing: const Icon(Icons.open_in_new), onTap: () => launchUrl(Uri.parse('https://github.com/1wc10086/Han1mePlus'), mode: LaunchMode.externalApplication)),
                SettingsCardItem(title: AppLocalizations.of(context)!.reportIssue, subtitle: AppLocalizations.of(context)!.submitGitHubIssue, leading: const Icon(Icons.bug_report_outlined), trailing: const Icon(Icons.open_in_new), onTap: () => launchUrl(Uri.parse('https://github.com/1wc10086/Han1mePlus/issues/new/choose'), mode: LaunchMode.externalApplication)),
-               SettingsCardItem(title: AppLocalizations.of(context)!.openSourceLicense, leading: const Icon(Icons.gavel_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => showLicensePage(context: context, applicationName: 'Han1me+', applicationVersion: '1.1.2')),
+               SettingsCardItem(title: AppLocalizations.of(context)!.openSourceLicense, leading: const Icon(Icons.gavel_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => showLicensePage(context: context, applicationName: 'Han1me+', applicationVersion: '1.1.3')),
              ]),
              const SizedBox(height: 20),
              SettingsCardList(children: [

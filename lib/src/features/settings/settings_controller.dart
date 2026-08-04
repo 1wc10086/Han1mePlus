@@ -10,9 +10,12 @@ final settingsStoreProvider = Provider((_) => SettingsStore(JsonStore()));
 final settingsProvider = AsyncNotifierProvider<SettingsController, AppSettings>(SettingsController.new);
 
 class SettingsController extends AsyncNotifier<AppSettings> {
+  SettingsController([this._initial]);
+  final AppSettings? _initial;
+
   @override
   Future<AppSettings> build() async {
-    final settings = await ref.read(settingsStoreProvider).load();
+    final settings = _initial ?? await ref.read(settingsStoreProvider).load();
     await _syncNetworkSettings(settings);
     return settings;
   }

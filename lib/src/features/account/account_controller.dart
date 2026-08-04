@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -38,7 +40,10 @@ class AccountController extends AsyncNotifier<Account?> {
     if (cookie != account.cookie) await store.write(settings.resolvedBaseUrl, sanitizedAccount);
     ref.read(han1meRepositoryProvider).setCookie(cookie);
     await http.saveCookies(cookie, url: settings.resolvedBaseUrl);
-    return _refresh(sanitizedAccount);
+    unawaited(Future<void>.delayed(Duration.zero, () async {
+      await _refresh(sanitizedAccount);
+    }));
+    return sanitizedAccount;
   }
 
   Future<void> saveCloudflareCookie(String cookie) async {

@@ -1,7 +1,7 @@
 name: han1me_plus
 description: Flutter client for browsing Han1me content.
 publish_to: 'none'
-version: 1.1.2+13
+version: 1.1.3+14
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

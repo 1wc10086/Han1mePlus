@@ -183,17 +183,33 @@ class Han1meApi {
         .where((text) => text.isNotEmpty)
         .firstOrNull;
     final description = descriptionPanel?.querySelector('.video-caption-text')?.text.trim();
-    final tags = document.querySelectorAll('div.single-video-tag a')
+    final tags = document.querySelectorAll('.video-tags-wrapper .single-video-tag a')
+        .where((tag) {
+          final href = tag.attributes['href']?.trim() ?? '';
+          dom.Element? element = tag;
+          while (element != null && element.classes.contains('video-tags-wrapper') == false) {
+            if (element.attributes.containsKey('data-target')) return false;
+            if (element.attributes.containsKey('hidden') || element.classes.contains('hidden') || (element.attributes['style'] ?? '').replaceAll(' ', '').contains('display:none')) return false;
+            element = element.parent;
+          }
+          return href.isNotEmpty;
+        })
         .map((tag) {
           final text = tag.text.trim();
           final count = RegExp(r'\((\d+)\)').firstMatch(text)?.group(1);
-          return VideoTag(name: text.split('(').first.trim(), count: count == null ? null : int.parse(count));
+          final href = tag.attributes['href']!.trim();
+          final uri = Uri.tryParse(href);
+          final name = uri?.queryParametersAll['tags[]']?.firstOrNull ?? uri?.queryParameters['tag'] ?? text.replaceFirst(RegExp(r'\s*\(\d+\)\s*$'), '').trim();
+          return VideoTag(name: name, count: count == null ? null : int.parse(count), href: href);
         })
         .where((tag) => tag.name.isNotEmpty)
         .fold<List<VideoTag>>([], (list, tag) => list.any((item) => item.name == tag.name) ? list : [...list, tag]);
     final detail = descriptionPanel;
     final artistAnchor = document.querySelector('#video-user-avatar + img') ?? document.querySelector('#video-user-avatar') ?? detail?.querySelector('a[href*="/user/"] img');
     final artistName = document.querySelector('#video-artist-name')?.text.trim() ?? detail?.querySelector('a[href*="/user/"]')?.nextElementSibling?.querySelector('span')?.text.trim();
+    final artistArea = document.querySelector('#video-artist-name')?.parent;
+    final genreAnchor = artistArea?.querySelector('a[href*="genre"]') ?? document.querySelector('.video-description-panel a[href*="genre"], .video-details a[href*="genre"], #video-detail a[href*="genre"]');
+    final genre = genreAnchor?.text.trim();
     final artistId = document.querySelector('#video-subscribe-form input[name="subscribe-artist-id"]')?.attributes['value'];
     final subscriptionUserId = document.querySelector('#video-subscribe-form input[name="subscribe-user-id"]')?.attributes['value'];
     final currentUserId = document.querySelector('input[name="like-user-id"]')?.attributes['value'];
@@ -202,6 +218,8 @@ class Han1meApi {
     final viewsLine = detail?.querySelector('div.hidden-xs')?.text.trim() ?? '';
     final views = _extractViews(viewsLine);
     final uploadDate = _extractDate(viewsLine);
+    final commentCountText = document.querySelector('#tab-comments-count')?.text.replaceAll(RegExp(r'\D'), '') ?? '';
+    final commentCount = int.tryParse(commentCountText);
     final playlist = document.querySelectorAll('#playlist-scroll .playlist-hover-wrap').map(_card).where((video) => video.id.isNotEmpty).fold<List<VideoCard>>([], _addUniqueCard);
     final rating = playlist.where((video) => video.id == id).firstOrNull?.rating;
     return VideoDetail(
@@ -214,7 +232,7 @@ class Han1meApi {
       artistAvatarUrl: artistAvatarUrl,
        uploader: uploader?.isEmpty == true ? null : uploader,
       uploaderAvatarUrl: uploaderAvatarUrl,
-       genre: tags.isNotEmpty ? tags.first.name : null,
+       genre: genre?.isEmpty == true ? null : genre,
        views: views,
        rating: rating,
        uploadDate: uploadDate,
@@ -224,6 +242,7 @@ class Han1meApi {
       csrfToken: csrfToken,
       currentUserId: currentUserId,
       subscriptionUserId: subscriptionUserId,
+      commentCount: commentCount,
       tags: tags,
       sources: sources,
         playlist: playlist,

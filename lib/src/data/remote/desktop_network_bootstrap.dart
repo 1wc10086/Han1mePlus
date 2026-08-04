@@ -3,16 +3,16 @@ import '../../core/settings.dart';
 import '../local/json_store.dart';
 import 'han1me_http_client.dart';
 
-Future<void> bootstrapDesktopNetwork() async {
+Future<void> bootstrapDesktopNetwork([AppSettings? settings]) async {
   if (!isDesktopHttpPlatform) return;
-  final settings = await SettingsStore(JsonStore()).load();
+  final resolved = settings ?? await SettingsStore(JsonStore()).load();
   await Han1meHttpClient().setNetworkSettings(
-    useBuiltInHosts: settings.useBuiltInHosts,
-    useDoh: settings.useDoh,
-    dohPreset: settings.dohPreset,
-    dohCustomUrl: settings.dohCustomUrl,
-    dohBootstrapIps: settings.dohBootstrapIps,
-    dohTimeoutSeconds: settings.dohTimeoutSeconds,
-    useEch: settings.useEch,
+    useBuiltInHosts: resolved.useBuiltInHosts,
+    useDoh: resolved.useDoh,
+    dohPreset: resolved.dohPreset,
+    dohCustomUrl: resolved.dohCustomUrl,
+    dohBootstrapIps: resolved.dohBootstrapIps,
+    dohTimeoutSeconds: resolved.dohTimeoutSeconds,
+    useEch: resolved.useEch,
   );
 }

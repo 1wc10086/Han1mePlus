@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/assets/search_option_catalog.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../settings/settings_controller.dart';
@@ -96,15 +97,16 @@ class SearchQueryNotifier extends StateNotifier<SearchQuery> {
 final searchResultsProvider = FutureProvider.autoDispose<SearchResult>((ref) async {
   ref.watch(accountProvider);
   final settings = await ref.watch(settingsProvider.future);
+  final catalog = await ref.watch(searchOptionCatalogProvider.future);
   final query = ref.watch(searchQueryProvider);
   final result = await ref.watch(han1meRepositoryProvider).search(
         baseUrl: settings.resolvedBaseUrl,
         query: query.text,
-        genre: query.genre,
-        sort: query.sort,
-        date: query.date,
-        duration: query.duration,
-        tags: query.tags,
+        genre: catalog.genres.canonical(query.genre),
+        sort: catalog.sorts.canonical(query.sort),
+        date: catalog.releaseDates.canonical(query.date),
+        duration: catalog.durations.canonical(query.duration),
+        tags: query.tags.map(catalog.canonicalTag).toList(growable: false),
         broad: query.broad,
         type: query.type,
         page: query.page,

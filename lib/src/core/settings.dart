@@ -93,7 +93,6 @@ class AppSettings {
     this.expandHomeVideoCards = false,
     this.useNavigationDrawer = false,
     this.useLiquidGlassBottomBar = true,
-    this.minimizeOnExit = true,
     this.useHomeCategoryTabs = false,
     this.blockedVideoTitleKeywords = const [],
     this.blockedAuthors = const [],
@@ -164,7 +163,6 @@ class AppSettings {
   final bool expandHomeVideoCards;
   final bool useNavigationDrawer;
   final bool useLiquidGlassBottomBar;
-  final bool minimizeOnExit;
   final bool useHomeCategoryTabs;
   final List<String> blockedVideoTitleKeywords;
   final List<String> blockedAuthors;
@@ -255,7 +253,6 @@ class AppSettings {
         'expandHomeVideoCards': expandHomeVideoCards,
         'useNavigationDrawer': useNavigationDrawer,
         'useLiquidGlassBottomBar': useLiquidGlassBottomBar,
-        'minimizeOnExit': minimizeOnExit,
         'useHomeCategoryTabs': useHomeCategoryTabs,
         'blockedVideoTitleKeywords': blockedVideoTitleKeywords,
         'blockedAuthors': blockedAuthors,
@@ -327,7 +324,6 @@ class AppSettings {
         expandHomeVideoCards: json['expandHomeVideoCards'] as bool? ?? false,
         useNavigationDrawer: json['useNavigationDrawer'] as bool? ?? false,
         useLiquidGlassBottomBar: json['useLiquidGlassBottomBar'] as bool? ?? true,
-        minimizeOnExit: json['minimizeOnExit'] as bool? ?? true,
         useHomeCategoryTabs: json['useHomeCategoryTabs'] as bool? ?? false,
         blockedVideoTitleKeywords: (json['blockedVideoTitleKeywords'] as List? ?? const []).whereType<String>().toList(),
         blockedAuthors: (json['blockedAuthors'] as List? ?? const []).whereType<String>().toList(),
@@ -444,7 +440,6 @@ class AppSettings {
     bool? expandHomeVideoCards,
     bool? useNavigationDrawer,
     bool? useLiquidGlassBottomBar,
-    bool? minimizeOnExit,
     bool? useHomeCategoryTabs,
     List<String>? blockedVideoTitleKeywords,
     List<String>? blockedAuthors,
@@ -515,7 +510,6 @@ class AppSettings {
         expandHomeVideoCards: expandHomeVideoCards ?? this.expandHomeVideoCards,
         useNavigationDrawer: useNavigationDrawer ?? this.useNavigationDrawer,
         useLiquidGlassBottomBar: useLiquidGlassBottomBar ?? this.useLiquidGlassBottomBar,
-        minimizeOnExit: minimizeOnExit ?? this.minimizeOnExit,
         useHomeCategoryTabs: useHomeCategoryTabs ?? this.useHomeCategoryTabs,
         blockedVideoTitleKeywords: blockedVideoTitleKeywords ?? this.blockedVideoTitleKeywords,
         blockedAuthors: blockedAuthors ?? this.blockedAuthors,

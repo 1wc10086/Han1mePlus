@@ -11,24 +11,15 @@ class VideoPlayerShutdown {
 
   static void untrack(VideoPlayerController controller) => _controllers.remove(controller);
 
-  static Future<void> shutdownAll() async {
-    if (_controllers.isEmpty) return;
+  static Future<void> pauseAllExcept(VideoPlayerController keep) async {
     final controllers = _controllers.toList(growable: false);
-    _controllers.clear();
     for (final controller in controllers) {
-      await _shutdown(controller);
+      if (identical(controller, keep)) continue;
+      try {
+        if (controller.value.isInitialized && controller.value.isPlaying) {
+          await controller.pause().timeout(const Duration(seconds: 1));
+        }
+      } catch (_) {}
     }
-  }
-
-  static Future<void> _shutdown(VideoPlayerController controller) async {
-    try {
-      if (controller.value.isInitialized && controller.value.isPlaying) {
-        await controller.pause();
-        await Future<void>.delayed(const Duration(milliseconds: 64));
-      }
-    } catch (_) {}
-    try {
-      await controller.dispose().timeout(const Duration(seconds: 2));
-    } catch (_) {}
   }
 }

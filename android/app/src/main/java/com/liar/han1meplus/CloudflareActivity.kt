@@ -1,5 +1,6 @@
 package com.liar.han1meplus
 
+import androidx.annotation.Keep;
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
+@Keep
 class CloudflareActivity : Activity() {
     companion object {
         const val requestUrlKey = "request_url"

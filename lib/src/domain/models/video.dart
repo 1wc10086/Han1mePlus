@@ -79,10 +79,11 @@ class PreviewFeed {
 }
 
 class VideoTag {
-  const VideoTag({required this.name, this.count});
+  const VideoTag({required this.name, this.count, this.href});
 
   final String name;
   final int? count;
+  final String? href;
 }
 
 class VideoSource {
@@ -118,6 +119,7 @@ class VideoDetail {
     this.csrfToken,
     this.currentUserId,
     this.subscriptionUserId,
+    this.commentCount,
   });
 
   final String id;
@@ -139,6 +141,7 @@ class VideoDetail {
   final String? csrfToken;
   final String? currentUserId;
   final String? subscriptionUserId;
+  final int? commentCount;
   final List<VideoTag> tags;
   final List<VideoSource> sources;
   final List<VideoCard> playlist;

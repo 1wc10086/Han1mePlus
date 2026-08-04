@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart' show SearchResult;
 import '../shared/video_card.dart';
 import 'search_controller.dart';
-import 'search_options.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key, this.initialUrl});
@@ -20,7 +20,6 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _textController = TextEditingController();
-  late final Future<SearchOptions> _options = SearchOptions.load();
 
   @override
   void initState() {
@@ -44,6 +43,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final result = ref.watch(searchResultsProvider);
     final query = ref.watch(searchQueryProvider);
+    final options = ref.watch(searchOptionCatalogProvider).valueOrNull;
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -74,10 +74,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       ),
       body: Column(
         children: [
-          FutureBuilder<SearchOptions>(
-            future: _options,
-            builder: (context, snapshot) => _Filters(options: snapshot.data, query: query, notifier: ref.read(searchQueryProvider.notifier)),
-          ),
+          _Filters(options: options, query: query, notifier: ref.read(searchQueryProvider.notifier)),
           Expanded(
             child: result.when(
               loading: () => const Center(child: M3EContainedLoadingIndicator()),
@@ -107,7 +104,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 class _Filters extends StatelessWidget {
   const _Filters({required this.options, required this.query, required this.notifier});
 
-  final SearchOptions? options;
+  final SearchOptionCatalog? options;
   final SearchQuery query;
   final SearchQueryNotifier notifier;
 
@@ -115,7 +112,7 @@ class _Filters extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     if (options == null) return const SizedBox(height: 56);
-    final locale = _searchLocale(Localizations.localeOf(context));
+    final locale = searchOptionLocaleKey(Localizations.localeOf(context));
     final genres = options!.genres;
     final sorts = options!.sorts;
     final durations = options!.durations;
@@ -126,24 +123,24 @@ class _Filters extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
           _MenuFilterButton(
-            label: l10n.category(query.genre.isEmpty ? l10n.all : _optionLabel(genres, query.genre, locale)),
+            label: l10n.category(query.genre.isEmpty ? l10n.all : genres.localize(query.genre, locale) ?? query.genre),
             icon: Icons.category_outlined,
-            values: genres.map((item) => item.searchKey ?? '').toList(),
+            values: genres.options.map((item) => item.searchKey ?? '').toList(),
             onSelected: notifier.genre,
-            formatter: (value) => value.isEmpty ? l10n.all : _optionLabel(genres, value, locale),
+            formatter: (value) => value.isEmpty ? l10n.all : genres.localize(value, locale) ?? value,
           ),
           _MenuFilterButton(
-            label: l10n.sort(query.sort.isEmpty ? l10n.defaultValue : _optionLabel(sorts, query.sort, locale)),
+            label: l10n.sort(query.sort.isEmpty ? l10n.defaultValue : sorts.localize(query.sort, locale) ?? query.sort),
             icon: Icons.sort,
-            values: sorts.map((item) => item.searchKey ?? '').toList(),
+            values: sorts.options.map((item) => item.searchKey ?? '').toList(),
             onSelected: notifier.sort,
-            formatter: (value) => value.isEmpty ? l10n.defaultValue : _optionLabel(sorts, value, locale),
+            formatter: (value) => value.isEmpty ? l10n.defaultValue : sorts.localize(value, locale) ?? value,
           ),
           _ActionFilterButton(
-             label: l10n.releaseDate(query.date.isEmpty ? l10n.all : _optionLabel(options!.releaseDates, query.date, locale)),
+            label: l10n.releaseDate(query.date.isEmpty ? l10n.all : options!.releaseDates.localize(query.date, locale) ?? query.date),
             icon: Icons.calendar_month_outlined,
             onPressed: () async {
-              final date = await _showDateFilter(context, query.date, options!.releaseDates, locale);
+              final date = await _showDateFilter(context, query.date, options!.releaseDates.options, locale);
               if (date != null) notifier.date(date);
             },
           ),
@@ -151,16 +148,16 @@ class _Filters extends StatelessWidget {
             label: query.tags.isEmpty ? l10n.tags : l10n.tagsSelected(query.tags.length),
             icon: Icons.sell_outlined,
             onPressed: () async {
-              final selection = await _showTagFilter(context, query.tags, query.broad, options!.tags, locale);
+              final selection = await _showTagFilter(context, query.tags, query.broad, options!, locale);
               if (selection != null) notifier.tags(selection.tags, selection.broad);
             },
           ),
           _MenuFilterButton(
-            label: l10n.duration(query.duration.isEmpty ? l10n.all : _optionLabel(durations, query.duration, locale)),
+            label: l10n.duration(query.duration.isEmpty ? l10n.all : durations.localize(query.duration, locale) ?? query.duration),
             icon: Icons.schedule_outlined,
-            values: durations.map((item) => item.searchKey ?? '').toList(),
+            values: durations.options.map((item) => item.searchKey ?? '').toList(),
             onSelected: notifier.duration,
-            formatter: (value) => value.isEmpty ? l10n.all : _optionLabel(durations, value, locale),
+            formatter: (value) => value.isEmpty ? l10n.all : durations.localize(value, locale) ?? value,
           ),
           _ActionFilterButton(
             label: l10n.searchAuthors,
@@ -300,26 +297,43 @@ class _TagSelection {
   final bool broad;
 }
 
-Future<_TagSelection?> _showTagFilter(BuildContext context, List<String> selectedTags, bool broad, Map<String, List<SearchOption>> options, String locale) => showDialog<_TagSelection>(
+Future<_TagSelection?> _showTagFilter(BuildContext context, List<String> selectedTags, bool broad, SearchOptionCatalog catalog, String locale) => showDialog<_TagSelection>(
       context: context,
-      builder: (context) => _TagFilterDialog(selectedTags: selectedTags, broad: broad, options: options, locale: locale),
+      builder: (context) => _TagFilterDialog(selectedTags: selectedTags, broad: broad, catalog: catalog, locale: locale),
     );
 
 class _TagFilterDialog extends StatefulWidget {
-  const _TagFilterDialog({required this.selectedTags, required this.broad, required this.options, required this.locale});
+  const _TagFilterDialog({required this.selectedTags, required this.broad, required this.catalog, required this.locale});
 
   final List<String> selectedTags;
   final bool broad;
-  final Map<String, List<SearchOption>> options;
+  final SearchOptionCatalog catalog;
   final String locale;
 
   @override
   State<_TagFilterDialog> createState() => _TagFilterDialogState();
 }
 
-class _TagFilterDialogState extends State<_TagFilterDialog> {
-  late final Set<String> _selected = widget.selectedTags.toSet();
-  late bool _broad = widget.broad;
+class _TagFilterDialogState extends State<_TagFilterDialog> with SingleTickerProviderStateMixin {
+  late final Set<String> _selected;
+  late final TabController _tabController;
+  late bool _broad;
+  late String _group;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.selectedTags.map(widget.catalog.canonicalTag).toSet();
+    _broad = widget.broad;
+    _group = widget.catalog.tags.keys.first;
+    _tabController = TabController(length: widget.catalog.tags.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -338,26 +352,30 @@ class _TagFilterDialogState extends State<_TagFilterDialog> {
               value: _broad,
               onChanged: (value) => setState(() => _broad = value),
             ),
-            const Divider(),
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: widget.catalog.tags.keys.map((group) => Tab(text: _tagGroupLabel(l10n, group))).toList(growable: false),
+              onTap: (index) => setState(() => _group = widget.catalog.tags.keys.elementAt(index)),
+            ),
             Expanded(
               child: ListView(
                 children: [
-                  for (final entry in widget.options.entries)
-                    _TagGroup(
-                      title: _tagGroupLabel(l10n, entry.key),
-                      tags: entry.value,
-                      locale: widget.locale,
-                      selected: _selected,
-                      onChanged: (tag, selected) {
-                        setState(() {
-                          if (selected) {
-                            _selected.add(tag);
-                          } else {
-                            _selected.remove(tag);
-                          }
-                        });
-                      },
-                    ),
+                  _TagGroup(
+                    tags: widget.catalog.tags[_group]!.options,
+                    locale: widget.locale,
+                    selected: _selected,
+                    onChanged: (tag, selected) {
+                      setState(() {
+                        if (selected) {
+                          _selected.add(tag);
+                        } else {
+                          _selected.remove(tag);
+                        }
+                      });
+                    },
+                  ),
                 ],
               ),
             ),
@@ -373,9 +391,8 @@ class _TagFilterDialogState extends State<_TagFilterDialog> {
 }
 
 class _TagGroup extends StatelessWidget {
-  const _TagGroup({required this.title, required this.tags, required this.locale, required this.selected, required this.onChanged});
+  const _TagGroup({required this.tags, required this.locale, required this.selected, required this.onChanged});
 
-  final String title;
   final List<SearchOption> tags;
   final String locale;
   final Set<String> selected;
@@ -387,8 +404,6 @@ class _TagGroup extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -409,13 +424,6 @@ String _tagGroupLabel(AppLocalizations l10n, String group) => switch (group) {
   'sex_positions' => l10n.tagPositions,
   _ => group,
 };
-
-String _searchLocale(Locale locale) => locale.languageCode == 'zh' && locale.countryCode == 'TW' ? 'zh-rTW' : locale.languageCode == 'zh' ? 'zh-rCN' : 'en';
-
-String _optionLabel(List<SearchOption> options, String searchKey, String locale) {
-  final option = options.where((item) => item.searchKey == searchKey);
-  return option.isEmpty ? searchKey : option.first.labelFor(locale);
-}
 
 class _PaginationBar extends StatelessWidget {
   const _PaginationBar({required this.result, required this.onChanged});
