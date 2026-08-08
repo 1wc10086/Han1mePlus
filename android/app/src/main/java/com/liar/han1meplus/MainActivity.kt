@@ -29,6 +29,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.net.InetAddress
 import java.nio.charset.Charset
 import java.util.concurrent.CountDownLatch
@@ -82,6 +83,9 @@ class MainActivity : FlutterActivity() {
     private var volumeUpPresses = 0
     private var lastVolumeUpPress = 0L
     private var authenticationResult: MethodChannel.Result? = null
+    private var directoryResult: MethodChannel.Result? = null
+    private var documentResult: MethodChannel.Result? = null
+    private var documentBytes: ByteArray? = null
     @Volatile private lateinit var client: OkHttpClient
 
     private val cookieJar = object : CookieJar {
@@ -226,6 +230,32 @@ class MainActivity : FlutterActivity() {
                         startActivityForResult(keyguard.createConfirmDeviceCredentialIntent(null, null), 812)
                     }
                 }
+                "selectDirectory" -> {
+                    if (directoryResult != null) result.error("directory_picker_busy", "Directory picker is already open", null)
+                    else {
+                        directoryResult = result
+                        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), 813)
+                    }
+                }
+                "exportDirectory" -> {
+                    val sourcePath = call.argument<String>("sourcePath")
+                    val destination = call.argument<String>("destination")
+                    if (sourcePath == null || destination == null) result.error("invalid_export", "Missing export path", null)
+                    else Thread {
+                        runCatching { copyDirectoryToTree(File(sourcePath), android.net.Uri.parse(destination)) }
+                            .onSuccess { runOnUiThread { result.success(null) } }
+                            .onFailure { error -> runOnUiThread { result.error("export_failed", error.message, null) } }
+                    }.start()
+                }
+                "saveDocument" -> {
+                    if (documentResult != null) result.error("document_picker_busy", "Document picker is already open", null)
+                    else {
+                        documentResult = result
+                        documentBytes = call.argument<ByteArray>("bytes")
+                        val name = call.argument<String>("name") ?: "han1me-plus-backup.zip"
+                        startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/zip").putExtra(Intent.EXTRA_TITLE, name).addCategory(Intent.CATEGORY_OPENABLE), 814)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -250,6 +280,43 @@ class MainActivity : FlutterActivity() {
             authenticationResult?.success(resultCode == Activity.RESULT_OK)
             authenticationResult = null
         }
+        if (requestCode == 813) {
+            val uri = data?.data
+            if (resultCode == Activity.RESULT_OK && uri != null) {
+                val flags = (data?.flags ?: 0) and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                runCatching { contentResolver.takePersistableUriPermission(uri, flags) }
+                directoryResult?.success(uri.toString())
+            } else directoryResult?.success(null)
+            directoryResult = null
+        }
+        if (requestCode == 814) {
+            val uri = data?.data
+            val bytes = documentBytes
+            if (resultCode == Activity.RESULT_OK && uri != null && bytes != null) {
+                runCatching { contentResolver.openOutputStream(uri, "w")!!.use { it.write(bytes) } }
+                    .onSuccess { documentResult?.success(true) }
+                    .onFailure { documentResult?.error("save_failed", it.message, null) }
+            } else documentResult?.success(false)
+            documentResult = null
+            documentBytes = null
+        }
+    }
+
+    private fun copyDirectoryToTree(source: File, treeUri: android.net.Uri) {
+        require(source.isDirectory) { "Source directory does not exist" }
+        val root = androidx.documentfile.provider.DocumentFile.fromTreeUri(this, treeUri) ?: error("Invalid destination directory")
+        source.listFiles().orEmpty().forEach { copyToDocument(it, root) }
+    }
+
+    private fun copyToDocument(source: File, parent: androidx.documentfile.provider.DocumentFile) {
+        if (source.isDirectory) {
+            val target = parent.findFile(source.name)?.takeIf { it.isDirectory } ?: parent.createDirectory(source.name) ?: error("Unable to create ${source.name}")
+            source.listFiles().orEmpty().forEach { copyToDocument(it, target) }
+            return
+        }
+        parent.findFile(source.name)?.delete()
+        val target = parent.createFile("application/octet-stream", source.name) ?: error("Unable to create ${source.name}")
+        contentResolver.openOutputStream(target.uri, "w")!!.use { output -> FileInputStream(source).use { input -> input.copyTo(output) } }
     }
 
     private fun androidUpdateAbi(): String? {

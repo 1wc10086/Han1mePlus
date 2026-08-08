@@ -14,8 +14,8 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "14"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.3"
+val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "15"
+val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.4"
 
 android {
     namespace = "com.liar.han1meplus"
@@ -72,6 +72,7 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.3.10")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
