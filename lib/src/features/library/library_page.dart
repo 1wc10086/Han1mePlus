@@ -11,6 +11,7 @@ import '../../data/local/watch_repository.dart';
 import '../../core/app_shell.dart';
 import '../../data/han1me_repository.dart';
 import '../../domain/models/library.dart';
+import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
 import '../shared/video_card.dart';
 import '../account/account_controller.dart';
@@ -226,7 +227,7 @@ class _RemoteSubscriptionsState extends State<_RemoteSubscriptions> {
                   artist: artist,
                   selected: isSelected,
                   onTap: () => setState(() => _artist = artist.name == selected ? null : artist.name),
-                  onLongPress: () => context.push('/search', extra: Uri(path: '/search', queryParameters: {'query': artist.name}).toString()),
+                  onLongPress: () => context.push('/search', extra: SearchRouteRequest(initialUrl: Uri(path: '/search', queryParameters: {'query': artist.name}).toString())),
                 );
               },
             ),
@@ -263,7 +264,7 @@ class _LocalSubscriptions extends StatelessWidget {
               itemCount: artists.length,
               itemBuilder: (context, index) {
                 final artist = artists[index];
-                return _SubscribedArtistCard(artist: artist, selected: artist.id == selected, onTap: () => onSelected(artist.id == selected ? null : artist.id), onLongPress: () => context.push('/search', extra: Uri(path: '/search', queryParameters: {'query': artist.name}).toString()));
+                return _SubscribedArtistCard(artist: artist, selected: artist.id == selected, onTap: () => onSelected(artist.id == selected ? null : artist.id), onLongPress: () => context.push('/search', extra: SearchRouteRequest(initialUrl: Uri(path: '/search', queryParameters: {'query': artist.name}).toString())));
               },
             ),
           ),

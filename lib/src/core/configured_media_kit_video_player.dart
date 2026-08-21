@@ -20,6 +20,9 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   final _videoControllers = HashMap<int, VideoController>();
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
   final _streamSubscriptions = HashMap<int, List<StreamSubscription>>();
+  final _rateQueues = HashMap<int, Future<void>>();
+  final _rateEpochs = HashMap<int, int>();
+  final _lastRates = HashMap<int, double>();
 
   static void registerWith() {
     VideoPlayerPlatform.instance = _instance;
@@ -36,10 +39,16 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     _videoControllers.clear();
     _streamControllers.clear();
     _streamSubscriptions.clear();
+    _rateQueues.clear();
+    _rateEpochs.clear();
+    _lastRates.clear();
   }
 
   @override
   Future<void> dispose(int textureId) async {
+    _rateEpochs[textureId] = (_rateEpochs[textureId] ?? 0) + 1;
+    _rateQueues.remove(textureId);
+    _lastRates.remove(textureId);
     final player = _players.remove(textureId);
     final streamController = _streamControllers.remove(textureId);
     final subscriptions = _streamSubscriptions.remove(textureId);
@@ -198,8 +207,24 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   }
 
   @override
-  Future<void> setPlaybackSpeed(int textureId, double speed) async {
-    return _players[textureId]?.setRate(speed);
+  Future<void> setPlaybackSpeed(int textureId, double speed) {
+    final player = _players[textureId];
+    if (player == null) return Future<void>.value();
+    if (_lastRates[textureId] == speed) return Future<void>.value();
+    final epoch = _rateEpochs[textureId] ?? 0;
+    final previous = _rateQueues[textureId] ?? Future<void>.value();
+    final operation = previous.catchError((_) {}).then((_) async {
+      if (_rateEpochs[textureId] != epoch || !identical(_players[textureId], player)) return;
+      if (_lastRates[textureId] == speed) return;
+      try {
+        await player.setRate(speed);
+        if (_rateEpochs[textureId] == epoch && identical(_players[textureId], player)) {
+          _lastRates[textureId] = speed;
+        }
+      } catch (_) {}
+    });
+    _rateQueues[textureId] = operation;
+    return operation;
   }
 
   @override

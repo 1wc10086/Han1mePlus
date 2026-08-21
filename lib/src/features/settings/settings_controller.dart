@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/media_player_initializer.dart';
+import '../../core/playback_speed_policy.dart';
 import '../../core/settings.dart';
 import '../../data/local/json_store.dart';
 import '../../data/remote/han1me_http_client.dart';
@@ -24,7 +25,10 @@ class SettingsController extends AsyncNotifier<AppSettings> {
 
   Future<void> saveChanges(AppSettings Function(AppSettings current) transform) async {
     final current = _current;
-    final next = transform(current);
+    final requested = transform(current);
+    final next = PlaybackSpeedPolicy.isHarmonyOs && requested.playerEngine != PlayerEngine.libMpv
+        ? requested.copyWith(playerEngine: PlayerEngine.libMpv)
+        : requested;
     state = AsyncData(next);
     await ref.read(settingsStoreProvider).save(next);
     MediaPlayerInitializer.update(next);
@@ -33,11 +37,14 @@ class SettingsController extends AsyncNotifier<AppSettings> {
   }
 
   Future<void> replace(AppSettings settings) async {
-    state = AsyncData(settings);
-    await ref.read(settingsStoreProvider).save(settings);
-    MediaPlayerInitializer.update(settings);
-    MediaPlayerInitializer.apply(settings);
-    await _syncNetworkSettings(settings);
+    final next = PlaybackSpeedPolicy.isHarmonyOs && settings.playerEngine != PlayerEngine.libMpv
+        ? settings.copyWith(playerEngine: PlayerEngine.libMpv)
+        : settings;
+    state = AsyncData(next);
+    await ref.read(settingsStoreProvider).save(next);
+    MediaPlayerInitializer.update(next);
+    MediaPlayerInitializer.apply(next);
+    await _syncNetworkSettings(next);
   }
 
   bool _networkSettingsChanged(AppSettings current, AppSettings next) =>

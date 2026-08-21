@@ -9,6 +9,30 @@
 #include "flutter/generated_plugin_registrant.h"
 #include "resource.h"
 
+namespace {
+
+void ApplyPerMonitorDpiAwareness() {
+  if (!SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+    SetProcessDPIAware();
+  }
+}
+
+UINT SystemDpi() {
+  const auto dpi = GetDpiForSystem();
+  if (dpi != 0) return dpi;
+  const auto screen = GetDC(nullptr);
+  if (screen == nullptr) return 96;
+  const auto result = static_cast<UINT>(GetDeviceCaps(screen, LOGPIXELSX));
+  ReleaseDC(nullptr, screen);
+  return result == 0 ? 96 : result;
+}
+
+int DpiScale(int value, UINT dpi) {
+  return static_cast<int>(static_cast<double>(value) * dpi / 96.0 + 0.5);
+}
+
+}
+
 struct AppWindow {
   std::unique_ptr<flutter::FlutterViewController> controller;
 };
@@ -38,8 +62,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
   switch (message) {
     case WM_GETMINMAXINFO: {
       auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
-      info->ptMinTrackSize.x = 720;
-      info->ptMinTrackSize.y = 540;
+      const auto dpi = GetDpiForWindow(window);
+      info->ptMinTrackSize.x = DpiScale(720, dpi);
+      info->ptMinTrackSize.y = DpiScale(540, dpi);
       return 0;
     }
     case WM_SIZE:
@@ -56,6 +81,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
 }
 
 int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int show_command) {
+  ApplyPerMonitorDpiAwareness();
   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   ConfigureWebViewUserDataFolder();
   const wchar_t class_name[] = L"Han1mePlusWindow";
@@ -68,7 +94,10 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int show_command)
   RegisterClass(&window_class);
 
   AppWindow app;
-  const auto window = CreateWindow(class_name, L"Han1me+", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, nullptr, nullptr, instance, &app);
+  const auto dpi = SystemDpi();
+  const auto width = DpiScale(1280, dpi);
+  const auto height = DpiScale(720, dpi);
+  const auto window = CreateWindow(class_name, L"Han1me+", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, nullptr, nullptr, instance, &app);
   if (window == nullptr) return EXIT_FAILURE;
 
   RECT bounds{};

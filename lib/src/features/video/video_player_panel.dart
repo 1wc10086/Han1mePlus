@@ -162,8 +162,9 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
   Future<void> _changeQuality(VideoSource source) async {
     final current = _controllerNotifier.value;
     final position = current?.value.isInitialized == true ? current!.value.position : null;
+    final wasPlaying = current?.value.isInitialized == true && current!.value.isPlaying;
     _selectedQuality = source.quality;
-    await _load(source, startAt: position);
+    await _load(source, startAt: position, resumePlaying: wasPlaying);
   }
 
   Future<void> _changeSuperResolution(SuperResolutionMode mode) async {
@@ -171,14 +172,15 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (settings.superResolutionMode == mode) return;
     final current = _controllerNotifier.value;
     final position = current?.value.isInitialized == true ? current!.value.position : null;
+    final wasPlaying = current?.value.isInitialized == true && current!.value.isPlaying;
     final source = widget.video.sources.where((source) => source.quality == _loadedQuality).firstOrNull;
     await ref.read(settingsProvider.notifier).saveChanges(
           (current) => current.copyWith(superResolutionMode: mode),
         );
-    if (source != null) await _load(source, startAt: position);
+    if (source != null) await _load(source, startAt: position, resumePlaying: wasPlaying);
   }
 
-  Future<void> _load(VideoSource source, {Duration? startAt}) async {
+  Future<void> _load(VideoSource source, {Duration? startAt, bool resumePlaying = false}) async {
     final version = ++_loadVersion;
     final previous = _controllerNotifier.value;
     _controllerNotifier.value = null;
@@ -202,6 +204,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
           );
     _loadedQuality = source.quality;
     _qualityNotifier.value = source.quality;
+    _wasPlaying = null;
     VideoPlayerShutdown.track(controller);
     setState(() {
       _controllerNotifier.value = controller;
@@ -213,9 +216,10 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
         return;
       }
       if (mounted && version == _loadVersion) setState(() {});
-      await _applyPlaybackPreferences(controller, version, startAt);
+      controller.addListener(_saveProgress);
+      await _applyPlaybackPreferences(controller, version, startAt, resumePlaying: resumePlaying);
       if (!mounted || version != _loadVersion || controller != _controllerNotifier.value) return;
-       controller.addListener(_saveProgress);
+      _saveProgress();
     } catch (error) {
       if (controller == _controllerNotifier.value) {
         _controllerNotifier.value = null;
@@ -251,7 +255,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     return disposal;
   }
 
-  Future<void> _applyPlaybackPreferences(VideoPlayerController controller, int version, Duration? startAt) async {
+  Future<void> _applyPlaybackPreferences(VideoPlayerController controller, int version, Duration? startAt, {bool resumePlaying = false}) async {
     try {
       final settings = await ref.read(settingsProvider.future);
       if (!mounted || version != _loadVersion || controller != _controllerNotifier.value) return;
@@ -267,6 +271,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
         }
       }
       _restored = true;
+      if (resumePlaying || (startAt == null && settings.autoPlayOnOpen)) await controller.play();
     } catch (_) {}
   }
 

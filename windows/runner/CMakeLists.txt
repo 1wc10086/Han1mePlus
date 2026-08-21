@@ -3,6 +3,7 @@ project(runner LANGUAGES CXX)
 
 add_executable(${BINARY_NAME} WIN32
   "main.cpp"
+  "runner.exe.manifest"
   "Runner.rc"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
 )

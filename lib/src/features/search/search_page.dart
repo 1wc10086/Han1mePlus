@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:m3e_core/m3e_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,17 +8,19 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart' show SearchResult;
+import '../../domain/models/search_query.dart';
 import '../settings/settings_controller.dart';
 import '../shared/compact_video_card.dart';
 import '../shared/video_card.dart';
 import 'search_controller.dart';
+import 'search_history_sheet.dart';
 
 const _compactSearchGenres = {'裏番', '泡麵番'};
 
 class SearchPage extends ConsumerStatefulWidget {
-  const SearchPage({super.key, this.initialUrl});
+  const SearchPage({super.key, required this.request});
 
-  final String? initialUrl;
+  final SearchRouteRequest request;
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -28,13 +32,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialUrl != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(searchInitProvider.notifier).state = widget.initialUrl;
-      });
-    }
-    final query = ref.read(searchQueryProvider);
-    if (query.text.isNotEmpty) _textController.text = query.text;
+    final query = ref.read(searchQueryProvider(widget.request));
+    _textController.text = query.text;
+    if (query.hasSearchCriteria) unawaited(ref.read(searchHistoryProvider.notifier).record(query));
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.request == widget.request) return;
+    _textController.text = ref.read(searchQueryProvider(widget.request)).text;
   }
 
   @override
@@ -43,48 +50,74 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
+  Future<void> _showHistory(BuildContext context, WidgetRef ref, SearchQueryNotifier notifier) async {
+    final selected = await showSearchHistorySheet(context, ref);
+    if (selected == null || !mounted) return;
+    notifier.replace(selected);
+    _textController.value = _textController.value.copyWith(text: selected.text, selection: TextSelection.collapsed(offset: selected.text.length));
+    unawaited(ref.read(searchHistoryProvider.notifier).record(selected));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final result = ref.watch(searchResultsProvider);
-    final query = ref.watch(searchQueryProvider);
+    final request = widget.request;
+    final result = ref.watch(searchResultsProvider(request));
+    final query = ref.watch(searchQueryProvider(request));
+    final notifier = ref.read(searchQueryProvider(request).notifier);
     final options = ref.watch(searchOptionCatalogProvider).valueOrNull;
     final l10n = AppLocalizations.of(context)!;
     final useCompactCards = (ref.watch(settingsProvider).valueOrNull?.useCompactSearchCards ?? true) &&
         _compactSearchGenres.contains(options?.genres.canonical(query.genre) ?? query.genre);
+    ref.listen<SearchQuery>(searchQueryProvider(request), (previous, next) {
+      if (previous != next && next.hasSearchCriteria) unawaited(ref.read(searchHistoryProvider.notifier).record(next));
+      if (_textController.text != next.text) _textController.value = _textController.value.copyWith(text: next.text, selection: TextSelection.collapsed(offset: next.text.length));
+    });
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
-        title: TextField(
-          controller: _textController,
-          autofocus: widget.initialUrl == null,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: l10n.searchHint,
-            border: InputBorder.none,
-            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _textController,
-              builder: (context, value, _) => value.text.isEmpty
-                  ? const SizedBox.shrink()
-                  : IconButton(
-                      tooltip: l10n.clear,
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        _textController.clear();
-                        ref.read(searchQueryProvider.notifier).text('');
-                      },
-                    ),
-            ),
-          ),
-          onSubmitted: ref.read(searchQueryProvider.notifier).text,
-        ),
+        title: Text(l10n.searchHint),
       ),
       body: Column(
         children: [
-          _Filters(options: options, query: query, notifier: ref.read(searchQueryProvider.notifier)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SearchBar(
+              controller: _textController,
+              autoFocus: request.initialUrl == null,
+              hintText: l10n.searchHint,
+              leading: const Icon(Icons.search),
+              trailing: [
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _textController,
+                  builder: (context, value, _) => value.text.isEmpty
+                      ? const SizedBox.shrink()
+                      : IconButton(
+                          tooltip: l10n.clear,
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _textController.clear();
+                            notifier.text('');
+                          },
+                        ),
+                ),
+                IconButton(
+                  tooltip: l10n.searchHistory,
+                  icon: const Icon(Icons.history),
+                  onPressed: () => _showHistory(context, ref, notifier),
+                ),
+              ],
+              onSubmitted: (value) {
+                notifier.text(value.trim());
+                final next = ref.read(searchQueryProvider(request));
+                unawaited(ref.read(searchHistoryProvider.notifier).record(next));
+              },
+            ),
+          ),
+          _Filters(options: options, query: query, notifier: notifier),
           Expanded(
             child: result.when(
               loading: () => const Center(child: M3EContainedLoadingIndicator()),
-              error: (error, stackTrace) => _ErrorView(error: error, onRetry: () => ref.invalidate(searchResultsProvider)),
+              error: (error, stackTrace) => _ErrorView(error: error, onRetry: () => ref.invalidate(searchResultsProvider(request))),
               data: (page) => page.items.isEmpty
                   ? _EmptyState(message: l10n.noSearchResults)
                   : useCompactCards
@@ -92,7 +125,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           videos: page.items,
                           itemBuilder: (context, index, video) => CompactVideoCard(
                             video: video,
-                            onTap: query.type == 'artist' ? () => ref.read(searchQueryProvider.notifier).artist(video.uploadTime ?? video.title) : null,
+                            onTap: video.id.isEmpty ? null : () => context.push('/video/${video.id}'),
                           ),
                         )
                       : VideoCardGrid(
@@ -100,14 +133,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           itemBuilder: (context, index, video, horizontal) => VideoCardTile(
                             video: video,
                             horizontal: horizontal,
-                            onTap: query.type == 'artist' ? () => ref.read(searchQueryProvider.notifier).artist(video.uploadTime ?? video.title) : null,
+                            onTap: video.id.isEmpty ? null : () => context.push('/video/${video.id}'),
                           ),
                         ),
             ),
           ),
           _PaginationBar(
             result: result.valueOrNull,
-            onChanged: ref.read(searchQueryProvider.notifier).page,
+            onChanged: notifier.page,
           ),
         ],
       ),

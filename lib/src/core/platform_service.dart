@@ -17,6 +17,14 @@ class PlatformService {
   static Future<void> setEmergencyExit(bool value) => isDesktop ? Future.value() : _channel.invokeMethod<void>('setEmergencyExit', {'value': value});
   static Future<void> minimizeApp() => isDesktop ? Future.value() : _channel.invokeMethod<void>('minimizeApp');
   static Future<bool> enterPictureInPicture() async => !Platform.isAndroid ? false : await _channel.invokeMethod<bool>('enterPictureInPicture') ?? false;
+  static Future<bool> isHarmonyOs() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isHarmonyOs') ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
   static Future<String?> androidUpdateAbi() async => !Platform.isAndroid ? null : await _channel.invokeMethod<String>('androidUpdateAbi');
   static Future<void> openAppLinksSettings() => isDesktop ? Future.value() : _channel.invokeMethod<void>('openAppLinksSettings');
   static Future<bool> authenticate() async => isDesktop ? false : await _channel.invokeMethod<bool>('authenticate') ?? false;

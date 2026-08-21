@@ -8,6 +8,7 @@ import 'package:m3e_core/m3e_core.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/playback_speed_policy.dart';
 import '../../core/platform_service.dart';
 import '../../core/settings.dart';
 import '../../domain/models/video.dart';
@@ -45,11 +46,24 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   double _volume = 1;
   _Adjustment? _adjustment;
   Timer? _hideTimer;
+  Future<void> _speedOperation = Future<void>.value();
+  double? _speedBeforeLongPress;
+  var _speedRequest = 0;
 
   @override
-  void initState() { super.initState(); _readLevels(); WidgetsBinding.instance.addPostFrameCallback((_) => _restartTimer()); }
+  void initState() {
+    super.initState();
+    _readLevels();
+    unawaited(PlaybackSpeedPolicy.initialize());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restartTimer());
+  }
+
   @override
-  void dispose() { _hideTimer?.cancel(); super.dispose(); }
+  void dispose() {
+    _speedRequest++;
+    _hideTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _readLevels() async {
     final levels = await Future.wait([PlatformService.screenBrightness(), PlatformService.volume()]);
@@ -73,10 +87,36 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
 
   void _longPress(bool active) {
     final controller = widget.controller.value;
-    if (controller == null) return;
-    final speed = ref.read(settingsProvider).valueOrNull?.longPressPlaybackSpeed ?? 2;
-    controller.setPlaybackSpeed(active ? speed : (ref.read(settingsProvider).valueOrNull?.defaultPlaybackSpeed ?? 1));
-    setState(() => _adjustment = active ? _Adjustment.speed(speed) : null);
+    if (controller == null || !controller.value.isInitialized) return;
+    final settings = ref.read(settingsProvider).valueOrNull ?? const AppSettings();
+    if (active) {
+      if (_speedBeforeLongPress != null) return;
+      _speedBeforeLongPress = controller.value.playbackSpeed;
+      final speed = PlaybackSpeedPolicy.longPressSpeed(
+        settings,
+        isThreeDimensional: PlaybackSpeedPolicy.isThreeDimensional(widget.video.genre, widget.video.title),
+      );
+      final request = ++_speedRequest;
+      unawaited(_queueSpeed(controller, speed, request));
+      setState(() => _adjustment = _Adjustment.speed(speed));
+      return;
+    }
+    final speed = _speedBeforeLongPress ?? controller.value.playbackSpeed;
+    _speedBeforeLongPress = null;
+    final request = ++_speedRequest;
+    unawaited(_queueSpeed(controller, speed, request));
+    setState(() => _adjustment = null);
+  }
+
+  Future<void> _queueSpeed(VideoPlayerController controller, double speed, int request) {
+    final operation = _speedOperation.catchError((_) {}).then((_) async {
+      if (!mounted || request != _speedRequest || controller != widget.controller.value || !controller.value.isInitialized) return;
+      try {
+        if ((controller.value.playbackSpeed - speed).abs() > .001) await controller.setPlaybackSpeed(speed);
+      } catch (_) {}
+    });
+    _speedOperation = operation;
+    return operation;
   }
 
   void _dragStart(DragStartDetails details) {

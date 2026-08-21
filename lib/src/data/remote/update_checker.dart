@@ -76,27 +76,40 @@ class UpdateChecker {
       return variant == null
           ? null
           : assets
-              .where(
-                (asset) => '${asset['name'] ?? ''}'.toLowerCase() == 'android.$variant.apk',
-              )
+              .where((asset) => '${asset['name'] ?? ''}'.toLowerCase() == 'android.$variant.apk')
               .firstOrNull;
     }
-    final suffix = switch (Platform.operatingSystem) {
-      'ios' => '.ipa',
-      'macos' => '.dmg',
-      'windows' => '.exe',
-      _ => '.apk',
+    return switch (Platform.operatingSystem) {
+      'linux' => _firstMatching(assets, const ['.tar.gz', '.tar.xz', '.deb']),
+      'windows' => _windowsAsset(assets),
+      'ios' => _firstMatching(assets, const ['.ipa']),
+      'macos' => _firstMatching(assets, const ['.dmg']),
+      _ => null,
     };
-    final preferredAssets = assets.where((asset) => '${asset['name'] ?? ''}'.toLowerCase().endsWith(suffix));
-    return Platform.isWindows
-        ? preferredAssets
-                .where((asset) {
-                  final name = '${asset['name'] ?? ''}'.toLowerCase();
-                  return name.contains('setup') || name.contains('installer');
-                })
-                .firstOrNull ??
-            preferredAssets.firstOrNull
-        : preferredAssets.firstOrNull;
+  }
+
+  Map? _windowsAsset(Iterable<Map> assets) {
+    final exes = assets
+        .where((asset) => '${asset['name'] ?? ''}'.toLowerCase().endsWith('.exe'))
+        .toList(growable: false);
+    if (exes.isEmpty) return null;
+    return exes.firstWhere(
+      (asset) {
+        final name = '${asset['name'] ?? ''}'.toLowerCase();
+        return name.contains('setup') || name.contains('installer');
+      },
+      orElse: () => exes.first,
+    );
+  }
+
+  Map? _firstMatching(Iterable<Map> assets, List<String> suffixes) {
+    for (final suffix in suffixes) {
+      final match = assets
+          .where((asset) => '${asset['name'] ?? ''}'.toLowerCase().endsWith(suffix))
+          .firstOrNull;
+      if (match != null) return match;
+    }
+    return null;
   }
 
   bool _newer(String remote, String local) {

@@ -30,6 +30,7 @@ class WindowsHttpOverrides extends HttpOverrides {
     final environmentRule = WindowsProxy.rule(environmentProxy);
     if (environmentRule != null) return environmentRule;
     if (Platform.isMacOS) return _macosSystemProxy();
+    if (Platform.isLinux) return _linuxSystemProxy();
     if (!Platform.isWindows) return 'DIRECT';
     try {
       final enabledResult = await Process.run('reg', [
@@ -78,6 +79,35 @@ class WindowsHttpOverrides extends HttpOverrides {
       client.badCertificateCallback = (cert, host, port) => WindowsConnectionFactory.hanimeHosts.contains(host);
     }
     return client;
+  }
+
+  static Future<String> _linuxSystemProxy() async {
+    try {
+      Future<String?> setting(String schema, String key) async {
+        final result = await Process.run('gsettings', ['get', schema, key]);
+        if (result.exitCode != 0) return null;
+        final value = result.stdout.toString().trim();
+        if (value.isEmpty || value == "''") return null;
+        return value.replaceAll(RegExp(r"^'|'$"), '');
+      }
+
+      final mode = await setting('org.gnome.system.proxy', 'mode');
+      if (mode == null || mode == 'none' || mode == 'auto') return 'DIRECT';
+      Future<String?> pair(String prefix) async {
+        final host = await setting('org.gnome.system.proxy.$prefix', 'host');
+        if (host == null || host.isEmpty) return null;
+        final port = await setting('org.gnome.system.proxy.$prefix', 'port');
+        return WindowsProxy.rule('$host:$port');
+      }
+
+      final https = await pair('https');
+      if (https != null) return https;
+      final http = await pair('http');
+      if (http != null) return http;
+      return await pair('socks') ?? 'DIRECT';
+    } catch (_) {
+      return 'DIRECT';
+    }
   }
 
   static Future<String> _macosSystemProxy() async {

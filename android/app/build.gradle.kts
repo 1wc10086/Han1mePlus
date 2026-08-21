@@ -14,8 +14,8 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "15"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.4"
+val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "16"
+val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.5"
 
 android {
     namespace = "com.liar.han1meplus"
@@ -39,12 +39,6 @@ android {
         targetSdk = 37
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
-        
-        externalNativeBuild {
-            cmake {
-                arguments += "-DANDROID_STL=c++_shared"
-            }
-        }
     }
 
     buildTypes {
@@ -56,13 +50,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
-    }
-    
-    externalNativeBuild {
-        cmake {
-            version = "4.3.0"
-            path = file("CMakeLists.txt")
         }
     }
 }

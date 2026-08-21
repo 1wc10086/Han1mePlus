@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../core/route_observer.dart';
 import '../domain/models/comic.dart';
+import '../domain/models/search_query.dart';
 import '../domain/models/video.dart';
 import '../features/account/account_web_page.dart';
 import '../features/account/login_page.dart';
@@ -86,7 +87,19 @@ class AppRouter {
             title: AppLocalizations.of(context)!.accountProfile,
           ),
         ),
-        GoRoute(path: '/search', builder: (context, state) => SearchPage(initialUrl: state.extra as String?)),
+        GoRoute(
+          path: '/search',
+          builder: (context, state) {
+            final extra = state.extra;
+            final request = extra is SearchRouteRequest
+                ? extra
+                : SearchRouteRequest.fromRoute(
+                    state.pageKey.value.toString(),
+                    initialUrl: extra as String? ?? (state.uri.hasQuery ? state.uri.toString() : null),
+                  );
+            return SearchPage(key: ValueKey(request.sessionId), request: request);
+          },
+        ),
         GoRoute(path: '/settings/about', builder: (context, state) => const AboutPage()),
         GoRoute(path: '/settings/license', builder: (context, state) => const AppLicensePage()),
         GoRoute(path: '/settings/keyframes', builder: (context, state) => const KeyframesPage()),

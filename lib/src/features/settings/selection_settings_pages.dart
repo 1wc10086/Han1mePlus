@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/playback_speed_policy.dart';
 import '../../core/settings.dart';
 import '../account/account_controller.dart';
 import '../explore/explore_controller.dart';
@@ -59,7 +60,7 @@ class DecoderSettingsPage extends ConsumerWidget {
     return _RadioSettingsPage<PlayerEngine>(
       title: l10n.decoder,
       current: current,
-      options: PlayerEngineX.available,
+      options: PlaybackSpeedPolicy.isHarmonyOs ? const [PlayerEngine.libMpv] : PlayerEngineX.available,
       label: (value) => switch (value) { PlayerEngine.exoPlayer => l10n.exoPlayer, PlayerEngine.avPlayer => l10n.avPlayer, PlayerEngine.libMpv => l10n.libMpv },
       onChanged: (value) => ref.read(settingsProvider.notifier).saveChanges((settings) => settings.copyWith(playerEngine: value)),
     );

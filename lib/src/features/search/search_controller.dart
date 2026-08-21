@@ -1,104 +1,73 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/settings.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/han1me_repository.dart';
+import '../../data/local/json_store.dart';
+import '../../data/local/search_history_repository.dart';
 import '../../data/remote/han1me_api.dart';
-import '../settings/settings_controller.dart';
-import '../account/account_controller.dart';
+import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
-import '../../core/settings.dart';
+import '../account/account_controller.dart';
+import '../settings/settings_controller.dart';
 
-class SearchQuery {
-  const SearchQuery({
-    this.text = '',
-    this.genre = '',
-    this.sort = '',
-    this.date = '',
-    this.duration = '',
-    this.tags = const [],
-    this.broad = false,
-    this.type = '',
-    this.page = 1,
-  });
+final searchQueryProvider = StateNotifierProvider.family<SearchQueryNotifier, SearchQuery, SearchRouteRequest>(
+  (_, request) => SearchQueryNotifier(SearchQuery.fromUri(request.initialUrl)),
+);
 
-  final String text;
-  final String genre;
-  final String sort;
-  final String date;
-  final String duration;
-  final List<String> tags;
-  final bool broad;
-  final String type;
-  final int page;
-
-  SearchQuery copyWith({
-    String? text,
-    String? genre,
-    String? sort,
-    String? date,
-    String? duration,
-    List<String>? tags,
-    bool? broad,
-    String? type,
-    int? page,
-  }) => SearchQuery(
-        text: text ?? this.text,
-        genre: genre ?? this.genre,
-        sort: sort ?? this.sort,
-        date: date ?? this.date,
-        duration: duration ?? this.duration,
-        tags: tags ?? this.tags,
-        broad: broad ?? this.broad,
-        type: type ?? this.type,
-        page: page ?? this.page,
-      );
-}
-
-final searchInitProvider = StateProvider<String?>((ref) => null);
-
-final searchQueryProvider = StateNotifierProvider<SearchQueryNotifier, SearchQuery>((ref) {
-  final init = ref.watch(searchInitProvider);
-  var query = const SearchQuery();
-  if (init != null) {
-    final uri = Uri.tryParse(init);
-    if (uri != null) {
-      final params = uri.queryParameters;
-      query = SearchQuery(
-        text: params['query'] ?? '',
-        genre: params['genre'] ?? '',
-        sort: params['sort'] ?? '',
-        date: params['date'] ?? '',
-        duration: params['duration'] ?? '',
-        tags: params['tags[]'] == null ? const [] : uri.queryParametersAll['tags[]']!,
-        broad: params['broad'] == 'on',
-        type: params['type'] ?? '',
-        page: 1,
-      );
-    }
-  }
-  return SearchQueryNotifier(query);
-});
+final searchHistoryProvider = AsyncNotifierProvider<SearchHistoryController, List<SearchQuery>>(SearchHistoryController.new);
 
 class SearchQueryNotifier extends StateNotifier<SearchQuery> {
   SearchQueryNotifier(super.state);
 
-  void text(String value) => state = state.copyWith(text: value, page: 1);
-  void genre(String value) => state = state.copyWith(genre: value, page: 1);
-  void sort(String value) => state = state.copyWith(sort: value, page: 1);
-  void date(String value) => state = state.copyWith(date: value, page: 1);
-  void duration(String value) => state = state.copyWith(duration: value, page: 1);
-  void tags(List<String> value, bool broad) => state = state.copyWith(tags: value, broad: broad, page: 1);
-  void type(String value) => state = state.copyWith(type: value, page: 1);
-  void artist(String value) => state = state.copyWith(text: value, type: '', page: 1);
+  void text(String value) => _update(state.copyWith(text: value, page: 1));
+  void genre(String value) => _update(state.copyWith(genre: value, page: 1));
+  void sort(String value) => _update(state.copyWith(sort: value, page: 1));
+  void date(String value) => _update(state.copyWith(date: value, page: 1));
+  void duration(String value) => _update(state.copyWith(duration: value, page: 1));
+  void tags(List<String> value, bool broad) => _update(state.copyWith(tags: List.unmodifiable(value), broad: broad, page: 1));
+  void type(String value) => _update(state.copyWith(type: value, page: 1));
+  void artist(String value) => _update(state.copyWith(text: value, type: '', page: 1));
   void page(int value) => state = state.copyWith(page: value);
-  void reset() => state = const SearchQuery();
+  void replace(SearchQuery value) => _update(value.copyWith(page: 1));
+  void reset() => _update(const SearchQuery());
+
+  void _update(SearchQuery next) {
+    if (next == state) return;
+    state = next;
+  }
 }
 
-final searchResultsProvider = FutureProvider.autoDispose<SearchResult>((ref) async {
+class SearchHistoryController extends AsyncNotifier<List<SearchQuery>> {
+  final _repository = SearchHistoryRepository(JsonStore());
+  Future<void> _write = Future<void>.value();
+
+  @override
+  Future<List<SearchQuery>> build() => _repository.load();
+
+  Future<void> record(SearchQuery query) async {
+    if (!query.hasSearchCriteria) return;
+    final current = state.valueOrNull ?? await future;
+    final next = [query, ...current.where((item) => item != query)].take(30).toList(growable: false);
+    state = AsyncData(next);
+    _write = _write.catchError((_) {}).then((_) => _repository.save(next));
+    await _write;
+  }
+
+  Future<void> remove(SearchQuery query) async {
+    final current = state.valueOrNull ?? await future;
+    final next = current.where((item) => item != query).toList(growable: false);
+    state = AsyncData(next);
+    _write = _write.catchError((_) {}).then((_) => _repository.save(next));
+    await _write;
+  }
+}
+
+final searchResultsProvider = FutureProvider.autoDispose.family<SearchResult, SearchRouteRequest>((ref, request) async {
   ref.watch(accountProvider);
   final settings = await ref.watch(settingsProvider.future);
   final catalog = await ref.watch(searchOptionCatalogProvider.future);
-  final query = ref.watch(searchQueryProvider);
+  final query = ref.watch(searchQueryProvider(request));
   final result = await ref.watch(han1meRepositoryProvider).search(
         baseUrl: settings.resolvedBaseUrl,
         query: query.text,

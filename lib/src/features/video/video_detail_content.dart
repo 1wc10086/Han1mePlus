@@ -9,6 +9,7 @@ import '../../data/assets/search_option_catalog.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/local/library_repository.dart';
 import '../../domain/models/library.dart';
+import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
 import '../account/account_controller.dart';
 import '../library/remote_library_controller.dart';
@@ -126,7 +127,7 @@ class _ArtistRow extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => context.push('/search', extra: Uri(path: '/search', queryParameters: {'query': video.artist!}).toString()),
+          onTap: () => context.push('/search', extra: SearchRouteRequest(initialUrl: Uri(path: '/search', queryParameters: {'query': video.artist!}).toString())),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -261,7 +262,7 @@ class _TagListState extends ConsumerState<_TagList> {
           key: index == 0 ? _firstChipKey : null,
           label: Text('${catalog?.localizeTag(tags[index].name, localeKey) ?? tags[index].name}${tags[index].count == null ? '' : ' (${tags[index].count})'}'),
           visualDensity: VisualDensity.compact,
-          onPressed: () => context.push('/search', extra: tags[index].href ?? Uri(path: '/search', queryParameters: {'tags[]': tags[index].name}).toString()),
+          onPressed: () => context.push('/search', extra: SearchRouteRequest(initialUrl: tags[index].href ?? Uri(path: '/search', queryParameters: {'tags[]': tags[index].name}).toString())),
         ),
       IconButton(tooltip: l10n.addTags, visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, constraints: const BoxConstraints.tightFor(width: 40, height: 40), icon: const Icon(Icons.add), onPressed: enabled ? () => _editTags('add') : null),
       IconButton(tooltip: l10n.removeTags, visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, constraints: const BoxConstraints.tightFor(width: 40, height: 40), icon: const Icon(Icons.remove), onPressed: enabled ? () => _editTags('remove') : null),

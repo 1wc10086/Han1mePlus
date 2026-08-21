@@ -1,0 +1,5 @@
+flutter/ephemeral/
+flutter/ephemeral/.plugin_symlinks/
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.h
+**/generated_plugins.cmake

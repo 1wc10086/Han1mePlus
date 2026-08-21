@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Han1me+
+Comment=Hanime1 third-party client for browsing and streaming videos
+Exec=han1me_plus
+Icon=com.liar.han1meplus
+Terminal=false
+Categories=AudioVideo;Video;Player;
+Keywords=Hanime1;hentai;video;
+StartupNotify=true

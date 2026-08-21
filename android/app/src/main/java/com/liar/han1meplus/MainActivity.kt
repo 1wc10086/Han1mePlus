@@ -216,6 +216,7 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     } else result.success(false)
                 }
+                "isHarmonyOs" -> result.success(isHarmonyOs())
                 "androidUpdateAbi" -> result.success(androidUpdateAbi())
                 "openAppLinksSettings" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) startActivity(Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:$packageName")))
@@ -318,6 +319,13 @@ class MainActivity : FlutterActivity() {
         val target = parent.createFile("application/octet-stream", source.name) ?: error("Unable to create ${source.name}")
         contentResolver.openOutputStream(target.uri, "w")!!.use { output -> FileInputStream(source).use { input -> input.copyTo(output) } }
     }
+
+    private fun isHarmonyOs(): Boolean = listOf(
+        Build.MANUFACTURER,
+        Build.BRAND,
+        Build.DISPLAY,
+        Build.VERSION.INCREMENTAL,
+    ).any { it.contains("harmony", ignoreCase = true) || it.contains("hongmeng", ignoreCase = true) }
 
     private fun androidUpdateAbi(): String? {
         val releaseAbis = setOf("arm64-v8a", "x86_64", "armeabi-v7a")

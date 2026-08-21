@@ -23,7 +23,7 @@ enum VideoAspectRatio { auto, crop, stretch, ratio4x3 }
 
 extension PlayerEngineX on PlayerEngine {
   static List<PlayerEngine> get available {
-    if (Platform.isWindows || Platform.isMacOS) return const [PlayerEngine.libMpv];
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) return const [PlayerEngine.libMpv];
     if (Platform.isIOS) return const [PlayerEngine.avPlayer, PlayerEngine.libMpv];
     if (Platform.isAndroid) return const [PlayerEngine.exoPlayer, PlayerEngine.libMpv];
     return const [PlayerEngine.libMpv];
@@ -49,6 +49,7 @@ class AppSettings {
     this.baseUrl = 'https://hanime1.com',
     this.preferredQuality = 720,
     this.resumePlayback = true,
+    this.autoPlayOnOpen = true,
     this.keyframesEnabled = true,
     this.language = AppLanguage.system,
     this.playerEngine = PlayerEngine.libMpv,
@@ -120,6 +121,7 @@ class AppSettings {
   final String baseUrl;
   final int preferredQuality;
   final bool resumePlayback;
+  final bool autoPlayOnOpen;
   final bool keyframesEnabled;
   final AppLanguage language;
   final PlayerEngine playerEngine;
@@ -211,6 +213,7 @@ class AppSettings {
         'baseUrl': baseUrl,
         'preferredQuality': preferredQuality,
         'resumePlayback': resumePlayback,
+        'autoPlayOnOpen': autoPlayOnOpen,
         'keyframesEnabled': keyframesEnabled,
         'language': language.name,
         'playerEngine': playerEngine.name,
@@ -283,6 +286,7 @@ class AppSettings {
         baseUrl: json['baseUrl'] as String? ?? 'https://hanime1.com',
         preferredQuality: json['preferredQuality'] as int? ?? 720,
         resumePlayback: json['resumePlayback'] as bool? ?? true,
+        autoPlayOnOpen: json['autoPlayOnOpen'] as bool? ?? true,
         keyframesEnabled: json['keyframesEnabled'] as bool? ?? true,
         language: _language(json['language'] as String?),
         playerEngine: _playerEngine(json['playerEngine'] as String?),
@@ -312,7 +316,7 @@ class AppSettings {
         blockedCommentKeywords: (json['blockedCommentKeywords'] as List? ?? const []).whereType<String>().toList(),
         comicMode: json['comicMode'] as bool? ?? false,
         videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.com' : json['baseUrl'] as String? ?? 'https://hanime1.com'),
-        useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows || Platform.isMacOS,
+        useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows || Platform.isLinux || Platform.isMacOS,
         useCustomMirrorSite: json['useCustomMirrorSite'] as bool? ?? false,
         customMirrorSite: _mirrorUrl(json['customMirrorSite'] as String?),
         appendCustomMirrorPath: json['appendCustomMirrorPath'] as bool? ?? true,
@@ -400,6 +404,7 @@ class AppSettings {
     String? baseUrl,
     int? preferredQuality,
     bool? resumePlayback,
+    bool? autoPlayOnOpen,
     bool? keyframesEnabled,
     AppLanguage? language,
     PlayerEngine? playerEngine,
@@ -471,6 +476,7 @@ class AppSettings {
         baseUrl: baseUrl ?? this.baseUrl,
         preferredQuality: preferredQuality ?? this.preferredQuality,
         resumePlayback: resumePlayback ?? this.resumePlayback,
+        autoPlayOnOpen: autoPlayOnOpen ?? this.autoPlayOnOpen,
         keyframesEnabled: keyframesEnabled ?? this.keyframesEnabled,
         language: language ?? this.language,
         playerEngine: playerEngine ?? this.playerEngine,

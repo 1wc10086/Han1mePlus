@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../core/app_shell.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
 import '../account/account_page.dart';
 import '../../data/local/library_repository.dart';
@@ -33,7 +34,7 @@ class ExplorePage extends ConsumerWidget {
         leading: drawerMode ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
         title: Text(AppLocalizations.of(context)!.appTitle),
         actions: [
-          IconButton(onPressed: () => context.push('/search'), icon: const Icon(Icons.search)),
+          IconButton(onPressed: () => context.push('/search', extra: SearchRouteRequest()), icon: const Icon(Icons.search)),
           IconButton(onPressed: () => context.push('/previews/${_currentPreviewMonth()}'), icon: const Icon(Icons.live_tv_outlined)),
           if (!drawerMode) Builder(builder: (context) => IconButton(onPressed: () => Scaffold.of(context).openEndDrawer(), icon: const Icon(Icons.account_circle_outlined))),
         ],
@@ -273,7 +274,7 @@ class _SectionHeader extends StatelessWidget {
         child: Row(children: [
           Expanded(child: Text(section.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
           if (section.moreUrl != null && showMore)
-            TextButton.icon(onPressed: () => context.push('/search', extra: section.moreUrl), iconAlignment: IconAlignment.end, icon: const Icon(Icons.arrow_forward_ios, size: 14), label: Text(AppLocalizations.of(context)!.more)),
+            TextButton.icon(onPressed: () => context.push('/search', extra: SearchRouteRequest(initialUrl: section.moreUrl)),  iconAlignment: IconAlignment.end, icon: const Icon(Icons.arrow_forward_ios, size: 14), label: Text(AppLocalizations.of(context)!.more)),
         ]),
       );
 }
