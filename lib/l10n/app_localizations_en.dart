@@ -48,7 +48,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyframesEnabled => 'Enable Key H-Frames';
 
   @override
-  String get keyframesEnabledDescription => 'Show key H-frame entries and countdown in the player';
+  String get keyframesEnabledDescription =>
+      'Show key H-frame entries and countdown in the player';
 
   @override
   String get keyframesDisabledDescription => 'Key H-frames are disabled';
@@ -86,7 +87,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get positionMilliseconds => 'Position (ms)';
 
   @override
-  String get invalidKeyframe => 'Invalid position, or less than 10 seconds from another keyframe';
+  String get invalidKeyframe =>
+      'Invalid position, or less than 10 seconds from another keyframe';
 
   @override
   String get content => 'Content';
@@ -128,7 +130,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resumePlayback => 'Resume Playback';
 
   @override
-  String get resumePlaybackDescription => 'Continue from the last position on next playback';
+  String get resumePlaybackDescription =>
+      'Continue from the last position on next playback';
+
+  @override
+  String get autoPlayOnOpen => 'Play Immediately';
+
+  @override
+  String get autoPlayOnOpenDescription =>
+      'Start playback automatically when a video page opens';
 
   @override
   String get site => 'Site';
@@ -143,7 +153,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useBuiltInHosts => 'Use Built-in Hosts';
 
   @override
-  String get useBuiltInHostsDescription => 'Use built-in Cloudflare addresses for Hanime1 domains, falling back to system DNS automatically';
+  String get useBuiltInHostsDescription =>
+      'Use built-in Cloudflare addresses for Hanime1 domains, falling back to system DNS automatically';
 
   @override
   String get doh => 'DNS over HTTPS';
@@ -167,7 +178,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dohBootstrapIps => 'Bootstrap IP Addresses';
 
   @override
-  String get dohBootstrapIpsDescription => 'Separated by comma, space, or newline';
+  String get dohBootstrapIpsDescription =>
+      'Separated by comma, space, or newline';
 
   @override
   String get dohTimeoutSeconds => 'Timeout (seconds)';
@@ -179,13 +191,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useEch => 'Enable ECH';
 
   @override
-  String get useEchDescription => 'Encrypt the domain name in the TLS ClientHello for Hanime sites';
+  String get useEchDescription =>
+      'Encrypt the domain name in the TLS ClientHello for Hanime sites';
 
   @override
   String get echLogs => 'ECH Logs';
 
   @override
-  String get echLogsDescription => 'View ECH configuration and connection status';
+  String get echLogsDescription =>
+      'View ECH configuration and connection status';
 
   @override
   String get clearEchLogs => 'Clear Logs';
@@ -197,13 +211,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customMirrorSite => 'Custom Mirror Site';
 
   @override
-  String get customMirrorSiteHint => 'Enter a mirror site with the same structure as the main site that opens its homepage directly, e.g. https://www.example.com/enter; the homepage is requested exactly as entered';
+  String get customMirrorSiteHint =>
+      'Enter a mirror site with the same structure as the main site that opens its homepage directly, e.g. https://www.example.com/enter; the homepage is requested exactly as entered';
 
   @override
   String get enableCustomMirrorSite => 'Enable custom mirror site';
 
   @override
-  String get customMirrorSiteInvalid => 'Enter a valid HTTPS URL that opens the homepage directly, e.g. https://www.example.com/enter';
+  String get customMirrorSiteInvalid =>
+      'Enter a valid HTTPS URL that opens the homepage directly, e.g. https://www.example.com/enter';
 
   @override
   String get customMirrorApiPathMode => 'Other API Path';
@@ -212,13 +228,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customMirrorPathFollowHome => 'Follow Home Directory';
 
   @override
-  String get customMirrorPathFollowHomeSummary => 'e.g. https://www.example.com/enter/search';
+  String get customMirrorPathFollowHomeSummary =>
+      'e.g. https://www.example.com/enter/search';
 
   @override
   String get customMirrorPathRoot => 'Use Root Domain';
 
   @override
-  String get customMirrorPathRootSummary => 'e.g. https://www.example.com/search. The homepage always uses the URL entered above';
+  String get customMirrorPathRootSummary =>
+      'e.g. https://www.example.com/search. The homepage always uses the URL entered above';
 
   @override
   String get testConnection => 'Test Connection';
@@ -244,10 +262,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get customMirrorTestParseFailed => 'Connected, but failed to parse the homepage structure';
+  String get customMirrorTestParseFailed =>
+      'Connected, but failed to parse the homepage structure';
 
   @override
-  String get customMirrorTestChallenge => 'The site is protected by Cloudflare and may not be usable';
+  String get customMirrorTestChallenge =>
+      'The site is protected by Cloudflare and may not be usable';
 
   @override
   String get custom => 'Custom';
@@ -256,7 +276,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudflareVerification => 'Cloudflare Verification';
 
   @override
-  String get cloudflareVerificationDescription => 'Complete verification when visiting protected pages';
+  String get cloudflareVerificationDescription =>
+      'Complete verification when visiting protected pages';
 
   @override
   String get autoCheckUpdates => 'Auto-check for updates';
@@ -265,7 +286,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get useUpdateMirror => 'Automatically use update mirrors';
 
   @override
-  String get useUpdateMirrorDescription => 'Try update mirrors in order when the original GitHub download fails';
+  String get useUpdateMirrorDescription =>
+      'Try update mirrors in order when the original GitHub download fails';
 
   @override
   String get checkUpdates => 'Check for Updates';
@@ -316,7 +338,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoPlaybackFailed => 'Failed to load video';
 
   @override
-  String get completeCloudflareVerification => 'Complete Cloudflare Verification';
+  String get completeCloudflareVerification =>
+      'Complete Cloudflare Verification';
 
   @override
   String get searchHint => 'Search videos, authors, tags…';
@@ -359,7 +382,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get broadMatch => 'Broad Match';
 
   @override
-  String get broadMatchDescription => 'Matches any of the selected tags; more results but lower precision.';
+  String get broadMatchDescription =>
+      'Matches any of the selected tags; more results but lower precision.';
 
   @override
   String get tagVideoAttributes => 'Video Attributes';
@@ -433,7 +457,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get getchuPreviewUnavailable => 'Getchu season previews are unavailable';
+  String get getchuPreviewUnavailable =>
+      'Getchu season previews are unavailable';
 
   @override
   String get noGetchuPreviews => 'No Getchu season previews this month';
@@ -479,13 +504,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewUnavailable => 'Season previews unavailable this month';
 
   @override
-  String get previewUnavailableDescription => 'You can reload, or view previews from earlier months.';
+  String get previewUnavailableDescription =>
+      'You can reload, or view previews from earlier months.';
 
   @override
   String get noPreviews => 'No season previews this month';
 
   @override
-  String get noPreviewsDescription => 'Previews will appear here once released. You can also browse earlier months.';
+  String get noPreviewsDescription =>
+      'Previews will appear here once released. You can also browse earlier months.';
 
   @override
   String get watchVideo => 'Watch Video';
@@ -560,7 +587,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noCache => 'No cache';
 
   @override
-  String get localVideoMissing => 'Local video file not found. Delete this cache and re-download.';
+  String get localVideoMissing =>
+      'Local video file not found. Delete this cache and re-download.';
 
   @override
   String get deleteCache => 'Delete Cache';
@@ -576,7 +604,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get moveGroupCacheToDefault => 'Caches in this group will move to the default group.';
+  String get moveGroupCacheToDefault =>
+      'Caches in this group will move to the default group.';
 
   @override
   String get groupName => 'Group Name';
@@ -619,7 +648,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataSource => 'Data Source';
 
   @override
-  String get dataSourceDescription => 'Public page content from the Hanime1 website';
+  String get dataSourceDescription =>
+      'Public page content from the Hanime1 website';
 
   @override
   String get githubRepository => 'GitHub Repository';
@@ -649,7 +679,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fullscreenPlayback => 'Fullscreen Playback';
 
   @override
-  String get pauseBeforeAddingKeyframe => 'Pause the video before adding a key H-frame';
+  String get pauseBeforeAddingKeyframe =>
+      'Pause the video before adding a key H-frame';
 
   @override
   String get addKeyframe => 'Add Key H-Frame';
@@ -666,7 +697,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyframeAdded => 'Key H-frame added';
 
   @override
-  String get keyframeTooClose => 'Less than 10 seconds from an existing keyframe';
+  String get keyframeTooClose =>
+      'Less than 10 seconds from an existing keyframe';
 
   @override
   String get longPressAddKeyframe => 'Long press to add a key H-frame';
@@ -675,10 +707,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keyframes => 'Key H-Frames';
 
   @override
-  String get deleteCurrentVideoKeyframes => 'Delete all key H-frames for the current video';
+  String get deleteCurrentVideoKeyframes =>
+      'Delete all key H-frames for the current video';
 
   @override
-  String get deleteCurrentVideoKeyframesConfirmation => 'Delete all key H-frames for the current video?';
+  String get deleteCurrentVideoKeyframesConfirmation =>
+      'Delete all key H-frames for the current video?';
 
   @override
   String get editKeyframe => 'Edit Key H-Frame';
@@ -784,7 +818,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get purple => 'Purple';
 
   @override
-  String get keyframeSettingsDescription => 'Manage the toggle and per-video key H-frames';
+  String get keyframeSettingsDescription =>
+      'Manage the toggle and per-video key H-frames';
 
   @override
   String get latestVersion => 'You\'re up to date';
@@ -833,7 +868,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadSettings => 'Download Settings';
 
   @override
-  String get downloadSettingsDescription => 'Speed and concurrent download limits';
+  String get downloadSettingsDescription =>
+      'Speed and concurrent download limits';
 
   @override
   String get downloadSpeedLimit => 'Download Speed Limit';
@@ -853,13 +889,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadPath => 'Download Path';
 
   @override
-  String get defaultDownloadPath => '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
+  String get defaultDownloadPath =>
+      '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
 
   @override
   String get exportDownloads => 'Export Downloads';
 
   @override
-  String get exportDownloadsDescription => 'Export all downloaded items from the private download directory to a custom directory';
+  String get exportDownloadsDescription =>
+      'Export all downloaded items from the private download directory to a custom directory';
 
   @override
   String get exportCompleted => 'Downloads exported';
@@ -997,7 +1035,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signedOut => 'Signed Out';
 
   @override
-  String accountSummary(Object id, int subscriberCount, int videoCount, Object joined) {
+  String accountSummary(
+      Object id, int subscriberCount, int videoCount, Object joined) {
     return '@$id\n$subscriberCount subscribers · $videoCount videos\n$joined';
   }
 
@@ -1038,7 +1077,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playbackSettings => 'Playback Settings';
 
   @override
-  String get playbackSettingsDescription => 'Playback speed, long-press speed, and control display time';
+  String get playbackSettingsDescription =>
+      'Playback speed, long-press speed, and control display time';
 
   @override
   String get defaultPlaybackSpeed => 'Default Playback Speed';
@@ -1050,7 +1090,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playerControlsTimeout => 'Player Controls Auto-Hide';
 
   @override
-  String get playerControlsTimeoutDescription => 'Automatically hide player controls when idle';
+  String get playerControlsTimeoutDescription =>
+      'Automatically hide player controls when idle';
 
   @override
   String get privacySettings => 'Privacy Settings';
@@ -1059,19 +1100,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLock => 'App Lock';
 
   @override
-  String get appLockDescription => 'When enabled, screen-lock verification is required to enter the app';
+  String get appLockDescription =>
+      'When enabled, screen-lock verification is required to enter the app';
 
   @override
   String get emergencyExit => 'Emergency Exit';
 
   @override
-  String get emergencyExitDescription => 'When enabled, pressing volume up three times stops playback and returns to the home screen';
+  String get emergencyExitDescription =>
+      'When enabled, pressing volume up three times stops playback and returns to the home screen';
 
   @override
   String get hideFromRecents => 'Hide from Recents';
 
   @override
-  String get hideFromRecentsDescription => 'Hide the app from the recents screen when in the background';
+  String get hideFromRecentsDescription =>
+      'Hide the app from the recents screen when in the background';
 
   @override
   String get commentSettings => 'Comment Settings';
@@ -1086,7 +1130,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commentKeywordFilter => 'Keyword Filter';
 
   @override
-  String get commentKeywordFilterDescription => 'Comments containing a keyword will be hidden';
+  String get commentKeywordFilterDescription =>
+      'Comments containing a keyword will be hidden';
 
   @override
   String get keyword => 'Keyword';
@@ -1095,13 +1140,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deepLinkSettings => 'Deep Link Settings';
 
   @override
-  String get deepLinkSettingsDescription => 'Jump into this app quickly after opening related web pages';
+  String get deepLinkSettingsDescription =>
+      'Jump into this app quickly after opening related web pages';
 
   @override
   String get openAppLinkSettings => 'Manage Web Links';
 
   @override
-  String get openAppLinkSettingsDescription => 'Allow Han1me+ to open supported links in system settings';
+  String get openAppLinkSettingsDescription =>
+      'Allow Han1me+ to open supported links in system settings';
 
   @override
   String get playbackSpeed => 'Playback Speed';
@@ -1125,19 +1172,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get horizontalSearchCards => 'Horizontal Video Cards';
 
   @override
-  String get horizontalSearchCardsDescription => 'Display videos as horizontal cards';
+  String get horizontalSearchCardsDescription =>
+      'Display videos as horizontal cards';
 
   @override
   String get compactSearchCards => 'Use New Cards for Some Categories';
 
   @override
-  String get compactSearchCardsDescription => 'When enabled, Hentai and Short Anime categories use compact vertical cards with cover on top and title below';
+  String get compactSearchCardsDescription =>
+      'When enabled, Hentai and Short Anime categories use compact vertical cards with cover on top and title below';
 
   @override
   String get expandHomeVideoCards => 'Expand Home Video Cards';
 
   @override
-  String get expandHomeVideoCardsDescription => 'When off, each home category shows a row of videos; when on, uses the videos-per-row setting';
+  String get expandHomeVideoCardsDescription =>
+      'When off, each home category shows a row of videos; when on, uses the videos-per-row setting';
 
   @override
   String get searchCardsPerRow => 'Video Cards Per Row';
@@ -1148,7 +1198,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get comicModeDescription => 'When enabled, home, library, and cache show comic content only';
+  String get comicModeDescription =>
+      'When enabled, home, library, and cache show comic content only';
 
   @override
   String get comicBrowse => 'Comic Filters';
@@ -1237,13 +1288,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationDrawer => 'Use Navigation Drawer';
 
   @override
-  String get navigationDrawerDescription => 'Use a drawer instead of the bottom navigation bar';
+  String get navigationDrawerDescription =>
+      'Use a drawer instead of the bottom navigation bar';
 
   @override
   String get liquidGlassBottomBar => 'Liquid Glass Bottom Bar';
 
   @override
-  String get liquidGlassBottomBarDescription => 'Use a floating Liquid Glass bottom navigation bar';
+  String get liquidGlassBottomBarDescription =>
+      'Use a floating Liquid Glass bottom navigation bar';
 
   @override
   String get home => 'Home';
@@ -1261,7 +1314,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seekSensitivity => 'Seek Sensitivity';
 
   @override
-  String get seekSensitivityDescription => 'Lower it to reduce the jump distance when swiping left or right';
+  String get seekSensitivityDescription =>
+      'Lower it to reduce the jump distance when swiping left or right';
 
   @override
   String seekSensitivityValue(int value) {
@@ -1272,13 +1326,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playerSettings => 'Player Settings';
 
   @override
-  String get playerSettingsDescription => 'Decoder, renderer, and advanced libmpv options';
+  String get playerSettingsDescription =>
+      'Decoder, renderer, and advanced libmpv options';
 
   @override
   String get hardwareDecode => 'Hardware Decode';
 
   @override
-  String get hardwareDecodeDescription => 'Use hardware-accelerated video decoding';
+  String get hardwareDecodeDescription =>
+      'Use hardware-accelerated video decoding';
 
   @override
   String get decoder => 'Decoder';
@@ -1296,7 +1352,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customParameters => 'Custom Parameters';
 
   @override
-  String get customParametersDescription => 'libmpv options applied on top of the defaults';
+  String get customParametersDescription =>
+      'libmpv options applied on top of the defaults';
 
   @override
   String get customParametersHint => 'One key=value per line, e.g. cache=yes';
@@ -1305,10 +1362,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get superResolution => 'Super Resolution';
 
   @override
-  String get superResolutionDescription => 'Upscale with Anime4K through libmpv shaders';
+  String get superResolutionDescription =>
+      'Upscale with Anime4K through libmpv shaders';
 
   @override
-  String get availableOnlyForLibmpv => 'Only available when the decoder is libmpv';
+  String get availableOnlyForLibmpv =>
+      'Only available when the decoder is libmpv';
 
   @override
   String get none => 'None';
@@ -1353,7 +1412,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountManage => 'Account Management';
 
   @override
-  String get accountManageSubtitleEmpty => 'Add or switch accounts for this site';
+  String get accountManageSubtitleEmpty =>
+      'Add or switch accounts for this site';
 
   @override
   String accountManageSubtitleCount(int count) {
@@ -1382,7 +1442,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCategoryTabs => 'Use Home Category Tabs';
 
   @override
-  String get homeCategoryTabsDescription => 'Show home categories as swipeable tabs and expand their video cards';
+  String get homeCategoryTabsDescription =>
+      'Show home categories as swipeable tabs and expand their video cards';
 
   @override
   String get recommendationFilters => 'Recommendation Filters';
@@ -1394,7 +1455,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoTitleKeywordFilter => 'Video Title Keyword Filter';
 
   @override
-  String get videoTitleKeywordFilterDescription => 'Hide videos whose titles contain a keyword';
+  String get videoTitleKeywordFilterDescription =>
+      'Hide videos whose titles contain a keyword';
 
   @override
   String get minimumVideoDuration => 'Minimum Video Duration';
@@ -1421,19 +1483,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exemptSubscribedAuthors => 'Exempt Subscribed Authors';
 
   @override
-  String get exemptSubscribedAuthorsDescription => 'Content from subscribed authors is not filtered';
+  String get exemptSubscribedAuthorsDescription =>
+      'Content from subscribed authors is not filtered';
 
   @override
   String get applyFiltersToRelated => 'Apply Filters to Related Videos';
 
   @override
-  String get applyFiltersToRelatedDescription => 'Filter related videos on the video details page';
+  String get applyFiltersToRelatedDescription =>
+      'Filter related videos on the video details page';
 
   @override
   String get applyFiltersToSearch => 'Apply Filters to Search';
 
   @override
-  String get applyFiltersToSearchDescription => 'Filter videos in search results';
+  String get applyFiltersToSearchDescription =>
+      'Filter videos in search results';
 
   @override
   String get commentUserFilter => 'Comment User Filter';
@@ -1451,13 +1516,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoPlayNext => 'Auto Play Next';
 
   @override
-  String get autoPlayNextDescription => 'Play the next episode after the current video finishes';
+  String get autoPlayNextDescription =>
+      'Play the next episode after the current video finishes';
 
   @override
   String get autoPictureInPicture => 'Auto Picture-in-Picture';
 
   @override
-  String get autoPictureInPictureDescription => 'Enter picture-in-picture when leaving the app during playback';
+  String get autoPictureInPictureDescription =>
+      'Enter picture-in-picture when leaving the app during playback';
 
   @override
   String get webDavSettings => 'WebDAV Settings';
@@ -1523,6 +1590,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aspectFourThree => '4:3';
 
   @override
+  String get searchHistory => 'Search History';
+
+  @override
+  String get searchHistoryEmpty => 'No search history';
+
+  @override
+  String get deleteSearchHistory => 'Delete search history';
+
+  @override
+  String get restoreSearchHistory => 'Search this combination';
+
+  @override
+  String searchHistorySummary(Object query, Object filters) {
+    return '$query · $filters';
+  }
+
+  @override
+  String get searchHistoryAll => 'All';
+
+  @override
+  String searchHistoryTags(int count) {
+    return '$count tags';
+  }
+
+  @override
   String get externalPlayback => 'External Playback';
 
   @override
@@ -1568,28 +1660,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteBookshelf => 'Delete Shelf';
 
   @override
-  String get deleteBookshelfDescription => 'Permanently delete this group without deleting cached media';
+  String get deleteBookshelfDescription =>
+      'Permanently delete this group without deleting cached media';
 
   @override
-  String get deleteBookshelfConfirmation => 'Delete this group? It will be gone forever! (A really long time!)';
+  String get deleteBookshelfConfirmation =>
+      'Delete this group? It will be gone forever! (A really long time!)';
 
   @override
   String get backupSettings => 'Backup Settings';
 
   @override
-  String get backupSettingsDescription => 'Import or export an application data backup';
+  String get backupSettingsDescription =>
+      'Import or export an application data backup';
 
   @override
   String get exportDataBackup => 'Export Data Backup';
 
   @override
-  String get exportDataBackupDescription => 'Export settings, watch history, download groups and video information, key H-frames, and check-in records for device migration.';
+  String get exportDataBackupDescription =>
+      'Export settings, watch history, download groups and video information, key H-frames, and check-in records for device migration.';
 
   @override
   String get importDataBackup => 'Import Data Backup';
 
   @override
-  String get importDataBackupDescription => 'Restore settings, watch history, download groups and video information, key H-frames, and check-in records from a backup file.';
+  String get importDataBackupDescription =>
+      'Restore settings, watch history, download groups and video information, key H-frames, and check-in records from a backup file.';
 
   @override
   String get backupExported => 'Data backup exported';
@@ -1598,10 +1695,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupImported => 'Data backup imported';
 
   @override
-  String get androidPrivateDownloadPath => 'Android downloads use the private app directory. Export downloads to save them through SAF.';
+  String get androidPrivateDownloadPath =>
+      'Android downloads use the private app directory. Export downloads to save them through SAF.';
 
   @override
-  String get privateDownloadPath => 'Mobile downloads use the private app directory. Export downloads to save them to a custom directory.';
+  String get privateDownloadPath =>
+      'Mobile downloads use the private app directory. Export downloads to save them to a custom directory.';
 
   @override
   String get chooseFolder => 'Choose Folder';

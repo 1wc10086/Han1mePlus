@@ -131,6 +131,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resumePlaybackDescription => '再次播放时从上次退出的位置继续';
 
   @override
+  String get autoPlayOnOpen => '即点即放';
+
+  @override
+  String get autoPlayOnOpenDescription => '打开视频页面后自动开始播放';
+
+  @override
   String get site => '站点';
 
   @override
@@ -143,7 +149,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get useBuiltInHosts => '使用内置 Hosts';
 
   @override
-  String get useBuiltInHostsDescription => '为 Hanime1 域名使用内置的 Cloudflare 地址，并自动回退到系统 DNS';
+  String get useBuiltInHostsDescription =>
+      '为 Hanime1 域名使用内置的 Cloudflare 地址，并自动回退到系统 DNS';
 
   @override
   String get doh => 'DNS over HTTPS';
@@ -197,13 +204,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customMirrorSite => '自定义镜像站';
 
   @override
-  String get customMirrorSiteHint => '请输入与主站结构相同、直达主页的镜像站，例如 https://www.example.com/enter；主页会按输入原样请求';
+  String get customMirrorSiteHint =>
+      '请输入与主站结构相同、直达主页的镜像站，例如 https://www.example.com/enter；主页会按输入原样请求';
 
   @override
   String get enableCustomMirrorSite => '启用自定义镜像站';
 
   @override
-  String get customMirrorSiteInvalid => '请输入有效且直达主页的 HTTPS 网址，例如 https://www.example.com/enter';
+  String get customMirrorSiteInvalid =>
+      '请输入有效且直达主页的 HTTPS 网址，例如 https://www.example.com/enter';
 
   @override
   String get customMirrorApiPathMode => '其他接口路径';
@@ -212,13 +221,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customMirrorPathFollowHome => '跟随主页目录';
 
   @override
-  String get customMirrorPathFollowHomeSummary => '例如 https://www.example.com/enter/search';
+  String get customMirrorPathFollowHomeSummary =>
+      '例如 https://www.example.com/enter/search';
 
   @override
   String get customMirrorPathRoot => '使用根域名';
 
   @override
-  String get customMirrorPathRootSummary => '例如 https://www.example.com/search；主页始终使用上方输入的网址';
+  String get customMirrorPathRootSummary =>
+      '例如 https://www.example.com/search；主页始终使用上方输入的网址';
 
   @override
   String get testConnection => '测试连接';
@@ -853,7 +864,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadPath => '下载路径';
 
   @override
-  String get defaultDownloadPath => '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
+  String get defaultDownloadPath =>
+      '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
 
   @override
   String get exportDownloads => '导出下载项';
@@ -997,7 +1009,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get signedOut => '未登录';
 
   @override
-  String accountSummary(Object id, int subscriberCount, int videoCount, Object joined) {
+  String accountSummary(
+      Object id, int subscriberCount, int videoCount, Object joined) {
     return '@$id\n$subscriberCount 位订阅者 · $videoCount 部影片\n$joined';
   }
 
@@ -1131,13 +1144,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get compactSearchCards => '搜索部分分类使用新的影片卡片';
 
   @override
-  String get compactSearchCardsDescription => '开启后里番和泡面番分类使用紧凑的纵向影片卡片，封面在上标题在下，节省空间';
+  String get compactSearchCardsDescription =>
+      '开启后里番和泡面番分类使用紧凑的纵向影片卡片，封面在上标题在下，节省空间';
 
   @override
   String get expandHomeVideoCards => '展开首页影片卡片';
 
   @override
-  String get expandHomeVideoCardsDescription => '关闭时首页每个分类横向显示一行影片；开启后使用影片卡片每行数量设置';
+  String get expandHomeVideoCardsDescription =>
+      '关闭时首页每个分类横向显示一行影片；开启后使用影片卡片每行数量设置';
 
   @override
   String get searchCardsPerRow => '影片卡片每行数量';
@@ -1523,6 +1538,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aspectFourThree => '4:3';
 
   @override
+  String get searchHistory => '搜索历史';
+
+  @override
+  String get searchHistoryEmpty => '暂无搜索历史';
+
+  @override
+  String get deleteSearchHistory => '删除搜索历史';
+
+  @override
+  String get restoreSearchHistory => '搜索此组合';
+
+  @override
+  String searchHistorySummary(Object query, Object filters) {
+    return '$query · $filters';
+  }
+
+  @override
+  String get searchHistoryAll => '全部';
+
+  @override
+  String searchHistoryTags(int count) {
+    return '$count 个标签';
+  }
+
+  @override
   String get externalPlayback => '外部播放';
 
   @override
@@ -1583,13 +1623,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportDataBackup => '导出数据备份';
 
   @override
-  String get exportDataBackupDescription => '导出设置、观看历史、下载分组与影片信息、H关键帧与打卡记录，方便换机还原。';
+  String get exportDataBackupDescription =>
+      '导出设置、观看历史、下载分组与影片信息、H关键帧与打卡记录，方便换机还原。';
 
   @override
   String get importDataBackup => '导入数据备份';
 
   @override
-  String get importDataBackupDescription => '从备份文件还原设置、观看历史、下载分组与影片信息、H关键帧与打卡记录。';
+  String get importDataBackupDescription =>
+      '从备份文件还原设置、观看历史、下载分组与影片信息、H关键帧与打卡记录。';
 
   @override
   String get backupExported => '数据备份已导出';
@@ -1598,7 +1640,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupImported => '数据备份已导入';
 
   @override
-  String get androidPrivateDownloadPath => 'Android 下载使用应用私有目录，可通过导出下载项保存到 SAF 目录';
+  String get androidPrivateDownloadPath =>
+      'Android 下载使用应用私有目录，可通过导出下载项保存到 SAF 目录';
 
   @override
   String get privateDownloadPath => '移动平台下载使用应用私有目录，可通过导出下载项保存到自定义目录';
@@ -1618,7 +1661,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
 class AppLocalizationsZhTw extends AppLocalizationsZh {
-  AppLocalizationsZhTw(): super('zh_TW');
+  AppLocalizationsZhTw() : super('zh_TW');
 
   @override
   String get appTitle => 'Han1me+';
@@ -1743,6 +1786,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get resumePlaybackDescription => '再次播放時從上次退出的位置繼續';
 
   @override
+  String get autoPlayOnOpen => '即點即播';
+
+  @override
+  String get autoPlayOnOpenDescription => '開啟影片頁面後自動開始播放';
+
+  @override
   String get site => '網站';
 
   @override
@@ -1755,7 +1804,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get useBuiltInHosts => '使用內建 Hosts';
 
   @override
-  String get useBuiltInHostsDescription => '為 Hanime1 網域使用內建的 Cloudflare 位址，並自動回退到系統 DNS';
+  String get useBuiltInHostsDescription =>
+      '為 Hanime1 網域使用內建的 Cloudflare 位址，並自動回退到系統 DNS';
 
   @override
   String get doh => 'DNS over HTTPS';
@@ -1809,13 +1859,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get customMirrorSite => '自訂鏡像站';
 
   @override
-  String get customMirrorSiteHint => '請輸入與主站結構相同、直達首頁的鏡像站，例如 https://www.example.com/enter；首頁會依輸入原樣請求';
+  String get customMirrorSiteHint =>
+      '請輸入與主站結構相同、直達首頁的鏡像站，例如 https://www.example.com/enter；首頁會依輸入原樣請求';
 
   @override
   String get enableCustomMirrorSite => '啟用自訂鏡像站';
 
   @override
-  String get customMirrorSiteInvalid => '請輸入有效且直達首頁的 HTTPS 網址，例如 https://www.example.com/enter';
+  String get customMirrorSiteInvalid =>
+      '請輸入有效且直達首頁的 HTTPS 網址，例如 https://www.example.com/enter';
 
   @override
   String get customMirrorApiPathMode => '其他介面路徑';
@@ -1824,13 +1876,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get customMirrorPathFollowHome => '跟隨首頁目錄';
 
   @override
-  String get customMirrorPathFollowHomeSummary => '例如 https://www.example.com/enter/search';
+  String get customMirrorPathFollowHomeSummary =>
+      '例如 https://www.example.com/enter/search';
 
   @override
   String get customMirrorPathRoot => '使用根網域';
 
   @override
-  String get customMirrorPathRootSummary => '例如 https://www.example.com/search；首頁一律使用上方輸入的網址';
+  String get customMirrorPathRootSummary =>
+      '例如 https://www.example.com/search；首頁一律使用上方輸入的網址';
 
   @override
   String get testConnection => '測試連線';
@@ -2465,7 +2519,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get downloadPath => '下載路徑';
 
   @override
-  String get defaultDownloadPath => '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
+  String get defaultDownloadPath =>
+      '/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/';
 
   @override
   String get exportDownloads => '匯出下載項目';
@@ -2609,7 +2664,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get signedOut => '未登入';
 
   @override
-  String accountSummary(Object id, int subscriberCount, int videoCount, Object joined) {
+  String accountSummary(
+      Object id, int subscriberCount, int videoCount, Object joined) {
     return '@$id\n$subscriberCount 位訂閱者 · $videoCount 部影片\n$joined';
   }
 
@@ -2743,13 +2799,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get compactSearchCards => '搜尋部分分類使用新的影片卡片';
 
   @override
-  String get compactSearchCardsDescription => '開啟後裏番和泡麵番分類使用緊湊的縱向影片卡片，封面在上標題在下，節省空間';
+  String get compactSearchCardsDescription =>
+      '開啟後裏番和泡麵番分類使用緊湊的縱向影片卡片，封面在上標題在下，節省空間';
 
   @override
   String get expandHomeVideoCards => '展開首頁影片卡片';
 
   @override
-  String get expandHomeVideoCardsDescription => '關閉時首頁每個分類橫向顯示一行影片；開啟後使用影片卡片每行數量設定';
+  String get expandHomeVideoCardsDescription =>
+      '關閉時首頁每個分類橫向顯示一行影片；開啟後使用影片卡片每行數量設定';
 
   @override
   String get searchCardsPerRow => '影片卡片每行數量';
@@ -3135,6 +3193,31 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get aspectFourThree => '4:3';
 
   @override
+  String get searchHistory => '搜尋歷史';
+
+  @override
+  String get searchHistoryEmpty => '暫無搜尋歷史';
+
+  @override
+  String get deleteSearchHistory => '刪除搜尋歷史';
+
+  @override
+  String get restoreSearchHistory => '搜尋此組合';
+
+  @override
+  String searchHistorySummary(Object query, Object filters) {
+    return '$query · $filters';
+  }
+
+  @override
+  String get searchHistoryAll => '全部';
+
+  @override
+  String searchHistoryTags(int count) {
+    return '$count 個標籤';
+  }
+
+  @override
   String get externalPlayback => '外部播放';
 
   @override
@@ -3195,13 +3278,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get exportDataBackup => '匯出資料備份';
 
   @override
-  String get exportDataBackupDescription => '匯出設定、觀看記錄、下載群組與影片資訊、H 關鍵幀與打卡記錄，方便換機還原。';
+  String get exportDataBackupDescription =>
+      '匯出設定、觀看記錄、下載群組與影片資訊、H 關鍵幀與打卡記錄，方便換機還原。';
 
   @override
   String get importDataBackup => '匯入資料備份';
 
   @override
-  String get importDataBackupDescription => '從備份檔案還原設定、觀看記錄、下載群組與影片資訊、H 關鍵幀與打卡記錄。';
+  String get importDataBackupDescription =>
+      '從備份檔案還原設定、觀看記錄、下載群組與影片資訊、H 關鍵幀與打卡記錄。';
 
   @override
   String get backupExported => '資料備份已匯出';
@@ -3210,7 +3295,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get backupImported => '資料備份已匯入';
 
   @override
-  String get androidPrivateDownloadPath => 'Android 下載使用應用程式私有目錄，可透過匯出下載項目儲存至 SAF 目錄';
+  String get androidPrivateDownloadPath =>
+      'Android 下載使用應用程式私有目錄，可透過匯出下載項目儲存至 SAF 目錄';
 
   @override
   String get privateDownloadPath => '行動平台下載使用應用程式私有目錄，可透過匯出下載項目儲存至自訂目錄';

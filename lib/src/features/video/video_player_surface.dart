@@ -46,9 +46,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   double _volume = 1;
   _Adjustment? _adjustment;
   Timer? _hideTimer;
-  Future<void> _speedOperation = Future<void>.value();
   double? _speedBeforeLongPress;
-  var _speedRequest = 0;
 
   @override
   void initState() {
@@ -60,7 +58,6 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
 
   @override
   void dispose() {
-    _speedRequest++;
     _hideTimer?.cancel();
     super.dispose();
   }
@@ -87,36 +84,35 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
 
   void _longPress(bool active) {
     final controller = widget.controller.value;
-    if (controller == null || !controller.value.isInitialized) return;
-    final settings = ref.read(settingsProvider).valueOrNull ?? const AppSettings();
     if (active) {
-      if (_speedBeforeLongPress != null) return;
+      if (controller == null || !controller.value.isInitialized || _speedBeforeLongPress != null) return;
+      final settings = ref.read(settingsProvider).valueOrNull ?? const AppSettings();
       _speedBeforeLongPress = controller.value.playbackSpeed;
       final speed = PlaybackSpeedPolicy.longPressSpeed(
         settings,
         isThreeDimensional: PlaybackSpeedPolicy.isThreeDimensional(widget.video.genre, widget.video.title),
       );
-      final request = ++_speedRequest;
-      unawaited(_queueSpeed(controller, speed, request));
+      unawaited(_applySpeed(controller, speed));
       setState(() => _adjustment = _Adjustment.speed(speed));
+      return;
+    }
+    if (controller == null) {
+      _speedBeforeLongPress = null;
       return;
     }
     final speed = _speedBeforeLongPress ?? controller.value.playbackSpeed;
     _speedBeforeLongPress = null;
-    final request = ++_speedRequest;
-    unawaited(_queueSpeed(controller, speed, request));
+    if (!controller.value.isInitialized) return;
+    unawaited(_applySpeed(controller, speed));
     setState(() => _adjustment = null);
   }
 
-  Future<void> _queueSpeed(VideoPlayerController controller, double speed, int request) {
-    final operation = _speedOperation.catchError((_) {}).then((_) async {
-      if (!mounted || request != _speedRequest || controller != widget.controller.value || !controller.value.isInitialized) return;
-      try {
-        if ((controller.value.playbackSpeed - speed).abs() > .001) await controller.setPlaybackSpeed(speed);
-      } catch (_) {}
-    });
-    _speedOperation = operation;
-    return operation;
+  Future<void> _applySpeed(VideoPlayerController controller, double speed) async {
+    try {
+      if ((controller.value.playbackSpeed - speed).abs() > .001) {
+        await controller.setPlaybackSpeed(speed);
+      }
+    } catch (_) {}
   }
 
   void _dragStart(DragStartDetails details) {

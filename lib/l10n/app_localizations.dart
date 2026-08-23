@@ -62,7 +62,8 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +84,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -335,6 +338,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue from the last position on next playback'**
   String get resumePlaybackDescription;
+
+  /// No description provided for @autoPlayOnOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Immediately'**
+  String get autoPlayOnOpen;
+
+  /// No description provided for @autoPlayOnOpenDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Start playback automatically when a video page opens'**
+  String get autoPlayOnOpenDescription;
 
   /// No description provided for @site.
   ///
@@ -1936,7 +1951,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'@{id}\n{subscriberCount} subscribers · {videoCount} videos\n{joined}'**
-  String accountSummary(Object id, int subscriberCount, int videoCount, Object joined);
+  String accountSummary(
+      Object id, int subscriberCount, int videoCount, Object joined);
 
   /// No description provided for @tapToLogin.
   ///
@@ -2964,6 +2980,48 @@ abstract class AppLocalizations {
   /// **'4:3'**
   String get aspectFourThree;
 
+  /// No description provided for @searchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search History'**
+  String get searchHistory;
+
+  /// No description provided for @searchHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No search history'**
+  String get searchHistoryEmpty;
+
+  /// No description provided for @deleteSearchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete search history'**
+  String get deleteSearchHistory;
+
+  /// No description provided for @restoreSearchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search this combination'**
+  String get restoreSearchHistory;
+
+  /// No description provided for @searchHistorySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{query} · {filters}'**
+  String searchHistorySummary(Object query, Object filters);
+
+  /// No description provided for @searchHistoryAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get searchHistoryAll;
+
+  /// No description provided for @searchHistoryTags.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tags'**
+  String searchHistoryTags(int count);
+
   /// No description provided for @externalPlayback.
   ///
   /// In en, this message translates to:
@@ -3151,7 +3209,8 @@ abstract class AppLocalizations {
   String get invalidCookies;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -3160,34 +3219,37 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
   // Lookup logic when language+country codes are specified.
   switch (locale.languageCode) {
-    case 'zh': {
-  switch (locale.countryCode) {
-    case 'TW': return AppLocalizationsZhTw();
-   }
-  break;
-   }
+    case 'zh':
+      {
+        switch (locale.countryCode) {
+          case 'TW':
+            return AppLocalizationsZhTw();
+        }
+        break;
+      }
   }
 
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'zh': return AppLocalizationsZh();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
