@@ -20,6 +20,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   final _videoControllers = HashMap<int, VideoController>();
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
   final _streamSubscriptions = HashMap<int, List<StreamSubscription>>();
+  int _nextTextureId = 0;
 
   static void registerWith() {
     VideoPlayerPlatform.instance = _instance;
@@ -60,12 +61,6 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     }
     if (player != null) {
       try {
-        await player.pause().timeout(const Duration(seconds: 1));
-      } catch (_) {}
-      try {
-        await player.stop().timeout(const Duration(seconds: 1));
-      } catch (_) {}
-      try {
         await player.dispose().timeout(const Duration(seconds: 2));
       } catch (_) {}
     }
@@ -87,7 +82,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
       final completer = Completer<void>();
       final streamController = StreamController<VideoEvent>();
       final streamSubscriptions = <StreamSubscription>[];
-      textureId = player.hashCode;
+      textureId = ++_nextTextureId;
 
       _players[textureId] = player;
       _completers[textureId] = completer;

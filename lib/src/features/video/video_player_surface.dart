@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../core/playback_speed_policy.dart';
 import '../../core/platform_service.dart';
 import '../../core/settings.dart';
+import '../../core/video_player_shutdown.dart';
 import '../../domain/models/video.dart';
 import '../settings/settings_controller.dart';
 import 'video_player_controls.dart';
@@ -146,6 +147,14 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   }
   void _dragEnd(DragEndDetails details) { _dragStartX = null; _dragStartY = null; _dragDirection = null; _seekStartPosition = null; Future<void>.delayed(const Duration(milliseconds: 700), () { if (mounted) setState(() => _adjustment = null); }); }
 
+  Future<void> _enterPictureInPicture(VideoPlayerController controller) async {
+    var entered = false;
+    try {
+      entered = await PlatformService.enterPictureInPicture();
+    } catch (_) {}
+    if (entered) VideoPlayerShutdown.pipActive = controller;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -183,7 +192,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     VideoPlayerSkipButton(controller: controller, onInteraction: _restartTimer),
-                    if (Platform.isAndroid) IconButton(color: Colors.white, tooltip: l10n.pictureInPicture, visualDensity: VisualDensity.compact, onPressed: PlatformService.enterPictureInPicture, icon: const Icon(Icons.picture_in_picture_alt_outlined)),
+                    if (Platform.isAndroid) IconButton(color: Colors.white, tooltip: l10n.pictureInPicture, visualDensity: VisualDensity.compact, onPressed: () => _enterPictureInPicture(controller), icon: const Icon(Icons.picture_in_picture_alt_outlined)),
                     widget.fullscreen
                         ? VideoPlayerFullscreenMoreMenu(sources: widget.video.sources, quality: widget.quality)
                         : VideoPlayerPortraitMoreMenu(controller: controller, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected),

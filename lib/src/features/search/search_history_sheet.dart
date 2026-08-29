@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../data/assets/search_option_catalog.dart';
 import '../../domain/models/search_query.dart';
 import 'search_controller.dart';
 
@@ -19,6 +20,8 @@ class _SearchHistorySheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final history = ref.watch(searchHistoryProvider);
+    final catalog = ref.watch(searchOptionCatalogProvider).valueOrNull;
+    final localeKey = searchOptionLocaleKey(Localizations.localeOf(context));
     return SafeArea(
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * .65,
@@ -37,8 +40,8 @@ class _SearchHistorySheet extends ConsumerWidget {
                     return Card(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       child: ListTile(
-                        title: Text(query.text.isEmpty ? l10n.searchHistoryAll : query.text, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(_summary(l10n, query), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        title: Text(_title(l10n, query, catalog, localeKey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(_summary(l10n, query, catalog, localeKey), maxLines: 2, overflow: TextOverflow.ellipsis),
                         onTap: () => Navigator.of(context).pop(query),
                         trailing: IconButton(
                           tooltip: l10n.deleteSearchHistory,
@@ -54,15 +57,26 @@ class _SearchHistorySheet extends ConsumerWidget {
     );
   }
 
-  String _summary(AppLocalizations l10n, SearchQuery query) {
-    final filters = <String>[
-      if (query.genre.isNotEmpty) query.genre,
-      if (query.sort.isNotEmpty) query.sort,
-      if (query.date.isNotEmpty) query.date,
-      if (query.duration.isNotEmpty) query.duration,
-      if (query.tags.isNotEmpty) l10n.searchHistoryTags(query.tags.length),
-      if (query.type.isNotEmpty) l10n.searchAuthors,
-    ];
+  String _title(AppLocalizations l10n, SearchQuery query, SearchOptionCatalog? catalog, String localeKey) {
+    if (query.text.isNotEmpty) return query.text;
+    final filters = _filters(l10n, query, catalog, localeKey);
+    if (filters.isNotEmpty) return filters.first;
+    return l10n.searchHistoryAll;
+  }
+
+  String _summary(AppLocalizations l10n, SearchQuery query, SearchOptionCatalog? catalog, String localeKey) {
+    final filters = _filters(l10n, query, catalog, localeKey);
     return filters.isEmpty ? l10n.searchHistoryAll : filters.join(' · ');
   }
+
+  List<String> _filters(AppLocalizations l10n, SearchQuery query, SearchOptionCatalog? catalog, String localeKey) => [
+        if (query.genre.isNotEmpty) catalog?.genres.localize(query.genre, localeKey) ?? query.genre,
+        if (query.sort.isNotEmpty) catalog?.sorts.localize(query.sort, localeKey) ?? query.sort,
+        if (query.date.isNotEmpty) catalog?.releaseDates.localize(query.date, localeKey) ?? query.date,
+        if (query.duration.isNotEmpty) catalog?.durations.localize(query.duration, localeKey) ?? query.duration,
+        if (query.tags.isNotEmpty) _tags(query, catalog, localeKey),
+        if (query.type.isNotEmpty) l10n.searchAuthors,
+      ];
+
+  String _tags(SearchQuery query, SearchOptionCatalog? catalog, String localeKey) => query.tags.map((tag) => catalog?.localizeTag(tag, localeKey) ?? tag).join(' · ');
 }

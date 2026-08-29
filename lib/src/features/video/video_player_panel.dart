@@ -34,6 +34,7 @@ class VideoPlayerPanel extends ConsumerStatefulWidget {
 }
 
 class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteAware, WidgetsBindingObserver {
+  static const _watchThresholdMs = 5000;
   final ValueNotifier<VideoPlayerController?> _controllerNotifier = ValueNotifier(null);
   final ValueNotifier<String?> _qualityNotifier = ValueNotifier(null);
   String? _selectedQuality;
@@ -46,14 +47,19 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
   bool _notifiersDisposed = false;
   bool _routeSubscribed = false;
   VideoPlayerController? _pendingDispose;
-  Future<void> _controllerDisposal = Future<void>.value();
+  final _disposing = <VideoPlayerController>{};
+  final _pendingInitialize = <VideoPlayerController, Future<void>>{};
   DateTime _lastSaved = DateTime.fromMillisecondsSinceEpoch(0);
   var _autoNextTriggered = false;
   bool? _wasPlaying;
+  Duration _watched = Duration.zero;
+  DateTime? _lastWatchedAt;
+  late final WatchController _watchController;
 
   @override
   void initState() {
     super.initState();
+    _watchController = ref.read(watchProvider.notifier);
     WidgetsBinding.instance.addObserver(this);
     _controllerNotifier.addListener(_handleControllerChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,12 +73,31 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (controller == null || !controller.value.isInitialized || !controller.value.isPlaying) return;
     final settings = ref.read(settingsProvider).valueOrNull;
     if (settings?.autoPictureInPicture == true) {
-      if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-        unawaited(PlatformService.enterPictureInPicture());
+      if (state == AppLifecycleState.inactive) {
+        unawaited(_tryEnterPictureInPicture(controller));
+      } else if (state == AppLifecycleState.paused) {
+        unawaited(_pauseIfNotPip(controller));
+      } else if (state == AppLifecycleState.resumed) {
+        if (identical(VideoPlayerShutdown.pipActive, controller)) VideoPlayerShutdown.pipActive = null;
       }
       return;
     }
     if (state == AppLifecycleState.paused) unawaited(controller.pause());
+  }
+
+  Future<void> _tryEnterPictureInPicture(VideoPlayerController controller) async {
+    var entered = false;
+    try {
+      entered = await PlatformService.enterPictureInPicture();
+    } catch (_) {}
+    if (entered) VideoPlayerShutdown.pipActive = controller;
+  }
+
+  Future<void> _pauseIfNotPip(VideoPlayerController controller) async {
+    if (identical(VideoPlayerShutdown.pipActive, controller)) return;
+    try {
+      await controller.pause();
+    } catch (_) {}
   }
 
   void _handleControllerChanged() {
@@ -93,6 +118,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
   @override
   void didPushNext() {
     if (_fullscreenOpen) return;
+    _recordWatch();
     unawaited(_pausePlayback());
   }
 
@@ -113,6 +139,8 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       if (oldWidget.video.id != widget.video.id) {
         _restored = false;
         _autoNextTriggered = false;
+        _watched = Duration.zero;
+        _lastWatchedAt = null;
       }
       _syncSource();
     }
@@ -187,7 +215,12 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     _qualityNotifier.value = null;
     _loadedQuality = null;
     if (mounted) setState(() {});
-    if (previous != null) await _queueDisposal(previous);
+    if (previous != null) {
+      if (previous.value.isInitialized && previous.value.isPlaying) {
+        unawaited(previous.pause().catchError((_) {}));
+      }
+      unawaited(_queueDisposal(previous));
+    }
     if (!mounted || version != _loadVersion) return;
     final settings = await ref.read(settingsProvider.future);
     if (!mounted || version != _loadVersion) return;
@@ -211,20 +244,25 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       _loadError = null;
     });
     try {
-      await controller.initialize();
-      if (!mounted || version != _loadVersion) {
+      final initializing = controller.initialize();
+      _pendingInitialize[controller] = initializing;
+      await initializing;
+      _pendingInitialize.remove(controller);
+      if (!mounted || version != _loadVersion || !identical(controller, _controllerNotifier.value)) {
+        unawaited(_queueDisposal(controller));
         return;
       }
       if (mounted && version == _loadVersion) setState(() {});
       controller.addListener(_saveProgress);
       await _applyPlaybackPreferences(controller, version, startAt, resumePlaying: resumePlaying);
-      if (!mounted || version != _loadVersion || controller != _controllerNotifier.value) return;
-      _saveProgress();
+      if (!mounted || version != _loadVersion || !identical(controller, _controllerNotifier.value)) return;
+      _saveProgress(controller);
     } catch (error) {
-      if (controller == _controllerNotifier.value) {
+      _pendingInitialize.remove(controller);
+      unawaited(_queueDisposal(controller));
+      if (identical(controller, _controllerNotifier.value)) {
         _controllerNotifier.value = null;
         _qualityNotifier.value = null;
-        await _queueDisposal(controller);
       }
       if (mounted && version == _loadVersion) {
         setState(() {
@@ -236,23 +274,29 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
   }
 
   Future<void> _disposeController(VideoPlayerController controller) async {
-    VideoPlayerShutdown.untrack(controller);
     try {
       controller.removeListener(_saveProgress);
+    } catch (_) {}
+    final pending = _pendingInitialize.remove(controller);
+    if (pending != null) {
+      try {
+        await pending.timeout(const Duration(seconds: 20));
+      } catch (_) {}
+    }
+    try {
       if (controller.value.isInitialized && controller.value.isPlaying) {
-        await controller.pause().timeout(const Duration(seconds: 1));
-        await Future<void>.delayed(const Duration(milliseconds: 64));
+        await controller.pause().timeout(const Duration(milliseconds: 500));
       }
     } catch (_) {}
     try {
       await controller.dispose().timeout(const Duration(seconds: 3));
     } catch (_) {}
+    VideoPlayerShutdown.untrack(controller);
   }
 
   Future<void> _queueDisposal(VideoPlayerController controller) {
-    final disposal = _controllerDisposal.then((_) => _disposeController(controller));
-    _controllerDisposal = disposal;
-    return disposal;
+    if (!_disposing.add(controller)) return Future<void>.value();
+    return _disposeController(controller).whenComplete(() => _disposing.remove(controller));
   }
 
   Future<void> _applyPlaybackPreferences(VideoPlayerController controller, int version, Duration? startAt, {bool resumePlaying = false}) async {
@@ -275,12 +319,21 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     } catch (_) {}
   }
 
-  void _saveProgress() {
-    final value = _controllerNotifier.value?.value;
-    if (value == null || !value.isInitialized) return;
+  void _saveProgress([VideoPlayerController? triggering]) {
+    final controller = triggering ?? _controllerNotifier.value;
+    if (!identical(controller, _controllerNotifier.value)) return;
+    final value = controller?.value;
+    if (controller == null || value == null || !value.isInitialized) {
+      _lastWatchedAt = null;
+      return;
+    }
+    final now = DateTime.now();
+    final lastWatchedAt = _lastWatchedAt;
+    if (value.isPlaying && lastWatchedAt != null) _watched += now.difference(lastWatchedAt);
+    _lastWatchedAt = value.isPlaying ? now : null;
     if (_wasPlaying != value.isPlaying) {
       _wasPlaying = value.isPlaying;
-      if (value.isPlaying) unawaited(VideoPlayerShutdown.pauseAllExcept(_controllerNotifier.value!));
+      if (value.isPlaying) unawaited(VideoPlayerShutdown.pauseAllExcept(controller));
       widget.onPlayingChanged?.call(value.isPlaying);
     }
     if (!_autoNextTriggered && ref.read(settingsProvider).valueOrNull?.autoPlayNext == true && value.duration > Duration.zero && value.position >= value.duration && widget.onNext != null) {
@@ -292,6 +345,14 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (DateTime.now().difference(_lastSaved).inSeconds < 5) return;
     _lastSaved = DateTime.now();
     ref.read(watchProvider.notifier).progress(id: widget.video.id, title: widget.video.title, coverUrl: widget.video.coverUrl, positionMs: value.position.inMilliseconds, durationMs: value.duration.inMilliseconds);
+  }
+
+  void _recordWatch() {
+    final watchedMs = _watched.inMilliseconds;
+    if (watchedMs < _watchThresholdMs) return;
+    _watched = Duration.zero;
+    if (ref.read(settingsProvider).valueOrNull?.incognitoPlayback == true) return;
+    unawaited(_watchController.addTime(widget.video.id, widget.video.title, watchedMs).catchError((_) {}));
   }
 
   Future<void> _fullscreen() async {
@@ -339,10 +400,12 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     try {
       _saveProgress();
     } catch (_) {}
+    _recordWatch();
     _wasPlaying = false;
     widget.onPlayingChanged?.call(false);
     final controller = _controllerNotifier.value;
     _controllerNotifier.value = null;
+    if (identical(VideoPlayerShutdown.pipActive, controller)) VideoPlayerShutdown.pipActive = null;
     if (controller != null) {
       if (_fullscreenOpen) {
         _pendingDispose = controller;

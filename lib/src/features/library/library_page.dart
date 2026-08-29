@@ -74,7 +74,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final l10n = AppLocalizations.of(context)!;
     return switch (index) {
       0 => _Videos(videos: library.watchLater, message: l10n.noWatchLater),
-      1 => _Videos(videos: library.favorites, message: l10n.noFavoriteVideos),
+      1 => _SelectableVideos(videos: library.favorites, emptyMessage: l10n.noFavoriteVideos, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeFavorites(ids)),
       2 => _LocalPlaylists(playlists: library.playlists),
       3 => _LocalSubscriptions(artists: library.artists, videos: library.subscriptionVideos, selectedArtist: _artistId, onSelected: (artist) => setState(() => _artistId = artist)),
       _ => const _LocalHistory(),
@@ -123,7 +123,22 @@ Widget _remoteTabContent(BuildContext context, RemoteLibrary library, int index,
   final l10n = AppLocalizations.of(context)!;
   return switch (index) {
     0 => _Videos(videos: library.watchLater, message: l10n.noWatchLater),
-    1 => _Videos(videos: library.favorites, message: l10n.noFavoriteVideos),
+    1 => _SelectableVideos(
+        videos: library.favorites,
+        emptyMessage: l10n.noFavoriteVideos,
+        remover: (ref, ids) async {
+          final account = ref.read(accountProvider).valueOrNull;
+          final userId = account?.id;
+          final token = library.csrfToken ?? accountToken;
+          if (userId == null || token == null) return;
+          final settings = await ref.read(settingsProvider.future);
+          final repository = ref.read(han1meRepositoryProvider);
+          for (final id in ids) {
+            await repository.setFavorite(settings.resolvedBaseUrl, token, userId, id, false);
+          }
+          ref.invalidate(remoteLibraryProvider);
+        },
+      ),
     2 => _Playlists(playlists: library.playlists, token: library.csrfToken ?? accountToken),
     3 => _RemoteSubscriptions(artists: library.subscriptionArtists, videos: library.subscriptions),
     _ => _RemoteHistory(videos: library.history, token: accountToken ?? library.csrfToken),
@@ -704,6 +719,63 @@ class _Videos extends StatelessWidget {
   Widget build(BuildContext context) {
     if (videos.isEmpty) return Center(child: Text(message, style: Theme.of(context).textTheme.bodyLarge));
     return VideoCardGrid(videos: videos.map(_videoCard).toList(growable: false));
+  }
+}
+
+class _SelectableVideos extends ConsumerStatefulWidget {
+  const _SelectableVideos({required this.videos, required this.emptyMessage, required this.remover});
+
+  final List<FollowingVideo> videos;
+  final String emptyMessage;
+  final Future<void> Function(WidgetRef ref, Set<String> videoCodes) remover;
+
+  @override
+  ConsumerState<_SelectableVideos> createState() => _SelectableVideosState();
+}
+
+class _SelectableVideosState extends ConsumerState<_SelectableVideos> {
+  final _selected = <String>{};
+  var _selectionMode = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Stack(
+      children: [
+        widget.videos.isEmpty
+            ? Center(child: Text(widget.emptyMessage, style: Theme.of(context).textTheme.bodyLarge))
+            : VideoCardGrid(
+                videos: widget.videos.map(_videoCard).toList(growable: false),
+                itemBuilder: (context, index, video, horizontal) {
+                  final selected = _selected.contains(video.id);
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      DecoratedBox(
+                        decoration: selected ? BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2), borderRadius: BorderRadius.circular(12)) : const BoxDecoration(),
+                        child: VideoCardTile(video: video, horizontal: horizontal, onTap: _selectionMode ? () => _toggle(video.id) : null, onLongPress: () => _startSelection(video.id)),
+                      ),
+                      if (selected) const Positioned(top: 6, right: 6, child: Icon(Icons.check_circle, color: Colors.white)),
+                    ],
+                  );
+                },
+              ),
+        Positioned(right: 16, bottom: 16 + MediaQuery.paddingOf(context).bottom, child: FloatingActionButton(tooltip: _selectionMode ? l10n.delete : l10n.select, onPressed: _selectionMode ? (_selected.isEmpty ? _exitSelection : _deleteSelected) : _enterSelection, child: Icon(_selectionMode ? Icons.delete_outline : Icons.checklist_outlined))),
+      ],
+    );
+  }
+
+  void _toggle(String id) => setState(() => _selected.contains(id) ? _selected.remove(id) : _selected.add(id));
+  void _enterSelection() => setState(() => _selectionMode = true);
+  void _startSelection(String id) => setState(() { _selectionMode = true; _selected.add(id); });
+  void _exitSelection() => setState(() { _selectionMode = false; _selected.clear(); });
+
+  Future<void> _deleteSelected() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text(l10n.delete), content: Text(l10n.selectedItems(_selected.length)), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete))]));
+    if (confirmed != true || !mounted) return;
+    await widget.remover(ref, _selected);
+    if (mounted) setState(() { _selectionMode = false; _selected.clear(); });
   }
 }
 

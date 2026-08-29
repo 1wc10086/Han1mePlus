@@ -236,9 +236,11 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
   }
 
   bool _handleScroll(ScrollNotification notification) {
-    if (!widget.showPlayer || _isPlaying || notification.metrics.axis != Axis.vertical) return false;
+    if (!widget.showPlayer || notification.metrics.axis != Axis.vertical) return false;
     if (notification is ScrollUpdateNotification && notification.scrollDelta != null) {
-      final next = (_playerCollapse.value + notification.scrollDelta! / 240).clamp(0.0, 1.0).toDouble();
+      final delta = notification.scrollDelta!;
+      if (delta > 0 && _isPlaying) return false;
+      final next = (_playerCollapse.value + delta / 240).clamp(0.0, 1.0).toDouble();
       if (next != _playerCollapse.value) _playerCollapse.value = next;
     }
     return false;
@@ -297,6 +299,9 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
 
   void _setPlaying(bool value) {
     if (_isPlaying == value) return;
-    setState(() => _isPlaying = value);
+    setState(() {
+      _isPlaying = value;
+      if (value && _playerCollapse.value > 0) _playerCollapse.value = 0;
+    });
   }
 }

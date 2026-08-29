@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:dio/dio.dart';
@@ -7,6 +8,7 @@ import 'package:m3e_core/m3e_core.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../core/platform_service.dart';
+import '../core/video_player_shutdown.dart';
 import '../data/local/update_installer.dart';
 import '../data/remote/update_checker.dart';
 import '../features/navigation/exit_coordinator.dart';
@@ -31,7 +33,14 @@ class _AppStartupEffectsState extends ConsumerState<AppStartupEffects> {
   @override
   void initState() {
     super.initState();
-    _lifecycleListener = AppLifecycleListener(onExitRequested: _handleExitRequest);
+    _lifecycleListener = AppLifecycleListener(
+      onExitRequested: _handleExitRequest,
+      onStateChange: (state) {
+        if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+          unawaited(VideoPlayerShutdown.pauseAllExceptPip());
+        }
+      },
+    );
     ref.listenManual(settingsProvider, (previous, next) {
       final settings = next.valueOrNull;
       if (settings == null) return;
