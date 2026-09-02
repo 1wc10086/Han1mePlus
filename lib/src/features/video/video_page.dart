@@ -118,7 +118,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       child: Stack(
         children: [
           if (isTablet) _TabletVideoLayout(video: video, scrollBehavior: _scrollBehavior) else _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior),
-          Positioned(left: 0, right: isTablet ? MediaQuery.sizeOf(context).width * .3 : 0, bottom: 16, child: _FloatingControls(video: video, scrollBehavior: _scrollBehavior)),
+          Positioned(
+            left: isTablet ? null : 0,
+            right: isTablet ? 16 : 0,
+            bottom: 16,
+            child: _FloatingControls(video: video, scrollBehavior: _scrollBehavior, vertical: isTablet),
+          ),
         ],
       ),
     );
@@ -155,20 +160,31 @@ class _TabletVideoLayout extends StatelessWidget {
 }
 
 class _FloatingControls extends ConsumerWidget {
-  const _FloatingControls({required this.video, required this.scrollBehavior});
+  const _FloatingControls({required this.video, required this.scrollBehavior, this.vertical = false});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
+  final bool vertical;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showComment = ref.watch(videoTabProvider(video.id)) == 1 && ref.watch(accountProvider).valueOrNull != null;
+    final actionColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showComment) ...[
+          FloatingActionButton(onPressed: () => writeSelectedVideoComment(context, ref, video.id), child: const Icon(Icons.add_comment_outlined)),
+          const SizedBox(height: 8),
+        ],
+        VideoActionBar(video: video, vertical: vertical),
+      ],
+    );
     return ListenableBuilder(
       listenable: scrollBehavior.state,
       builder: (context, child) {
         final state = scrollBehavior.state;
         return Transform.translate(
-          offset: Offset(0, -state.offset),
+          offset: vertical ? Offset(-state.offset, 0) : Offset(0, -state.offset),
           child: ExcludeFocus(
             excluding: state.collapsedFraction >= 1,
             child: IgnorePointer(
@@ -178,18 +194,9 @@ class _FloatingControls extends ConsumerWidget {
           ),
         );
       },
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showComment) ...[
-              FloatingActionButton(onPressed: () => writeSelectedVideoComment(context, ref, video.id), child: const Icon(Icons.add_comment_outlined)),
-              const SizedBox(height: 8),
-            ],
-            VideoActionBar(video: video),
-          ],
-        ),
-      ),
+      child: vertical
+          ? Align(alignment: Alignment.bottomRight, child: actionColumn)
+          : Center(child: actionColumn),
     );
   }
 }

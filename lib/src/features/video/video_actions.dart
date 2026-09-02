@@ -15,9 +15,10 @@ import '../settings/settings_controller.dart';
 import 'video_controller.dart';
 
 class VideoActionBar extends ConsumerWidget {
-  const VideoActionBar({super.key, required this.video});
+  const VideoActionBar({super.key, required this.video, this.vertical = false});
 
   final VideoDetail video;
+  final bool vertical;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,18 +29,15 @@ class VideoActionBar extends ConsumerWidget {
     final persistedFavorite = (remote?.favorites ?? library.favorites).any((item) => item.videoCode == video.id);
     final inFavorites = ref.watch(favoriteOverrideProvider(video.id)) ?? persistedFavorite;
     final l10n = AppLocalizations.of(context)!;
-    return M3EHorizontalFloatingToolbar(
-      expanded: true,
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),
-          IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
-          IconButton(tooltip: l10n.download, icon: const Icon(Icons.download_outlined), onPressed: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref)),
-          IconButton(tooltip: l10n.share, icon: const Icon(Icons.share_outlined), onPressed: () => Share.share('${video.title} (${video.id})', subject: video.title)),
-        ],
-      ),
-    );
+    final actions = <Widget>[
+      IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),
+      IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
+      IconButton(tooltip: l10n.download, icon: const Icon(Icons.download_outlined), onPressed: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref)),
+      IconButton(tooltip: l10n.share, icon: const Icon(Icons.share_outlined), onPressed: () => Share.share('${video.title} (${video.id})', subject: video.title)),
+    ];
+    return vertical
+        ? M3EVerticalFloatingToolbar(expanded: true, content: Column(mainAxisSize: MainAxisSize.min, children: actions))
+        : M3EHorizontalFloatingToolbar(expanded: true, content: Row(mainAxisSize: MainAxisSize.min, children: actions));
   }
 
   Future<void> _toggleFavorite(WidgetRef ref, String? token, String? userId, bool enabled) async {

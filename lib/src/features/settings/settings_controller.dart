@@ -53,10 +53,9 @@ class SettingsController extends AsyncNotifier<AppSettings> {
       current.dohPreset != next.dohPreset ||
       current.dohCustomUrl != next.dohCustomUrl ||
       current.dohBootstrapIps != next.dohBootstrapIps ||
-      current.dohTimeoutSeconds != next.dohTimeoutSeconds ||
-      current.useEch != next.useEch;
+      current.dohTimeoutSeconds != next.dohTimeoutSeconds;
 
-  Future<void> _syncNetworkSettings(AppSettings settings) => Han1meHttpClient().setNetworkSettings(useBuiltInHosts: settings.useBuiltInHosts, useDoh: settings.useDoh, dohPreset: settings.dohPreset, dohCustomUrl: settings.dohCustomUrl, dohBootstrapIps: settings.dohBootstrapIps, dohTimeoutSeconds: settings.dohTimeoutSeconds, useEch: settings.useEch);
+  Future<void> _syncNetworkSettings(AppSettings settings) => Han1meHttpClient().setNetworkSettings(useBuiltInHosts: settings.useBuiltInHosts, useDoh: settings.useDoh, dohPreset: settings.dohPreset, dohCustomUrl: settings.dohCustomUrl, dohBootstrapIps: settings.dohBootstrapIps, dohTimeoutSeconds: settings.dohTimeoutSeconds);
 
   Future<void> setPreferredQuality(String quality) async {
     await saveChanges((current) => current.copyWith(preferredQuality: _qualityInt(quality)));

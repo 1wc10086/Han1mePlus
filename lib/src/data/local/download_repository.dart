@@ -247,13 +247,23 @@ class DownloadController extends AsyncNotifier<DownloadState> {
     var downloaded = received;
     var windowStart = DateTime.now();
     var windowBytes = 0;
+    var speedStart = DateTime.now();
+    var speedBytes = 0;
+    var speed = 0;
     final sink = partial.openWrite(mode: received > 0 && rangeAccepted ? FileMode.append : FileMode.write);
     try {
       await for (final chunk in response.data!.stream) {
         sink.add(chunk);
         downloaded += chunk.length;
         windowBytes += chunk.length;
-        await _replace(taskId, (value) => value.copyWith(progress: total <= 0 ? 0 : downloaded / total, downloadedBytes: downloaded, totalBytes: total));
+        speedBytes += chunk.length;
+        final elapsed = DateTime.now().difference(speedStart);
+        if (elapsed >= const Duration(milliseconds: 800)) {
+          speed = (speedBytes / elapsed.inMilliseconds * 1000).round();
+          speedStart = DateTime.now();
+          speedBytes = 0;
+        }
+        await _replace(taskId, (value) => value.copyWith(progress: total <= 0 ? 0 : downloaded / total, downloadedBytes: downloaded, totalBytes: total, speedBytesPerSecond: speed));
         final limit = ref.read(settingsProvider).value?.downloadSpeedLimitMbps ?? 0;
         if (limit > 0) {
           final elapsed = DateTime.now().difference(windowStart);

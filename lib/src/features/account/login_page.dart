@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../data/remote/webview_environment.dart';
 import '../settings/settings_controller.dart';
 import 'account_controller.dart';
 
@@ -45,6 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
     final loginUrl = Uri.parse('$baseUrl/login');
+    final webViewEnvironment = ref.watch(webViewEnvironmentProvider).valueOrNull;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.login)),
@@ -57,6 +59,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         fit: StackFit.expand,
         children: [
           InAppWebView(
+            webViewEnvironment: webViewEnvironment,
             initialSettings: InAppWebViewSettings(
               javaScriptEnabled: true,
               domStorageEnabled: true,

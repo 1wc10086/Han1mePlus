@@ -39,7 +39,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final l10n = AppLocalizations.of(context)!;
     if (drawerMode) {
       return Scaffold(
-        appBar: AppBar(leading: Navigator.of(context).canPop() ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, widget.initialTab)), actions: widget.initialTab == 4 ? [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))] : null),
+        appBar: AppBar(leading: Navigator.of(context).canPop() || permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, widget.initialTab)), actions: widget.initialTab == 4 ? [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))] : null),
         body: value.when(loading: () => const Center(child: M3EContainedLoadingIndicator()), error: (error, stackTrace) => Center(child: Text('$error')), data: (library) => _tabContent(library, widget.initialTab)),
       );
     }
@@ -48,7 +48,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       initialIndex: widget.initialTab,
       child: Scaffold(
         appBar: AppBar(
-          leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
+          leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null,
           title: Text(l10n.myLibrary),
           actions: [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))],
           bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n)),
@@ -73,7 +73,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   Widget _tabContent(LibraryState library, int index) {
     final l10n = AppLocalizations.of(context)!;
     return switch (index) {
-      0 => _Videos(videos: library.watchLater, message: l10n.noWatchLater),
+      0 => _SelectableVideos(videos: library.watchLater, emptyMessage: l10n.noWatchLater, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeWatchLater(ids)),
       1 => _SelectableVideos(videos: library.favorites, emptyMessage: l10n.noFavoriteVideos, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeFavorites(ids)),
       2 => _LocalPlaylists(playlists: library.playlists),
       3 => _LocalSubscriptions(artists: library.artists, videos: library.subscriptionVideos, selectedArtist: _artistId, onSelected: (artist) => setState(() => _artistId = artist)),
@@ -94,7 +94,7 @@ class _RemoteLibrary extends ConsumerWidget {
     final account = ref.watch(accountProvider).valueOrNull;
     if (drawerMode) {
       return Scaffold(
-        appBar: AppBar(leading: IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, initialTab))),
+        appBar: AppBar(leading: permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, initialTab))),
         body: ref.watch(remoteLibraryProvider).when(
           loading: () => const Center(child: M3EContainedLoadingIndicator()),
           error: (error, stackTrace) => Center(child: FilledButton(onPressed: () => ref.invalidate(remoteLibraryProvider), child: Text(l10n.reload))),
@@ -107,7 +107,7 @@ class _RemoteLibrary extends ConsumerWidget {
       initialIndex: initialTab,
       child: Builder(
         builder: (context) => Scaffold(
-          appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null, title: Text(l10n.myLibrary), bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n))),
+          appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null, title: Text(l10n.myLibrary), bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n))),
           body: ref.watch(remoteLibraryProvider).when(
                 loading: () => const Center(child: M3EContainedLoadingIndicator()),
                 error: (error, stackTrace) => Center(child: FilledButton(onPressed: () => ref.invalidate(remoteLibraryProvider), child: Text(l10n.reload))),
@@ -122,7 +122,22 @@ class _RemoteLibrary extends ConsumerWidget {
 Widget _remoteTabContent(BuildContext context, RemoteLibrary library, int index, String? accountToken) {
   final l10n = AppLocalizations.of(context)!;
   return switch (index) {
-    0 => _Videos(videos: library.watchLater, message: l10n.noWatchLater),
+    0 => _SelectableVideos(
+        videos: library.watchLater,
+        emptyMessage: l10n.noWatchLater,
+        remover: (ref, ids) async {
+          final account = ref.read(accountProvider).valueOrNull;
+          final userId = account?.id;
+          final token = library.csrfToken ?? accountToken;
+          if (userId == null || token == null) return;
+          final settings = await ref.read(settingsProvider.future);
+          final repository = ref.read(han1meRepositoryProvider);
+          for (final id in ids) {
+            await repository.saveToPlaylist(settings.resolvedBaseUrl, token, 'save', id, false);
+          }
+          ref.invalidate(remoteLibraryProvider);
+        },
+      ),
     1 => _SelectableVideos(
         videos: library.favorites,
         emptyMessage: l10n.noFavoriteVideos,

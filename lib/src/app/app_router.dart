@@ -9,6 +9,7 @@ import '../domain/models/video.dart';
 import '../features/account/account_web_page.dart';
 import '../features/account/login_page.dart';
 import '../features/account/manual_cookie_page.dart';
+import '../features/account/account_page.dart';
 import '../features/cache/cache_page.dart';
 import '../features/cache/download_group_page.dart';
 import '../features/comics/comic_pages.dart';
@@ -78,6 +79,7 @@ class AppRouter {
         ),
         GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
         GoRoute(path: '/login/cookies', builder: (context, state) => const ManualCookiePage()),
+        GoRoute(path: '/mine', builder: (context, state) => const AccountPage()),
         GoRoute(path: '/cache/groups/new', builder: (context, state) => const DownloadGroupPage()),
         GoRoute(path: '/cache/groups/:id', builder: (context, state) => DownloadGroupPage(groupId: state.pathParameters['id'])),
         GoRoute(

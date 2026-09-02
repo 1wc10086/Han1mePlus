@@ -17,7 +17,7 @@ class SettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     Text sectionTitle(String value) => Text(value, style: TextStyle(color: Theme.of(context).colorScheme.primary));
     return Scaffold(
-        appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null, title: Text(l10n.settings)),
+        appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null, title: Text(l10n.settings)),
       body: SettingsList(
         contentPadding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         sections: [

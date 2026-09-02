@@ -32,9 +32,3 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 -dontwarn io.flutter.embedding.**
-
-# ECH native bridge
--keep class com.liar.han1meplus.EchHttpClient { *; }
--keepclasseswithmembernames class com.liar.han1meplus.EchHttpClient {
-    native <methods>;
-}

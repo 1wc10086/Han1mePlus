@@ -13,6 +13,5 @@ Future<void> bootstrapDesktopNetwork([AppSettings? settings]) async {
     dohCustomUrl: resolved.dohCustomUrl,
     dohBootstrapIps: resolved.dohBootstrapIps,
     dohTimeoutSeconds: resolved.dohTimeoutSeconds,
-    useEch: resolved.useEch,
   );
 }

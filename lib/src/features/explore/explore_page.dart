@@ -12,7 +12,6 @@ import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
-import '../account/account_page.dart';
 import '../../data/local/library_repository.dart';
 import '../../core/settings.dart';
 import '../settings/settings_controller.dart';
@@ -28,15 +27,15 @@ class ExplorePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sections = ref.watch(homeSectionsProvider);
     final drawerMode = ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      endDrawer: drawerMode ? null : const AccountDrawer(),
       appBar: AppBar(
-        leading: drawerMode ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
-        title: Text(AppLocalizations.of(context)!.appTitle),
+        leading: drawerMode && !permanentNavigationDrawer(context) ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
+        title: Text(l10n.appTitle),
         actions: [
           IconButton(onPressed: () => context.push('/search', extra: SearchRouteRequest()), icon: const Icon(Icons.search)),
           IconButton(onPressed: () => context.push('/previews/${_currentPreviewMonth()}'), icon: const Icon(Icons.live_tv_outlined)),
-          if (!drawerMode) Builder(builder: (context) => IconButton(onPressed: () => Scaffold.of(context).openEndDrawer(), icon: const Icon(Icons.account_circle_outlined))),
+          IconButton(tooltip: l10n.mine, onPressed: () => context.push('/mine'), icon: const Icon(Icons.account_circle_outlined)),
         ],
       ),
       body: sections.when(
@@ -80,10 +79,10 @@ class _HomeFeedBody extends ConsumerWidget {
         .where((section) => section.videos.isNotEmpty)
         .toList();
     Future<void> refresh() => ref.read(homeSectionsProvider.notifier).refresh();
-    if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return RefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: sections));
+    if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: sections));
     return DefaultTabController(length: sections.length, child: Column(children: [
       TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: sections.map((section) => Tab(text: section.title)).toList()),
-      Expanded(child: TabBarView(children: sections.map((section) => RefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: [section], forceExpanded: true))).toList())),
+      Expanded(child: TabBarView(children: sections.map((section) => M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: [section], forceExpanded: true))).toList())),
     ]));
   }
 

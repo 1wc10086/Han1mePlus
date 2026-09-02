@@ -7,47 +7,85 @@ import '../../../l10n/app_localizations.dart';
 import '../../domain/models/account.dart';
 import 'account_controller.dart';
 
-class AccountDrawer extends ConsumerWidget {
-  const AccountDrawer({super.key});
+class AccountPage extends ConsumerWidget {
+  const AccountPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final account = ref.watch(accountProvider).valueOrNull;
-    return Drawer(
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
-              child: IntrinsicHeight(
-                child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(AppLocalizations.of(context)!.account, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              _AccountCard(account: account, onRefresh: () => ref.read(accountProvider.notifier).refresh()),
-              const SizedBox(height: 8),
-              _AccountSwitcher(account: account),
-              if (account != null) ...[
-                const SizedBox(height: 12),
-                const SizedBox(height: 8),
-                _ProfilePanels(account: account!),
-                const SizedBox(height: 24),
-                TextButton.icon(
-                  onPressed: () async {
-                    final l10n = AppLocalizations.of(context)!;
-                    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text(l10n.logout), content: Text(l10n.logoutConfirmation), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.logout))]));
-                    if (confirmed == true) await ref.read(accountProvider.notifier).logout();
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: Text(AppLocalizations.of(context)!.logout),
-                ),
-              ],
-            ],
-                ),
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.mine)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          _AccountCard(account: account, onRefresh: () => ref.read(accountProvider.notifier).refresh()),
+          const SizedBox(height: 8),
+          _AccountSwitcher(account: account),
+          if (account != null) ...[
+            const SizedBox(height: 12),
+            _ProfilePanels(account: account!),
+            const SizedBox(height: 24),
+            Center(
+              child: TextButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text(l10n.logout), content: Text(l10n.logoutConfirmation), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.logout))]));
+                  if (confirmed == true) await ref.read(accountProvider.notifier).logout();
+                },
+                icon: const Icon(Icons.logout),
+                label: Text(l10n.logout),
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountCard extends StatelessWidget {
+  const _AccountCard({this.account, required this.onRefresh});
+  final Account? account;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final loggedIn = account != null;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          final router = GoRouter.of(context);
+          if (!loggedIn) router.push('/login');
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          child: Column(
+            children: [
+              InkWell(
+                borderRadius: BorderRadius.circular(44),
+                onTap: loggedIn
+                    ? () async {
+                        final router = GoRouter.of(context);
+                        await router.push('/account/profile/${account!.id}');
+                        onRefresh();
+                      }
+                    : null,
+                child: CircleAvatar(radius: 44, backgroundImage: account?.avatarUrl?.isNotEmpty == true ? CachedNetworkImageProvider(account!.avatarUrl!) : null, child: account?.avatarUrl?.isNotEmpty == true ? null : Icon(loggedIn ? Icons.person : Icons.person_outline, size: 44)),
+              ),
+              const SizedBox(height: 12),
+              Text(account?.name?.isNotEmpty == true ? account!.name! : loggedIn ? l10n.signedIn : l10n.signedOut, textAlign: TextAlign.center, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(loggedIn ? '@${account!.id}' : l10n.tapToLogin, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
+              if (loggedIn) ...[
+                const SizedBox(height: 10),
+                Text(l10n.subscriberVideoCount(account!.subscriberCount ?? 0, account!.videoCount ?? 0), textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 2),
+                Text(l10n.joinedDate(account!.joinedLabel ?? ''), textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ],
           ),
         ),
       ),
@@ -135,58 +173,6 @@ class _AccountSheet extends ConsumerWidget {
           ],
         ),
       );
-}
-
-class _AccountCard extends StatelessWidget {
-  const _AccountCard({this.account, required this.onRefresh});
-  final Account? account;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final loggedIn = account != null;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          final router = GoRouter.of(context);
-          Navigator.pop(context);
-          if (!loggedIn) router.push('/login');
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(28),
-                onTap: loggedIn
-                    ? () async {
-                        final router = GoRouter.of(context);
-                        Navigator.pop(context);
-                        await router.push('/account/profile/${account!.id}');
-                        onRefresh();
-                      }
-                    : null,
-                child: CircleAvatar(radius: 28, backgroundImage: account?.avatarUrl?.isNotEmpty == true ? CachedNetworkImageProvider(account!.avatarUrl!) : null, child: account?.avatarUrl?.isNotEmpty == true ? null : Icon(loggedIn ? Icons.person : Icons.person_outline, size: 30)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(account?.name?.isNotEmpty == true ? account!.name! : loggedIn ? AppLocalizations.of(context)!.signedIn : AppLocalizations.of(context)!.signedOut, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(loggedIn ? AppLocalizations.of(context)!.accountSummary(account?.id ?? '', account?.subscriberCount ?? 0, account?.videoCount ?? 0, account?.joinedLabel ?? '') : AppLocalizations.of(context)!.tapToLogin, style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              Icon(loggedIn ? Icons.verified_user_outlined : Icons.login),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ProfilePanels extends ConsumerWidget {

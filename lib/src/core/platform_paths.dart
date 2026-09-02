@@ -18,11 +18,7 @@ Future<Directory> downloadStorageDirectory() async {
     final external = await getExternalStorageDirectory();
     if (external != null) return Directory(path.join(external.path, 'Download'));
   }
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    final downloads = await getDownloadsDirectory();
-    if (downloads != null) return Directory(path.join(downloads.path, 'Han1me+'));
-  }
-  return Directory(path.join((await getApplicationDocumentsDirectory()).path, 'Download'));
+  return Directory(path.join((await appStorageDirectory()).path, 'Download'));
 }
 
 Future<String> resolveDefaultDownloadPath() async {
@@ -47,9 +43,9 @@ Future<String> normalizeDownloadPath(String value) async {
 }
 
 String platformDownloadPathHint(String fallbackHint) {
-  if (Platform.isWindows) return r'%USERPROFILE%\Downloads\Han1me+';
-  if (Platform.isMacOS) return '~/Downloads/Han1me+';
-  if (Platform.isLinux) return '~/Downloads/Han1me+';
+  if (Platform.isWindows) return r'%APPDATA%\han1me_plus\Download';
+  if (Platform.isMacOS) return '~/Library/Application Support/han1me_plus/Download';
+  if (Platform.isLinux) return '~/.local/share/han1me_plus/Download';
   if (Platform.isIOS) return '~/Documents/Download';
   return fallbackHint;
 }

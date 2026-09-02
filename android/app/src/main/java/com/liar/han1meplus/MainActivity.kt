@@ -46,7 +46,6 @@ class MainActivity : FlutterActivity() {
         const val dohCustomUrlKey = "doh_custom_url"
         const val dohBootstrapIpsKey = "doh_bootstrap_ips"
         const val dohTimeoutSecondsKey = "doh_timeout_seconds"
-        const val useEchKey = "use_ech"
 
         fun saveCookies(context: Context, cookies: String, url: String) {
             val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
@@ -112,7 +111,6 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        EchHttpClient.init(applicationContext)
         networkSettings = loadNetworkSettings()
         client = createClient()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
@@ -156,16 +154,10 @@ class MainActivity : FlutterActivity() {
                         dohCustomUrl = call.argument<String>("dohCustomUrl").orEmpty(),
                         dohBootstrapIps = call.argument<String>("dohBootstrapIps").orEmpty(),
                         dohTimeoutSeconds = (call.argument<Int>("dohTimeoutSeconds") ?: 10).coerceIn(1, 60),
-                        useEch = call.argument<Boolean>("useEch") ?: false,
                     )
                     saveNetworkSettings(networkSettings)
                     client.connectionPool.evictAll()
                     client = createClient()
-                    result.success(null)
-                }
-                "echLogs" -> result.success(EchHttpClient.logs())
-                "clearEchLogs" -> {
-                    EchHttpClient.clearLogs()
                     result.success(null)
                 }
                 "hasCookie" -> {
@@ -351,17 +343,6 @@ class MainActivity : FlutterActivity() {
                     if (call.argument<String>("method") == "DELETE") request.delete(body) else request.post(body)
                 }
                 val builtRequest = request.build()
-                val echResponse = nativeEchRequest(builtRequest)
-                if (echResponse != null) {
-                    val payload = mapOf(
-                        "statusCode" to echResponse.statusCode,
-                        "body" to decodeResponse(echResponse.body, call.argument<String>("responseCharset")),
-                        "url" to echResponse.url,
-                        "headers" to echResponse.headers,
-                    )
-                    runOnUiThread { result.success(payload) }
-                    return@Thread
-                }
                 httpClient.newCall(builtRequest).execute().use {
                     val payload = mapOf(
                         "statusCode" to it.code,
@@ -377,26 +358,6 @@ class MainActivity : FlutterActivity() {
         }.start()
     }
 
-    private fun nativeEchRequest(request: Request): EchResponse? {
-        val settings = networkSettings
-        if (!settings.useEch || !EchHttpClient.isLoaded || request.url.host !in hanimeHosts || request.method !in setOf("GET", "POST", "DELETE")) return null
-        return runCatching {
-            val headers = request.headers.toMultimap().mapValues { it.value.joinToString(", ") }.toMutableMap()
-            cookieJar.loadForRequest(request.url).takeIf { it.isNotEmpty() }?.let { cookies ->
-                headers["Cookie"] = cookies.joinToString("; ") { "${it.name}=${it.value}" }
-            }
-            val response = EchHttpClient.execute(request.method, request.url.toString(), headers, request.body?.let { body -> okio.Buffer().use { buffer -> body.writeTo(buffer); buffer.readByteArray() } }, settings.echDohUrl, settings.echDohResolve)
-            EchHttpClient.addLog("${request.url.host}: ${response.echStatus}")
-            response.headers.entries
-                .filter { it.key.equals("Set-Cookie", true) }
-                .flatMap { it.value }
-                .mapNotNull { Cookie.parse(request.url, it) }
-                .takeIf { it.isNotEmpty() }
-                ?.let { cookieJar.saveFromResponse(request.url, it) }
-            response.takeUnless { it.statusCode == 403 && it.headers.any { header -> header.key.equals("cf-mitigated", true) } }
-        }.onFailure { EchHttpClient.addLog("${request.url.host}: ${it.message ?: "native request failed"}") }.getOrNull()
-    }
-
     private fun decodeResponse(bytes: ByteArray, responseCharset: String?): String = bytes.toString(responseCharset?.let(Charset::forName) ?: Charsets.UTF_8)
 
     private fun download(call: MethodCall, result: MethodChannel.Result) {
@@ -410,15 +371,6 @@ class MainActivity : FlutterActivity() {
                     .header("Referer", "https://hanimeone.me/")
                     .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
                     .build()
-                nativeEchRequest(request)?.let { response ->
-                    if (response.statusCode !in 200..299) throw IllegalStateException("Image request failed: HTTP ${response.statusCode}")
-                    val target = File(path)
-                    target.parentFile?.mkdirs()
-                    target.writeBytes(response.body)
-                    if (!target.exists() || target.length() == 0L) throw IllegalStateException("Image response was empty")
-                    runOnUiThread { result.success(null) }
-                    return@Thread
-                }
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw IllegalStateException("Image request failed: HTTP ${response.code}")
                     val target = File(path)
@@ -452,7 +404,6 @@ class MainActivity : FlutterActivity() {
             dohCustomUrl = preferences.getString(dohCustomUrlKey, "").orEmpty(),
             dohBootstrapIps = preferences.getString(dohBootstrapIpsKey, "").orEmpty(),
             dohTimeoutSeconds = preferences.getInt(dohTimeoutSecondsKey, 10).coerceIn(1, 60),
-            useEch = preferences.getBoolean(useEchKey, false),
         )
     }
 
@@ -464,7 +415,6 @@ class MainActivity : FlutterActivity() {
             .putString(dohCustomUrlKey, settings.dohCustomUrl)
             .putString(dohBootstrapIpsKey, settings.dohBootstrapIps)
             .putInt(dohTimeoutSecondsKey, settings.dohTimeoutSeconds)
-            .putBoolean(useEchKey, settings.useEch)
             .apply()
     }
 
@@ -477,7 +427,6 @@ private data class NetworkSettings(
     val dohCustomUrl: String = "",
     val dohBootstrapIps: String = "",
     val dohTimeoutSeconds: Int = 10,
-    val useEch: Boolean = false,
 )
 
 private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns {
@@ -550,12 +499,6 @@ private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns
         fun address(hostname: String, value: String) = InetAddress.getByAddress(hostname, InetAddress.getByName(value).address)
     }
 }
-
-private val NetworkSettings.echDohUrl: String
-    get() = "https://0kbpekmcr1.cloudflare-gateway.com/dns-query"
-
-private val NetworkSettings.echDohResolve: String
-    get() = ""
 
 private class CloudflareInterceptor(private val context: Context) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {

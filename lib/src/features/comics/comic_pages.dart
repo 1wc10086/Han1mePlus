@@ -51,14 +51,14 @@ class ComicExplorePage extends ConsumerWidget {
     final drawerMode = ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false;
     return Scaffold(
       appBar: AppBar(
-        leading: drawerMode ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
+        leading: drawerMode && !permanentNavigationDrawer(context) ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null,
         title: const Text('Hanime1.me'),
         actions: [IconButton(tooltip: l10n.comicBrowse, onPressed: () => context.push('/comics/browse'), icon: const Icon(Icons.tune))],
       ),
       body: home.when(
         loading: () => const Center(child: M3EContainedLoadingIndicator()),
         error: (error, _) => _Retry(error: error, onRetry: () => ref.invalidate(comicHomeProvider)),
-        data: (feed) => RefreshIndicator(
+        data: (feed) => M3EPullToRefreshIndicator(
           onRefresh: () async {
             await ref.read(comicHomeProvider.notifier).refresh();
           },
@@ -521,7 +521,7 @@ class ComicLibraryPage extends ConsumerWidget {
     final library = ref.watch(comicLibraryProvider);
     if (drawerMode) {
       final title = selectedTab == 0 ? l10n.watchLater : l10n.favoriteVideos;
-      return Scaffold(appBar: AppBar(leading: IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(title)), body: library.when(loading: () => const Center(child: M3EContainedLoadingIndicator()), error: (error, _) => Text('$error'), data: (value) => _ComicGrid(comics: selectedTab == 0 ? value.watchLater : value.favorites)));
+      return Scaffold(appBar: AppBar(leading: permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(title)), body: library.when(loading: () => const Center(child: M3EContainedLoadingIndicator()), error: (error, _) => Text('$error'), data: (value) => _ComicGrid(comics: selectedTab == 0 ? value.watchLater : value.favorites)));
     }
     return DefaultTabController(initialIndex: selectedTab, length: 2, child: Scaffold(appBar: AppBar(title: Text(l10n.myLibrary), bottom: TabBar(tabs: [Tab(text: l10n.watchLater), Tab(text: l10n.favoriteVideos)])), body: library.when(loading: () => const Center(child: M3EContainedLoadingIndicator()), error: (error, _) => Text('$error'), data: (value) => TabBarView(children: [_ComicGrid(comics: value.watchLater), _ComicGrid(comics: value.favorites)]))));
   }
@@ -554,7 +554,7 @@ class _ComicCachePageState extends ConsumerState<ComicCachePage> {
     final l10n = AppLocalizations.of(context)!;
     final drawerMode = ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false;
     return Scaffold(
-      appBar: AppBar(leading: drawerMode ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null, title: Text(l10n.cache), actions: [IconButton(tooltip: l10n.cacheCategory, onPressed: _manageCategories, icon: const Icon(Icons.folder_outlined))]),
+      appBar: AppBar(leading: drawerMode && !permanentNavigationDrawer(context) ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)) : null, title: Text(l10n.cache), actions: [IconButton(tooltip: l10n.cacheCategory, onPressed: _manageCategories, icon: const Icon(Icons.folder_outlined))]),
       body: ref.watch(comicCacheProvider).when(
         loading: () => const Center(child: M3EContainedLoadingIndicator()),
         error: (error, _) => Text('$error'),

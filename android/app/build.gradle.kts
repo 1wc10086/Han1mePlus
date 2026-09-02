@@ -14,8 +14,8 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "17"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.6"
+val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "19"
+val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.8"
 
 android {
     namespace = "com.liar.han1meplus"

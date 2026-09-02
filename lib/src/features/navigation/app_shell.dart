@@ -68,7 +68,9 @@ class _AppShellState extends ConsumerState<AppShell> with SingleTickerProviderSt
     final settings = ref.watch(settingsProvider).valueOrNull;
     final comicMode = settings?.comicMode ?? false;
     final drawerMode = settings?.useNavigationDrawer ?? false;
-    final useRail = !drawerMode && MediaQuery.sizeOf(context).shortestSide >= 600;
+    final largeScreen = MediaQuery.sizeOf(context).shortestSide >= 600;
+    final permanentDrawer = drawerMode && largeScreen;
+    final useRail = !drawerMode && largeScreen;
     final useLiquidGlassBottomBar = !drawerMode && !useRail && (settings?.useLiquidGlassBottomBar ?? true);
     final destinations = [
       (icon: Icons.explore_outlined, selectedIcon: Icons.explore, label: AppLocalizations.of(context)!.explore),
@@ -106,21 +108,29 @@ class _AppShellState extends ConsumerState<AppShell> with SingleTickerProviderSt
       child: Scaffold(
         key: drawerMode ? appShellScaffoldKey : null,
         extendBody: useLiquidGlassBottomBar,
-        drawer: drawerMode ? _AppDrawer(navigationShell: widget.navigationShell) : null,
-        body: useRail
+        drawer: drawerMode && !permanentDrawer ? _AppDrawer(navigationShell: widget.navigationShell) : null,
+        body: permanentDrawer
             ? Row(
                 children: [
-                  NavigationRail(
-                    selectedIndex: widget.navigationShell.currentIndex,
-                    labelType: NavigationRailLabelType.all,
-                    onDestinationSelected: select,
-                    destinations: destinations.map((destination) => NavigationRailDestination(icon: Icon(destination.icon), selectedIcon: Icon(destination.selectedIcon), label: Text(destination.label))).toList(),
-                  ),
+                  _PermanentNavigationDrawer(navigationShell: widget.navigationShell),
                   const VerticalDivider(width: 1),
                   Expanded(child: content),
                 ],
               )
-            : MediaQuery(data: contentMediaQuery, child: animatedContent),
+            : useRail
+                ? Row(
+                    children: [
+                      NavigationRail(
+                        selectedIndex: widget.navigationShell.currentIndex,
+                        labelType: NavigationRailLabelType.all,
+                        onDestinationSelected: select,
+                        destinations: destinations.map((destination) => NavigationRailDestination(icon: Icon(destination.icon), selectedIcon: Icon(destination.selectedIcon), label: Text(destination.label))).toList(),
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
+                    ],
+                  )
+                : MediaQuery(data: contentMediaQuery, child: animatedContent),
         bottomNavigationBar: drawerMode || useRail
             ? null
             : useLiquidGlassBottomBar
@@ -165,6 +175,28 @@ int _libraryTab(String? tab) => switch (tab) {
       _ => 0,
     };
 
+List<_DrawerItem> _drawerItems(BuildContext context, {bool comicMode = false}) {
+  final l10n = AppLocalizations.of(context)!;
+  final items = [
+    _DrawerItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: l10n.home, location: '/'),
+    _DrawerItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: l10n.settings, location: '/settings'),
+    _DrawerItem(icon: Icons.watch_later_outlined, selectedIcon: Icons.watch_later, label: l10n.watchLater, location: '/library/watch-later'),
+    _DrawerItem(icon: Icons.favorite_outline, selectedIcon: Icons.favorite, label: l10n.favoriteVideos, location: '/library/favorites'),
+    if (!comicMode) ...[
+      _DrawerItem(icon: Icons.playlist_play_outlined, selectedIcon: Icons.playlist_play, label: l10n.playlists, location: '/library/playlists'),
+      _DrawerItem(icon: Icons.subscriptions_outlined, selectedIcon: Icons.subscriptions, label: l10n.subscriptions, location: '/library/subscriptions'),
+      _DrawerItem(icon: Icons.history_outlined, selectedIcon: Icons.history, label: l10n.watchHistory, location: '/library/history'),
+    ],
+    _DrawerItem(icon: Icons.download_outlined, selectedIcon: Icons.download, label: l10n.download, location: '/cache'),
+  ];
+  return items;
+}
+
+int _selectedDrawerIndex(BuildContext context, List<_DrawerItem> items) {
+  final path = GoRouterState.of(context).uri.path;
+  return items.indexWhere((item) => item.location == path);
+}
+
 class _AppDrawer extends ConsumerWidget {
   const _AppDrawer({required this.navigationShell});
 
@@ -172,34 +204,20 @@ class _AppDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final account = ref.watch(accountProvider).valueOrNull;
-    final path = GoRouterState.of(context).uri.path;
     final comicMode = ref.watch(settingsProvider).valueOrNull?.comicMode ?? false;
-    final destinations = [
-      _DrawerItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: l10n.home, location: '/'),
-      _DrawerItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: l10n.settings, location: '/settings'),
-      _DrawerItem(icon: Icons.watch_later_outlined, selectedIcon: Icons.watch_later, label: l10n.watchLater, location: '/library/watch-later'),
-      _DrawerItem(icon: Icons.favorite_outline, selectedIcon: Icons.favorite, label: l10n.favoriteVideos, location: '/library/favorites'),
-      if (!comicMode) ...[
-        _DrawerItem(icon: Icons.playlist_play_outlined, selectedIcon: Icons.playlist_play, label: l10n.playlists, location: '/library/playlists'),
-        _DrawerItem(icon: Icons.subscriptions_outlined, selectedIcon: Icons.subscriptions, label: l10n.subscriptions, location: '/library/subscriptions'),
-        _DrawerItem(icon: Icons.history_outlined, selectedIcon: Icons.history, label: l10n.watchHistory, location: '/library/history'),
-      ],
-      _DrawerItem(icon: Icons.download_outlined, selectedIcon: Icons.download, label: l10n.download, location: '/cache'),
-    ];
-    final selectedIndex = destinations.indexWhere((destination) => destination.location == path);
+    final destinations = _drawerItems(context, comicMode: comicMode);
+    final selectedIndex = _selectedDrawerIndex(context, destinations);
     return NavigationDrawer(
       selectedIndex: selectedIndex < 0 ? null : selectedIndex,
       onDestinationSelected: (index) => _go(context, destinations[index].location),
       children: [
-        Padding(padding: const EdgeInsets.fromLTRB(28, 12, 28, 20), child: Text(l10n.appTitle, style: Theme.of(context).textTheme.headlineSmall)),
-        _DrawerAccountCard(account: account),
+        _DrawerAccountCard(account: account, onTap: () {
+          Navigator.pop(context);
+          context.push('/mine');
+        }),
         const SizedBox(height: 12),
-        NavigationDrawerDestination(icon: Icon(destinations[0].icon), selectedIcon: Icon(destinations[0].selectedIcon), label: Text(destinations[0].label)),
-        NavigationDrawerDestination(icon: Icon(destinations[1].icon), selectedIcon: Icon(destinations[1].selectedIcon), label: Text(destinations[1].label)),
-        const Padding(padding: EdgeInsets.fromLTRB(28, 12, 28, 8), child: Divider()),
-        for (final destination in destinations.skip(2)) NavigationDrawerDestination(icon: Icon(destination.icon), selectedIcon: Icon(destination.selectedIcon), label: Text(destination.label)),
+        for (final destination in destinations) NavigationDrawerDestination(icon: Icon(destination.icon), selectedIcon: Icon(destination.selectedIcon), label: Text(destination.label)),
       ],
     );
   }
@@ -223,6 +241,46 @@ class _AppDrawer extends ConsumerWidget {
   }
 }
 
+class _PermanentNavigationDrawer extends ConsumerWidget {
+  const _PermanentNavigationDrawer({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final account = ref.watch(accountProvider).valueOrNull;
+    final comicMode = ref.watch(settingsProvider).valueOrNull?.comicMode ?? false;
+    final destinations = _drawerItems(context, comicMode: comicMode);
+    final selectedIndex = _selectedDrawerIndex(context, destinations);
+    return SizedBox(
+      width: 320,
+      child: SafeArea(
+        child: NavigationDrawer(
+          selectedIndex: selectedIndex < 0 ? null : selectedIndex,
+          onDestinationSelected: (index) {
+            final location = destinations[index].location;
+            switch (location) {
+              case '/':
+                navigationShell.goBranch(0, initialLocation: navigationShell.currentIndex == 0);
+              case '/settings':
+                navigationShell.goBranch(3, initialLocation: navigationShell.currentIndex == 3);
+              case '/cache':
+                navigationShell.goBranch(2, initialLocation: navigationShell.currentIndex == 2);
+              default:
+                context.push(location);
+            }
+          },
+          children: [
+            _DrawerAccountCard(account: account, onTap: () => context.push('/mine')),
+            const SizedBox(height: 12),
+            for (final destination in destinations) NavigationDrawerDestination(icon: Icon(destination.icon), selectedIcon: Icon(destination.selectedIcon), label: Text(destination.label)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DrawerItem {
   const _DrawerItem({required this.icon, required this.selectedIcon, required this.label, required this.location});
 
@@ -233,42 +291,39 @@ class _DrawerItem {
 }
 
 class _DrawerAccountCard extends StatelessWidget {
-  const _DrawerAccountCard({this.account});
+  const _DrawerAccountCard({this.account, required this.onTap});
 
   final Account? account;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final loggedIn = account != null;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Card(
         clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(28),
-                onTap: () {
-                  final router = GoRouter.of(context);
-                  Navigator.pop(context);
-                  router.push(loggedIn ? '/account/profile/${account!.id}' : '/login');
-                },
-                child: CircleAvatar(radius: 28, backgroundImage: account?.avatarUrl?.isNotEmpty == true ? NetworkImage(account!.avatarUrl!) : null, child: account?.avatarUrl?.isNotEmpty == true ? null : Icon(loggedIn ? Icons.person : Icons.person_outline, size: 30)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(account?.name?.isNotEmpty == true ? account!.name! : loggedIn ? AppLocalizations.of(context)!.signedIn : AppLocalizations.of(context)!.signedOut, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(loggedIn ? '@${account!.id}' : AppLocalizations.of(context)!.tapToLogin, style: Theme.of(context).textTheme.bodySmall),
-                  ],
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(radius: 28, backgroundImage: account?.avatarUrl?.isNotEmpty == true ? NetworkImage(account!.avatarUrl!) : null, child: account?.avatarUrl?.isNotEmpty == true ? null : Icon(loggedIn ? Icons.person : Icons.person_outline, size: 30)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(account?.name?.isNotEmpty == true ? account!.name! : loggedIn ? l10n.signedIn : l10n.signedOut, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(loggedIn ? '@${account!.id}' : l10n.tapToLogin, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

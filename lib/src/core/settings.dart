@@ -88,7 +88,6 @@ class AppSettings {
     this.dohCustomUrl = '',
     this.dohBootstrapIps = '',
     this.dohTimeoutSeconds = 10,
-    this.useEch = false,
     this.useHorizontalSearchCards = true,
     this.searchCardsPerRow = 2,
     this.useCompactSearchCards = true,
@@ -106,6 +105,7 @@ class AppSettings {
     this.blockedCommentUsers = const [],
     this.incognitoPlayback = false,
     this.autoPlayNext = false,
+    this.loopPlayback = false,
     this.autoPictureInPicture = false,
     this.videoAspectRatio = VideoAspectRatio.auto,
     this.skipSeconds = 80,
@@ -160,7 +160,6 @@ class AppSettings {
   final String dohCustomUrl;
   final String dohBootstrapIps;
   final int dohTimeoutSeconds;
-  final bool useEch;
   final bool useHorizontalSearchCards;
   final int searchCardsPerRow;
   final bool useCompactSearchCards;
@@ -178,6 +177,7 @@ class AppSettings {
   final List<String> blockedCommentUsers;
   final bool incognitoPlayback;
   final bool autoPlayNext;
+  final bool loopPlayback;
   final bool autoPictureInPicture;
   final VideoAspectRatio videoAspectRatio;
   final int skipSeconds;
@@ -252,7 +252,6 @@ class AppSettings {
         'dohCustomUrl': dohCustomUrl,
         'dohBootstrapIps': dohBootstrapIps,
         'dohTimeoutSeconds': dohTimeoutSeconds,
-        'useEch': useEch,
         'useHorizontalSearchCards': useHorizontalSearchCards,
         'searchCardsPerRow': searchCardsPerRow,
         'useCompactSearchCards': useCompactSearchCards,
@@ -270,6 +269,7 @@ class AppSettings {
         'blockedCommentUsers': blockedCommentUsers,
         'incognitoPlayback': incognitoPlayback,
         'autoPlayNext': autoPlayNext,
+        'loopPlayback': loopPlayback,
         'autoPictureInPicture': autoPictureInPicture,
         'videoAspectRatio': videoAspectRatio.name,
         'skipSeconds': skipSeconds,
@@ -325,7 +325,6 @@ class AppSettings {
         dohCustomUrl: json['dohCustomUrl'] as String? ?? '',
         dohBootstrapIps: json['dohBootstrapIps'] as String? ?? '',
         dohTimeoutSeconds: (json['dohTimeoutSeconds'] as int? ?? 10).clamp(1, 60) as int,
-        useEch: json['useEch'] as bool? ?? false,
         useHorizontalSearchCards: json['useHorizontalSearchCards'] as bool? ?? true,
         searchCardsPerRow: (json['searchCardsPerRow'] as int? ?? 2).clamp(1, 3) as int,
         useCompactSearchCards: json['useCompactSearchCards'] as bool? ?? true,
@@ -343,6 +342,7 @@ class AppSettings {
         blockedCommentUsers: (json['blockedCommentUsers'] as List? ?? const []).whereType<String>().toList(),
         incognitoPlayback: json['incognitoPlayback'] as bool? ?? false,
         autoPlayNext: json['autoPlayNext'] as bool? ?? false,
+        loopPlayback: json['loopPlayback'] as bool? ?? false,
         autoPictureInPicture: json['autoPictureInPicture'] as bool? ?? false,
         videoAspectRatio: _enumByName(VideoAspectRatio.values, json['videoAspectRatio'] as String?) ?? VideoAspectRatio.auto,
         skipSeconds: (json['skipSeconds'] as int? ?? 80).clamp(1, 3600) as int,
@@ -443,7 +443,6 @@ class AppSettings {
     String? dohCustomUrl,
     String? dohBootstrapIps,
     int? dohTimeoutSeconds,
-    bool? useEch,
     bool? useHorizontalSearchCards,
     int? searchCardsPerRow,
     bool? useCompactSearchCards,
@@ -461,6 +460,7 @@ class AppSettings {
     List<String>? blockedCommentUsers,
     bool? incognitoPlayback,
     bool? autoPlayNext,
+    bool? loopPlayback,
     bool? autoPictureInPicture,
     VideoAspectRatio? videoAspectRatio,
     int? skipSeconds,
@@ -515,7 +515,6 @@ class AppSettings {
         dohCustomUrl: dohCustomUrl ?? this.dohCustomUrl,
         dohBootstrapIps: dohBootstrapIps ?? this.dohBootstrapIps,
         dohTimeoutSeconds: dohTimeoutSeconds ?? this.dohTimeoutSeconds,
-        useEch: useEch ?? this.useEch,
         useHorizontalSearchCards: useHorizontalSearchCards ?? this.useHorizontalSearchCards,
         searchCardsPerRow: searchCardsPerRow ?? this.searchCardsPerRow,
         useCompactSearchCards: useCompactSearchCards ?? this.useCompactSearchCards,
@@ -533,6 +532,7 @@ class AppSettings {
         blockedCommentUsers: blockedCommentUsers ?? this.blockedCommentUsers,
         incognitoPlayback: incognitoPlayback ?? this.incognitoPlayback,
         autoPlayNext: autoPlayNext ?? this.autoPlayNext,
+        loopPlayback: loopPlayback ?? this.loopPlayback,
         autoPictureInPicture: autoPictureInPicture ?? this.autoPictureInPicture,
         videoAspectRatio: videoAspectRatio ?? this.videoAspectRatio,
         skipSeconds: skipSeconds ?? this.skipSeconds,

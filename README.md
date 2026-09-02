@@ -30,6 +30,7 @@ Han1mePlus 是一个基于 Flutter 开发的 Hanime1 第三方客户端，采用
 - `Windows`
 - `Ios`
 - `Macos`
+- `Linux`
 
 ## 下载
 

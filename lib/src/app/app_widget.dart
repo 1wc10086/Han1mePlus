@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../core/app_scroll_behavior.dart';
+import '../core/m3e_theme_bridge.dart';
 import '../core/settings.dart';
 import '../features/auth/app_lock_gate.dart';
 import '../features/navigation/exit_coordinator.dart';
@@ -44,12 +45,14 @@ class _Han1meAppState extends ConsumerState<Han1meApp> {
         onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
         debugShowCheckedModeBanner: false,
         routerConfig: _appRouter.router,
-        builder: (context, child) => AppStartupEffects(
-          navigatorKey: _appRouter.navigatorKey,
-          exitCoordinator: _exitCoordinator,
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.textScale)),
-            child: AppLockGate(child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => M3EThemeBridge(
+          child: AppStartupEffects(
+            navigatorKey: _appRouter.navigatorKey,
+            exitCoordinator: _exitCoordinator,
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.textScale)),
+              child: AppLockGate(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         ),
         scrollBehavior: const AppScrollBehavior(),

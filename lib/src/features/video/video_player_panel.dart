@@ -304,6 +304,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       final settings = await ref.read(settingsProvider.future);
       if (!mounted || version != _loadVersion || controller != _controllerNotifier.value) return;
       await controller.setPlaybackSpeed(settings.defaultPlaybackSpeed);
+      await controller.setLooping(settings.loopPlayback);
       if (startAt != null) {
         await controller.seekTo(startAt);
       } else if (!_restored && settings.resumePlayback) {
@@ -336,10 +337,17 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       if (value.isPlaying) unawaited(VideoPlayerShutdown.pauseAllExcept(controller));
       widget.onPlayingChanged?.call(value.isPlaying);
     }
-    if (!_autoNextTriggered && ref.read(settingsProvider).valueOrNull?.autoPlayNext == true && value.duration > Duration.zero && value.position >= value.duration && widget.onNext != null) {
-      _autoNextTriggered = true;
-      widget.onNext!();
-      return;
+    if (value.duration > Duration.zero && value.position >= value.duration) {
+      if (ref.read(settingsProvider).valueOrNull?.loopPlayback == true) {
+        unawaited(controller.seekTo(Duration.zero));
+        if (!value.isPlaying) unawaited(controller.play());
+        return;
+      }
+      if (!_autoNextTriggered && ref.read(settingsProvider).valueOrNull?.autoPlayNext == true && widget.onNext != null) {
+        _autoNextTriggered = true;
+        widget.onNext!();
+        return;
+      }
     }
     if (ref.read(settingsProvider).valueOrNull?.incognitoPlayback == true) return;
     if (DateTime.now().difference(_lastSaved).inSeconds < 5) return;
@@ -410,8 +418,8 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       if (_fullscreenOpen) {
         _pendingDispose = controller;
       } else {
-        if (controller.value.isInitialized && controller.value.isPlaying) {
-          unawaited(controller.pause());
+        if (controller.value.isInitialized) {
+          unawaited(controller.pause().catchError((_) {}));
         }
         unawaited(_queueDisposal(controller));
       }
@@ -423,9 +431,23 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     super.dispose();
   }
 
+  void _handleRoutePop(bool didPop, Object? result) {
+    if (!didPop) return;
+    _recordWatch();
+    unawaited(_pausePlayback());
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<int>(settingsProvider.select((value) => value.valueOrNull?.preferredQuality ?? 720), (_, __) => _syncSource());
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: _handleRoutePop,
+      child: _buildPlayer(context),
+    );
+  }
+
+  Widget _buildPlayer(BuildContext context) {
     final controller = _controllerNotifier.value;
     if (controller == null || !controller.value.isInitialized) {
       return _PlayerFrame(

@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../data/remote/webview_environment.dart';
 import '../account/account_controller.dart';
 import 'settings_controller.dart';
 
@@ -66,10 +67,12 @@ class _CloudflarePageState extends ConsumerState<CloudflarePage> {
   Widget build(BuildContext context) {
     final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
     final initialUrl = widget.initialUrl ?? baseUrl;
+    final webViewEnvironment = ref.watch(webViewEnvironmentProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.cloudflareVerification)),
       body: Stack(children: [
         InAppWebView(
+          webViewEnvironment: webViewEnvironment,
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             domStorageEnabled: true,

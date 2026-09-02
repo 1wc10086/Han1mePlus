@@ -48,6 +48,7 @@ class DownloadTask {
     required this.progress,
     required this.downloadedBytes,
     required this.totalBytes,
+    this.speedBytesPerSecond = 0,
     required this.createdAt,
     required this.updatedAt,
     this.coverUrl,
@@ -79,6 +80,7 @@ class DownloadTask {
   final double progress;
   final int downloadedBytes;
   final int totalBytes;
+  final int speedBytesPerSecond;
   final String? localVideoPath;
   final String? localCoverPath;
   final String? localMetaPath;
@@ -94,6 +96,7 @@ class DownloadTask {
     double? progress,
     int? downloadedBytes,
     int? totalBytes,
+    int? speedBytesPerSecond,
     String? sourceUrl,
     String? localVideoPath,
     String? localCoverPath,
@@ -120,6 +123,7 @@ class DownloadTask {
         progress: progress ?? this.progress,
         downloadedBytes: downloadedBytes ?? this.downloadedBytes,
         totalBytes: totalBytes ?? this.totalBytes,
+        speedBytesPerSecond: speedBytesPerSecond ?? this.speedBytesPerSecond,
         localVideoPath: localVideoPath ?? this.localVideoPath,
         localCoverPath: localCoverPath ?? this.localCoverPath,
         localMetaPath: localMetaPath ?? this.localMetaPath,
@@ -146,6 +150,7 @@ class DownloadTask {
         'progress': progress,
         'downloadedBytes': downloadedBytes,
         'totalBytes': totalBytes,
+        'speedBytesPerSecond': speedBytesPerSecond,
         'localVideoPath': localVideoPath,
         'localCoverPath': localCoverPath,
         'localMetaPath': localMetaPath,
@@ -175,6 +180,7 @@ class DownloadTask {
       progress: (json['progress'] as num?)?.toDouble() ?? 0,
       downloadedBytes: json['downloadedBytes'] as int? ?? 0,
       totalBytes: json['totalBytes'] as int? ?? 0,
+      speedBytesPerSecond: json['speedBytesPerSecond'] as int? ?? 0,
       localVideoPath: json['localVideoPath'] as String?,
       localCoverPath: json['localCoverPath'] as String?,
       localMetaPath: json['localMetaPath'] as String?,

@@ -50,7 +50,7 @@ class _CachePageState extends ConsumerState<CachePage> with TickerProviderStateM
             leading: view.selecting
                 ? IconButton(tooltip: l10n.cancel, onPressed: ref.read(cacheViewProvider.notifier).clearSelection, icon: const Icon(Icons.close))
                 : ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false
-                    ? IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))
+                    ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)))
                     : null,
             title: Text(view.selecting ? l10n.selectedItems(view.selected.length) : l10n.cache),
             actions: view.selecting
@@ -206,9 +206,9 @@ class _TaskGrid extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + 36),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + 38),
           itemCount: tasks.length,
-          itemBuilder: (context, index) => _TaskCard(task: tasks[index], horizontal: horizontal),
+          itemBuilder: (context, index) => _TaskCard(task: tasks[index], horizontal: horizontal, cardHeight: metrics.cardHeight),
         );
       },
     );
@@ -216,16 +216,19 @@ class _TaskGrid extends ConsumerWidget {
 }
 
 class _TaskCard extends ConsumerWidget {
-  const _TaskCard({required this.task, required this.horizontal});
+  const _TaskCard({required this.task, required this.horizontal, required this.cardHeight});
 
   final DownloadTask task;
   final bool horizontal;
+  final double cardHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final view = ref.watch(cacheViewProvider);
     final selected = view.selected.contains(task.id);
+    final downloading = task.status == DownloadStatus.downloading;
+    final queued = task.status == DownloadStatus.queued;
     final label = switch (task.status) {
       DownloadStatus.queued => l10n.queued,
       DownloadStatus.downloading => l10n.downloading,
@@ -234,10 +237,12 @@ class _TaskCard extends ConsumerWidget {
     };
     final localCover = task.localCoverPath;
     final cover = localCover != null && File(localCover).existsSync() ? FileImage(File(localCover)) : null;
+    final infoStyle = Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
+        SizedBox(
+          height: cardHeight - 6,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -261,25 +266,46 @@ class _TaskCard extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
-        SizedBox(
-          height: 32,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              ),
-              if (task.status == DownloadStatus.downloading || task.status == DownloadStatus.queued) ...[
-                const SizedBox(height: 3),
-                M3ELinearProgressIndicator(value: task.status == DownloadStatus.downloading ? task.progress : null),
-              ],
-            ],
+        if (downloading || queued) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: infoStyle),
           ),
-        ),
+          const SizedBox(height: 2),
+          M3ELinearProgressIndicator(value: downloading ? task.progress : null, minHeight: 3),
+          if (downloading) ...[
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Text(_progressInfo(l10n, task), maxLines: 1, overflow: TextOverflow.ellipsis, style: infoStyle),
+            ),
+          ],
+        ] else if (task.status == DownloadStatus.failed) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: infoStyle),
+          ),
+        ],
       ],
     );
+  }
+
+  String _progressInfo(AppLocalizations l10n, DownloadTask task) {
+    final speed = l10n.downloadSpeed(_formatBytes(task.speedBytesPerSecond));
+    final downloaded = _formatBytes(task.downloadedBytes);
+    if (task.totalBytes <= 0) return l10n.downloadProgressPartial(speed, downloaded);
+    return l10n.downloadProgressFull(speed, downloaded, _formatBytes(task.totalBytes));
+  }
+
+  String _formatBytes(int bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var value = bytes.toDouble();
+    var unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    return '${value.toStringAsFixed(value >= 100 || unit == 0 ? 0 : 1)} ${units[unit]}';
   }
 
   Future<void> _openCachedVideo(BuildContext context, DownloadTask task) async {
