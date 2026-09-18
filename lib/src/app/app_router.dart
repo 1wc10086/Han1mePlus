@@ -133,7 +133,17 @@ class AppRouter {
         GoRoute(path: '/comments/:type/:id', builder: (context, state) => CommentsPage(id: state.pathParameters['id']!, type: state.pathParameters['type']!, title: state.extra as String? ?? '')),
         GoRoute(path: '/stats', builder: (context, state) => const StatsPage()),
         GoRoute(path: '/video/:id/tags/:mode', builder: (context, state) => TagEditorPage(videoId: state.pathParameters['id']!, mode: state.pathParameters['mode'] == 'remove' ? TagEditorMode.remove : TagEditorMode.add)),
-        GoRoute(path: '/video/:id', builder: (context, state) => VideoPage(id: state.pathParameters['id']!, localVideo: state.extra as VideoDetail?)),
+        GoRoute(
+          path: '/video/:id',
+          builder: (context, state) {
+            final home = state.uri.queryParameters['home'];
+            return VideoPage(
+              id: state.pathParameters['id']!,
+              localVideo: state.extra as VideoDetail?,
+              homeTarget: home == '/cache' ? '/cache' : '/',
+            );
+          },
+        ),
         GoRoute(path: '/comics/browse', builder: (context, state) => ComicBrowsePage(target: state.extra as ComicBrowseTarget? ?? const ComicBrowseTarget('/comics'))),
         GoRoute(path: '/comics/:id/read', builder: (context, state) => ComicReaderPage(comic: state.extra! as ComicDetail)),
         GoRoute(path: '/comics/:id', builder: (context, state) => ComicDetailPage(id: state.pathParameters['id']!)),

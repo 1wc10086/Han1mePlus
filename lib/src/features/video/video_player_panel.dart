@@ -22,9 +22,10 @@ import 'video_player_controls.dart';
 import 'video_player_surface.dart';
 
 class VideoPlayerPanel extends ConsumerStatefulWidget {
-  const VideoPlayerPanel({super.key, required this.video, required this.onBack, this.onNext, this.onEpisodeSelected, this.onPlayingChanged});
+  const VideoPlayerPanel({super.key, required this.video, required this.onBack, this.onHome, this.onNext, this.onEpisodeSelected, this.onPlayingChanged});
   final VideoDetail video;
   final VoidCallback onBack;
+  final VoidCallback? onHome;
   final VoidCallback? onNext;
   final ValueChanged<VideoCard>? onEpisodeSelected;
   final ValueChanged<bool>? onPlayingChanged;
@@ -370,7 +371,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext)));
+      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome)));
     } finally {
       _fullscreenOpen = false;
       try {
@@ -478,14 +479,21 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
                       ],
                     ),
             ),
-            Positioned(top: 8, left: 8, child: BackButton(color: Colors.white, onPressed: widget.onBack)),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                BackButton(color: Colors.white, onPressed: widget.onBack),
+                if (widget.onHome != null) IconButton(color: Colors.white, tooltip: AppLocalizations.of(context)!.home, onPressed: widget.onHome, icon: const Icon(Icons.home_outlined)),
+              ]),
+            ),
           ],
         ),
       );
     }
     return _PlayerFrame(
       aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
-       child: VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected),
+       child: VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onHome: widget.onHome, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected),
     );
   }
 }
@@ -507,7 +515,7 @@ class _NoVideoSource {
 }
 
 class _FullscreenPlayer extends ConsumerWidget {
-  const _FullscreenPlayer({required this.controller, required this.quality, required this.video, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onEpisodeSelected, this.onNext});
+  const _FullscreenPlayer({required this.controller, required this.quality, required this.video, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onEpisodeSelected, this.onNext, this.onHome});
   final ValueListenable<VideoPlayerController?> controller;
   final ValueListenable<String?> quality;
   final VideoDetail video;
@@ -515,6 +523,7 @@ class _FullscreenPlayer extends ConsumerWidget {
   final ValueChanged<SuperResolutionMode> onSuperResolutionSelected;
   final ValueChanged<VideoCard>? onEpisodeSelected;
   final VoidCallback? onNext;
+  final VoidCallback? onHome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -523,7 +532,7 @@ class _FullscreenPlayer extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       endDrawer: VideoKeyframeDrawer(video: video, controller: controller),
-       body: SafeArea(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onEpisodeSelected: onEpisodeSelected, onNext: onNext, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
+       body: SafeArea(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome, onEpisodeSelected: onEpisodeSelected, onNext: onNext, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
     );
   }
 

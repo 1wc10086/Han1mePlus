@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,17 +86,17 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('zh'),
-    Locale('zh', 'TW')
+    Locale('zh', 'TW'),
   ];
 
   /// No description provided for @appTitle.
@@ -440,42 +440,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Range from 1 to 60 seconds'**
   String get dohTimeoutSecondsDescription;
-
-  /// No description provided for @useEch.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable ECH'**
-  String get useEch;
-
-  /// No description provided for @useEchDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Encrypt the domain name in the TLS ClientHello for Hanime sites'**
-  String get useEchDescription;
-
-  /// No description provided for @echLogs.
-  ///
-  /// In en, this message translates to:
-  /// **'ECH Logs'**
-  String get echLogs;
-
-  /// No description provided for @echLogsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'View ECH configuration and connection status'**
-  String get echLogsDescription;
-
-  /// No description provided for @clearEchLogs.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear Logs'**
-  String get clearEchLogs;
-
-  /// No description provided for @noEchLogs.
-  ///
-  /// In en, this message translates to:
-  /// **'No ECH logs'**
-  String get noEchLogs;
 
   /// No description provided for @customMirrorSite.
   ///
@@ -1208,6 +1172,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed'**
   String get failed;
+
+  /// No description provided for @downloadSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'{speed}/s'**
+  String downloadSpeed(Object speed);
+
+  /// No description provided for @downloadProgressFull.
+  ///
+  /// In en, this message translates to:
+  /// **'{speed} · {downloaded} / {total}'**
+  String downloadProgressFull(Object speed, Object downloaded, Object total);
+
+  /// No description provided for @downloadProgressPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'{speed} · {downloaded}'**
+  String downloadProgressPartial(Object speed, Object downloaded);
 
   /// No description provided for @commentsTitle.
   ///
@@ -1952,7 +1934,29 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'@{id}\n{subscriberCount} subscribers · {videoCount} videos\n{joined}'**
   String accountSummary(
-      Object id, int subscriberCount, int videoCount, Object joined);
+    Object id,
+    int subscriberCount,
+    int videoCount,
+    Object joined,
+  );
+
+  /// No description provided for @subscriberVideoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{subscriberCount} subscribers · {videoCount} videos'**
+  String subscriberVideoCount(int subscriberCount, int videoCount);
+
+  /// No description provided for @joinedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined {date}'**
+  String joinedDate(Object date);
+
+  /// No description provided for @mine.
+  ///
+  /// In en, this message translates to:
+  /// **'My Page'**
+  String get mine;
 
   /// No description provided for @tapToLogin.
   ///
@@ -2842,6 +2846,18 @@ abstract class AppLocalizations {
   /// **'Play the next episode after the current video finishes'**
   String get autoPlayNextDescription;
 
+  /// No description provided for @loopPlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Playback'**
+  String get loopPlayback;
+
+  /// No description provided for @loopPlaybackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart the current video automatically after it finishes'**
+  String get loopPlaybackDescription;
+
   /// No description provided for @autoPictureInPicture.
   ///
   /// In en, this message translates to:
@@ -3207,6 +3223,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter valid cookies'**
   String get invalidCookies;
+
+  /// No description provided for @videoInfoOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load video info. Showing cached info, please check your network connection'**
+  String get videoInfoOffline;
 }
 
 class _AppLocalizationsDelegate
@@ -3248,8 +3270,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

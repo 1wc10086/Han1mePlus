@@ -20,7 +20,11 @@
   "editVideoTitle": "Edit Video Title",
   "deleteVideoKeyframes": "Delete this video's key H-frames",
   "deleteVideoKeyframesConfirmation": "Delete all key H-frames for \"{title}\"?",
-  "@deleteVideoKeyframesConfirmation": {"placeholders": {"title": {}}},
+  "@deleteVideoKeyframesConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "editPosition": "Edit Position",
   "deleteKeyframe": "Delete Key H-Frame",
   "deleteKeyframeTitle": "Delete Key H-Frame",
@@ -69,13 +73,36 @@
   "customMirrorPathRootSummary": "e.g. https://www.example.com/search. The homepage always uses the URL entered above",
   "testConnection": "Test Connection",
   "customMirrorTestSuccess": "Test succeeded\nHomepage: {homeUrl}\nOther API base: {apiBase}",
-  "@customMirrorTestSuccess": {"placeholders": {"homeUrl": {}, "apiBase": {}}},
+  "@customMirrorTestSuccess": {
+    "placeholders": {
+      "homeUrl": {},
+      "apiBase": {}
+    }
+  },
   "customMirrorTestPartialSuccess": "Homepage test succeeded, but other API test failed\nOther API base: {apiBase}\nReason: HTTP {statusCode}",
-  "@customMirrorTestPartialSuccess": {"placeholders": {"apiBase": {}, "statusCode": {"type": "int"}}},
+  "@customMirrorTestPartialSuccess": {
+    "placeholders": {
+      "apiBase": {},
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
   "customMirrorTestFailed": "Test failed: {error}",
-  "@customMirrorTestFailed": {"placeholders": {"error": {}}},
+  "@customMirrorTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "customMirrorTestFailedHttp": "Test failed: HTTP {statusCode}\nHomepage: {url}",
-  "@customMirrorTestFailedHttp": {"placeholders": {"statusCode": {"type": "int"}, "url": {}}},
+  "@customMirrorTestFailedHttp": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      },
+      "url": {}
+    }
+  },
   "customMirrorTestParseFailed": "Connected, but failed to parse the homepage structure",
   "customMirrorTestChallenge": "The site is protected by Cloudflare and may not be usable",
   "custom": "Custom",
@@ -104,17 +131,39 @@
   "searchHint": "Search videos, authors, tags…",
   "noSearchResults": "No matching videos found",
   "category": "Category: {value}",
-  "@category": {"placeholders": {"value": {}}},
+  "@category": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "sort": "Sort: {value}",
-  "@sort": {"placeholders": {"value": {}}},
+  "@sort": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "releaseDate": "Release date: {value}",
-  "@releaseDate": {"placeholders": {"value": {}}},
+  "@releaseDate": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "releaseDateTitle": "Release Date",
   "duration": "Duration: {value}",
-  "@duration": {"placeholders": {"value": {}}},
+  "@duration": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "searchAuthors": "Search Authors",
   "tagsSelected": "Tags: {count} selected",
-  "@tagsSelected": {"placeholders": {"count": {"type": "int"}}},
+  "@tagsSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "broadMatch": "Broad Match",
   "broadMatchDescription": "Matches any of the selected tags; more results but lower precision.",
   "tagVideoAttributes": "Video Attributes",
@@ -140,20 +189,34 @@
   "previews": "Season Previews",
   "getchuPreviews": "Getchu Season Previews",
   "getchuPreviewMonth": "Getchu {month} Release Schedule",
-  "@getchuPreviewMonth": {"placeholders": {"month": {}}},
+  "@getchuPreviewMonth": {
+    "placeholders": {
+      "month": {}
+    }
+  },
   "getchuPreviewUnavailable": "Getchu season previews are unavailable",
   "noGetchuPreviews": "No Getchu season previews this month",
   "getchuPreviewDetail": "Getchu Preview Details",
   "openGetchu": "Open Getchu",
   "playTrailer": "Play trailer",
   "trailerNumber": "Trailer {number}",
-  "@trailerNumber": {"placeholders": {"number": {"type": "int"}}},
+  "@trailerNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "productIntroduction": "Product Introduction",
   "story": "Story",
   "staff": "Staff",
   "getchuSeries": "Series Products",
   "previewMonth": "{month} Release Schedule",
-  "@previewMonth": {"placeholders": {"month": {}}},
+  "@previewMonth": {
+    "placeholders": {
+      "month": {}
+    }
+  },
   "previousMonth": "Previous Month",
   "nextMonth": "Next Month",
   "previewUnavailable": "Season previews unavailable this month",
@@ -162,17 +225,40 @@
   "noPreviewsDescription": "Previews will appear here once released. You can also browse earlier months.",
   "watchVideo": "Watch Video",
   "previewImages": "Preview Images ({count})",
-  "@previewImages": {"placeholders": {"count": {"type": "int"}}},
+  "@previewImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "statistics": "Statistics",
   "watchDuration": "Watch time  {duration}",
-  "@watchDuration": {"placeholders": {"duration": {}}},
+  "@watchDuration": {
+    "placeholders": {
+      "duration": {}
+    }
+  },
   "noWatchHistory": "No watch history",
   "hoursMinutes": "{hours}h {minutes}m",
-  "@hoursMinutes": {"placeholders": {"hours": {}, "minutes": {}}},
+  "@hoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
   "minutes": "{value} min",
-  "@minutes": {"placeholders": {"value": {}}},
+  "@minutes": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "seconds": "{value} sec",
-  "@seconds": {"placeholders": {"value": {}}},
+  "@seconds": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "myLibrary": "My Library",
   "watchLater": "Watch Later",
   "favoriteVideos": "Favorite Videos",
@@ -181,7 +267,13 @@
   "noFavoriteVideos": "No favorite videos",
   "noSubscriptionVideos": "No subscription videos",
   "selectedItems": "{count} selected",
-  "@selectedItems": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "select": "Select",
   "deleteSelectedCache": "Delete Selected Cache",
   "createGroup": "Create Group",
@@ -189,9 +281,17 @@
   "localVideoMissing": "Local video file not found. Delete this cache and re-download.",
   "deleteCache": "Delete Cache",
   "deleteCacheConfirmation": "Delete the local cache for \"{title}\"?",
-  "@deleteCacheConfirmation": {"placeholders": {"title": {}}},
+  "@deleteCacheConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "deleteGroupTitle": "Delete \"{name}\"",
-  "@deleteGroupTitle": {"placeholders": {"name": {}}},
+  "@deleteGroupTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "moveGroupCacheToDefault": "Caches in this group will move to the default group.",
   "groupName": "Group Name",
   "confirm": "Confirm",
@@ -201,15 +301,46 @@
   "completed": "Completed",
   "failed": "Failed",
   "downloadSpeed": "{speed}/s",
-  "@downloadSpeed": {"placeholders": {"speed": {}}},
+  "@downloadSpeed": {
+    "placeholders": {
+      "speed": {}
+    }
+  },
   "downloadProgressFull": "{speed} · {downloaded} / {total}",
-  "@downloadProgressFull": {"placeholders": {"speed": {}, "downloaded": {}, "total": {}}},
+  "@downloadProgressFull": {
+    "placeholders": {
+      "speed": {},
+      "downloaded": {},
+      "total": {}
+    }
+  },
   "downloadProgressPartial": "{speed} · {downloaded}",
-  "@downloadProgressPartial": {"placeholders": {"speed": {}, "downloaded": {}}},
+  "@downloadProgressPartial": {
+    "placeholders": {
+      "speed": {},
+      "downloaded": {}
+    }
+  },
   "commentsTitle": "{title} Comments",
-  "@commentsTitle": {"placeholders": {"title": {}}},
+  "@commentsTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "date": "{month}/{day}/{year}",
-  "@date": {"placeholders": {"year": {"type": "int"}, "month": {"type": "int"}, "day": {"type": "int"}}},
+  "@date": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "thirdPartyClient": "Third-party Hanime1 client",
   "version": "Version",
   "dataSource": "Data Source",
@@ -226,7 +357,13 @@
   "pauseBeforeAddingKeyframe": "Pause the video before adding a key H-frame",
   "addKeyframe": "Add Key H-Frame",
   "addKeyframeConfirmation": "Add the current paused position as a key H-frame?\n\nCurrent time: {position} ms\nAdjacent keyframes must be at least 10 seconds apart.",
-  "@addKeyframeConfirmation": {"placeholders": {"position": {"type": "int"}}},
+  "@addKeyframeConfirmation": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
   "add": "Add",
   "keyframeAdded": "Key H-frame added",
   "keyframeTooClose": "Less than 10 seconds from an existing keyframe",
@@ -236,7 +373,11 @@
   "deleteCurrentVideoKeyframesConfirmation": "Delete all key H-frames for the current video?",
   "editKeyframe": "Edit Key H-Frame",
   "keyframeCountdown": "Key H-frame in {seconds} seconds",
-  "@keyframeCountdown": {"placeholders": {"seconds": {}}},
+  "@keyframeCountdown": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
   "episodeList": "Episode List",
   "seriesVideos": "Series Videos",
   "relatedVideos": "Related Videos",
@@ -254,7 +395,13 @@
   "description": "Description",
   "commentsLoadFailed": "Failed to load comments",
   "keyframeCount": "{count} keyframes",
-  "@keyframeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@keyframeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "themeMode": "Theme Mode",
   "followSystem": "Follow System",
   "light": "Light",
@@ -272,7 +419,11 @@
   "keyframeSettingsDescription": "Manage the toggle and per-video key H-frames",
   "latestVersion": "You're up to date",
   "newVersionAvailable": "New version {version} available",
-  "@newVersionAvailable": {"placeholders": {"version": {}}},
+  "@newVersionAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
   "newVersionReleased": "A new version has been released.",
   "later": "Later",
   "updateNow": "Update Now",
@@ -281,7 +432,11 @@
   "downloadingUpdate": "Downloading Update",
   "connecting": "Connecting...",
   "updateFailed": "Update failed: {error}",
-  "@updateFailed": {"placeholders": {"error": {}}},
+  "@updateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "close": "Close",
   "monetColors": "Monet Colors",
   "monetColorsDescription": "Use dynamic system wallpaper colors",
@@ -291,7 +446,13 @@
   "unlimited": "Unlimited",
   "concurrentDownloads": "Concurrent Download Limit",
   "concurrentDownloadsDescription": "Download {count} videos at the same time",
-  "@concurrentDownloadsDescription": {"placeholders": {"count": {"type": "int"}}},
+  "@concurrentDownloadsDescription": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "downloadPath": "Download Path",
   "defaultDownloadPath": "/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/",
   "exportDownloads": "Export Downloads",
@@ -307,11 +468,25 @@
   "noPlaylists": "No playlists",
   "deletePlaylist": "Delete Playlist",
   "deletePlaylistConfirmation": "Delete \"{title}\"?",
-  "@deletePlaylistConfirmation": {"placeholders": {"title": {}}},
+  "@deletePlaylistConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "videoCount": "{count} videos",
-  "@videoCount": {"placeholders": {"count": {"type": "int"}}},
+  "@videoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "loadFailed": "Failed to load: {error}",
-  "@loadFailed": {"placeholders": {"error": {}}},
+  "@loadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "playlistEmpty": "Playlist is empty",
   "writeComment": "Write a Comment",
   "commentHint": "Enter your comment",
@@ -319,9 +494,22 @@
   "popular": "Popular",
   "oldest": "Oldest",
   "playlistCreatedBy": "Created by {name}",
-  "@playlistCreatedBy": {"placeholders": {"name": {}}},
+  "@playlistCreatedBy": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "playlistStats": "Playlist • {count} videos • {views} views",
-  "@playlistStats": {"placeholders": {"count": {"type": "int"}, "views": {"type": "int"}}},
+  "@playlistStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "views": {
+        "type": "int"
+      }
+    }
+  },
   "playAll": "Play All",
   "earliest": "Earliest",
   "mostReplies": "Most Replies",
@@ -329,7 +517,13 @@
   "mostDislikes": "Most Disliked",
   "viewReplies": "View Replies",
   "viewRepliesCount": "View Replies ({count})",
-  "@viewRepliesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@viewRepliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reply": "Reply",
   "replyComment": "Reply to Comment",
   "send": "Send",
@@ -344,11 +538,35 @@
   "signedIn": "Signed In",
   "signedOut": "Signed Out",
   "accountSummary": "@{id}\n{subscriberCount} subscribers · {videoCount} videos\n{joined}",
-  "@accountSummary": {"placeholders": {"id": {}, "subscriberCount": {"type": "int"}, "videoCount": {"type": "int"}, "joined": {}}},
+  "@accountSummary": {
+    "placeholders": {
+      "id": {},
+      "subscriberCount": {
+        "type": "int"
+      },
+      "videoCount": {
+        "type": "int"
+      },
+      "joined": {}
+    }
+  },
   "subscriberVideoCount": "{subscriberCount} subscribers · {videoCount} videos",
-  "@subscriberVideoCount": {"placeholders": {"subscriberCount": {"type": "int"}, "videoCount": {"type": "int"}}},
+  "@subscriberVideoCount": {
+    "placeholders": {
+      "subscriberCount": {
+        "type": "int"
+      },
+      "videoCount": {
+        "type": "int"
+      }
+    }
+  },
   "joinedDate": "Joined {date}",
-  "@joinedDate": {"placeholders": {"date": {}}},
+  "@joinedDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "mine": "My Page",
   "tapToLogin": "Tap to Log In",
   "editProfile": "Edit Profile",
@@ -398,7 +616,13 @@
   "expandHomeVideoCardsDescription": "When off, each home category shows a row of videos; when on, uses the videos-per-row setting",
   "searchCardsPerRow": "Video Cards Per Row",
   "searchCardsPerRowValue": "{count} per row",
-  "@searchCardsPerRowValue": {"placeholders": {"count": {"type": "int"}}},
+  "@searchCardsPerRowValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "comicModeDescription": "When enabled, home, library, and cache show comic content only",
   "comicBrowse": "Comic Filters",
   "trendingComics": "Trending Comics",
@@ -407,7 +631,13 @@
   "comicDetails": "Comic Details",
   "read": "Read",
   "pageCount": "{count} pages",
-  "@pageCount": {"placeholders": {"count": {"type": "int"}}},
+  "@pageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tags": "Tags",
   "chapter": "Chapters",
   "chapterOne": "Chapter 1",
@@ -439,7 +669,13 @@
   "seekSensitivity": "Seek Sensitivity",
   "seekSensitivityDescription": "Lower it to reduce the jump distance when swiping left or right",
   "seekSensitivityValue": "{value}%",
-  "@seekSensitivityValue": {"placeholders": {"value": {"type": "int"}}},
+  "@seekSensitivityValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "playerSettings": "Player Settings",
   "playerSettingsDescription": "Decoder, renderer, and advanced libmpv options",
   "hardwareDecode": "Hardware Decode",
@@ -470,7 +706,13 @@
   "accountManage": "Account Management",
   "accountManageSubtitleEmpty": "Add or switch accounts for this site",
   "accountManageSubtitleCount": "{count} account(s) saved for this site",
-  "@accountManageSubtitleCount": {"placeholders": {"count": {"type": "int"}}},
+  "@accountManageSubtitleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "removeAccount": "Remove Account",
   "addAccount": "Add Account",
   "defaultCategory": "Default",
@@ -532,10 +774,21 @@
   "deleteSearchHistory": "Delete search history",
   "restoreSearchHistory": "Search this combination",
   "searchHistorySummary": "{query} · {filters}",
-  "@searchHistorySummary": {"placeholders": {"query": {}, "filters": {}}},
+  "@searchHistorySummary": {
+    "placeholders": {
+      "query": {},
+      "filters": {}
+    }
+  },
   "searchHistoryAll": "All",
   "searchHistoryTags": "{count} tags",
-  "@searchHistoryTags": {"placeholders": {"count": {"type": "int"}}},
+  "@searchHistoryTags": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "externalPlayback": "External Playback",
   "addTags": "Add Tags",
   "removeTags": "Remove Tags",
@@ -566,5 +819,6 @@
   "chooseFolder": "Choose Folder",
   "manualCookieLogin": "Enter Cookies Manually",
   "cookies": "Cookies",
-  "invalidCookies": "Enter valid cookies"
+  "invalidCookies": "Enter valid cookies",
+  "videoInfoOffline": "Failed to load video info. Showing cached info, please check your network connection"
 }

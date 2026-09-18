@@ -188,26 +188,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dohTimeoutSecondsDescription => 'Range from 1 to 60 seconds';
 
   @override
-  String get useEch => 'Enable ECH';
-
-  @override
-  String get useEchDescription =>
-      'Encrypt the domain name in the TLS ClientHello for Hanime sites';
-
-  @override
-  String get echLogs => 'ECH Logs';
-
-  @override
-  String get echLogsDescription =>
-      'View ECH configuration and connection status';
-
-  @override
-  String get clearEchLogs => 'Clear Logs';
-
-  @override
-  String get noEchLogs => 'No ECH logs';
-
-  @override
   String get customMirrorSite => 'Custom Mirror Site';
 
   @override
@@ -629,6 +609,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failed => 'Failed';
 
   @override
+  String downloadSpeed(Object speed) {
+    return '$speed/s';
+  }
+
+  @override
+  String downloadProgressFull(Object speed, Object downloaded, Object total) {
+    return '$speed · $downloaded / $total';
+  }
+
+  @override
+  String downloadProgressPartial(Object speed, Object downloaded) {
+    return '$speed · $downloaded';
+  }
+
+  @override
   String commentsTitle(Object title) {
     return '$title Comments';
   }
@@ -1036,9 +1031,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String accountSummary(
-      Object id, int subscriberCount, int videoCount, Object joined) {
+    Object id,
+    int subscriberCount,
+    int videoCount,
+    Object joined,
+  ) {
     return '@$id\n$subscriberCount subscribers · $videoCount videos\n$joined';
   }
+
+  @override
+  String subscriberVideoCount(int subscriberCount, int videoCount) {
+    return '$subscriberCount subscribers · $videoCount videos';
+  }
+
+  @override
+  String joinedDate(Object date) {
+    return 'Joined $date';
+  }
+
+  @override
+  String get mine => 'My Page';
 
   @override
   String get tapToLogin => 'Tap to Log In';
@@ -1520,6 +1532,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Play the next episode after the current video finishes';
 
   @override
+  String get loopPlayback => 'Loop Playback';
+
+  @override
+  String get loopPlaybackDescription =>
+      'Restart the current video automatically after it finishes';
+
+  @override
   String get autoPictureInPicture => 'Auto Picture-in-Picture';
 
   @override
@@ -1713,4 +1732,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invalidCookies => 'Enter valid cookies';
+
+  @override
+  String get videoInfoOffline =>
+      'Failed to load video info. Showing cached info, please check your network connection';
 }
