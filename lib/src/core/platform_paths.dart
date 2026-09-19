@@ -14,6 +14,12 @@ Future<Directory> appStorageDirectory() async {
 }
 
 Future<Directory> downloadStorageDirectory() async {
+  if (Platform.isIOS) {
+    // Documents is exposed in the Files app ("On My iPad > Han1me+") via
+    // UIFileSharingEnabled, so downloads stay user-visible.
+    final documents = await getApplicationDocumentsDirectory();
+    return Directory(path.join(documents.path, 'Download'));
+  }
   if (Platform.isAndroid) {
     final external = await getExternalStorageDirectory();
     if (external != null) return Directory(path.join(external.path, 'Download'));
@@ -28,6 +34,7 @@ Future<String> resolveDefaultDownloadPath() async {
 }
 
 Future<String> normalizeDownloadPath(String value) async {
+  if (Platform.isIOS) return resolveDefaultDownloadPath();
   if (value.trim().isEmpty || (!Platform.isAndroid && isAndroidDownloadPath(value))) {
     return resolveDefaultDownloadPath();
   }

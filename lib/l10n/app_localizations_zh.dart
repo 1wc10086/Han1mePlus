@@ -1686,6 +1686,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeFeaturedDescription => '在首页顶部显示推荐视频横幅';
+
+  @override
+  String get downloadQuality => '缓存分辨率';
+
+  @override
+  String get downloadQualityDescription =>
+      '下载时自动选择最接近的可用分辨率,1080p 不可用时自动降级到 720p、480p';
+
+  @override
+  String downloadQualityValue(Object quality) {
+    return '${quality}p';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3370,4 +3382,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get homeFeaturedDescription => '在首頁頂部顯示推薦影片橫幅';
+
+  @override
+  String get downloadQuality => '快取解析度';
+
+  @override
+  String get downloadQualityDescription =>
+      '下載時自動選擇最接近的可用解析度,1080p 不可用時自動降級到 720p、480p';
+
+  @override
+  String downloadQualityValue(Object quality) {
+    return '${quality}p';
+  }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import '../../core/settings.dart';
@@ -46,7 +47,11 @@ class DownloadController extends AsyncNotifier<DownloadState> {
   @override
   Future<DownloadState> build() async {
     ref.listen<AsyncValue<AppSettings>>(settingsProvider, (previous, next) {
-      if (previous?.valueOrNull?.downloadPath != next.valueOrNull?.downloadPath) {
+      // Only re-initialize when the user actually changes the download path;
+      // the initial settings load (previous == null) must not invalidate this
+      // provider, or anything awaiting it hangs while it is being rebuilt.
+      final previousPath = previous?.valueOrNull?.downloadPath;
+      if (previousPath != null && previousPath != next.valueOrNull?.downloadPath) {
         ref.invalidateSelf();
       } else {
         _schedule();
@@ -76,10 +81,14 @@ class DownloadController extends AsyncNotifier<DownloadState> {
   }
 
   Future<void> _save(DownloadState value) async {
+    state = AsyncData(value);
     final file = File(path.join(_root.path, 'download_store.json'));
     _writeQueue = _writeQueue.then((_) async {
-      await file.writeAsString(jsonEncode(value.toJson()), flush: true);
-      state = AsyncData(value);
+      try {
+        await file.writeAsString(jsonEncode(value.toJson()), flush: true);
+      } catch (error) {
+        debugPrint('Failed to persist download store: $error');
+      }
     });
     await _writeQueue;
   }

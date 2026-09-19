@@ -1743,4 +1743,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeFeaturedDescription =>
       'Show the featured video banner at the top of the home page';
+
+  @override
+  String get downloadQuality => 'Download Quality';
+
+  @override
+  String get downloadQualityDescription =>
+      'Automatically pick the closest available quality when downloading (1080p, falling back to 720p then 480p)';
+
+  @override
+  String downloadQualityValue(Object quality) {
+    return '${quality}p';
+  }
 }

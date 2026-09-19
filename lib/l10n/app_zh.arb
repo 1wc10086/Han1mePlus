@@ -822,5 +822,13 @@
   "invalidCookies": "请输入有效的 Cookies",
   "videoInfoOffline": "视频信息加载失败,已显示缓存信息,请检查网络连接",
   "homeFeatured": "首页推荐",
-  "homeFeaturedDescription": "在首页顶部显示推荐视频横幅"
+  "homeFeaturedDescription": "在首页顶部显示推荐视频横幅",
+  "downloadQuality": "缓存分辨率",
+  "downloadQualityDescription": "下载时自动选择最接近的可用分辨率,1080p 不可用时自动降级到 720p、480p",
+  "downloadQualityValue": "{quality}p",
+  "@downloadQualityValue": {
+    "placeholders": {
+      "quality": {}
+    }
+  }
 }

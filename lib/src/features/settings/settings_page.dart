@@ -38,6 +38,7 @@ class SettingsPage extends ConsumerWidget {
           ]),
           SettingsSection(title: sectionTitle(l10n.application), tiles: [
             _NavigationTile(icon: Icons.apps_outlined, title: l10n.applicationSettings, onTap: () => context.push('/settings/application')).tile,
+            _NavigationTile(icon: Icons.download_outlined, title: l10n.downloadSettings, onTap: () => context.push('/settings/download')).tile,
           ]),
           SettingsSection(title: sectionTitle(l10n.other), tiles: [
             _NavigationTile(icon: Icons.info_outline, title: l10n.about, onTap: () => context.push('/settings/about')).tile,

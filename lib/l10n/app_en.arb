@@ -822,5 +822,13 @@
   "invalidCookies": "Enter valid cookies",
   "videoInfoOffline": "Failed to load video info. Showing cached info, please check your network connection",
   "homeFeatured": "Home Featured Video",
-  "homeFeaturedDescription": "Show the featured video banner at the top of the home page"
+  "homeFeaturedDescription": "Show the featured video banner at the top of the home page",
+  "downloadQuality": "Download Quality",
+  "downloadQualityDescription": "Automatically pick the closest available quality when downloading (1080p, falling back to 720p then 480p)",
+  "downloadQualityValue": "{quality}p",
+  "@downloadQualityValue": {
+    "placeholders": {
+      "quality": {}
+    }
+  }
 }

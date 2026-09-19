@@ -822,5 +822,13 @@
   "invalidCookies": "請輸入有效的 Cookies",
   "videoInfoOffline": "影片資訊載入失敗,已顯示快取資訊,請檢查網路連線",
   "homeFeatured": "首頁推薦",
-  "homeFeaturedDescription": "在首頁頂部顯示推薦影片橫幅"
+  "homeFeaturedDescription": "在首頁頂部顯示推薦影片橫幅",
+  "downloadQuality": "快取解析度",
+  "downloadQualityDescription": "下載時自動選擇最接近的可用解析度,1080p 不可用時自動降級到 720p、480p",
+  "downloadQualityValue": "{quality}p",
+  "@downloadQualityValue": {
+    "placeholders": {
+      "quality": {}
+    }
+  }
 }

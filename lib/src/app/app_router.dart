@@ -27,6 +27,7 @@ import '../features/settings/backup_settings_page.dart';
 import '../features/settings/cloudflare_page.dart';
 import '../features/settings/comment_settings_page.dart';
 import '../features/settings/deep_link_settings_page.dart';
+import '../features/settings/download_settings_page.dart';
 import '../features/settings/keyframes_page.dart';
 import '../features/settings/language_settings_page.dart';
 import '../features/settings/layout_settings_page.dart';
@@ -111,6 +112,7 @@ class AppRouter {
         GoRoute(path: '/settings/comments', builder: (context, state) => const CommentSettingsPage()),
         GoRoute(path: '/settings/comments/users', builder: (context, state) => const CommentUserFilterPage()),
         GoRoute(path: '/settings/deep-links', builder: (context, state) => const DeepLinkSettingsPage()),
+        GoRoute(path: '/settings/download', builder: (context, state) => const DownloadSettingsPage()),
         GoRoute(path: '/settings/theme', builder: (context, state) => const ThemeSettingsPage()),
         GoRoute(path: '/settings/layout', builder: (context, state) => const LayoutSettingsPage()),
         GoRoute(path: '/settings/network', builder: (context, state) => const NetworkSettingsPage()),

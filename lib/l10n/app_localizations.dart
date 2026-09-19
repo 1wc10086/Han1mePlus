@@ -3241,6 +3241,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show the featured video banner at the top of the home page'**
   String get homeFeaturedDescription;
+
+  /// No description provided for @downloadQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Quality'**
+  String get downloadQuality;
+
+  /// No description provided for @downloadQualityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically pick the closest available quality when downloading (1080p, falling back to 720p then 480p)'**
+  String get downloadQualityDescription;
+
+  /// No description provided for @downloadQualityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{quality}p'**
+  String downloadQualityValue(Object quality);
 }
 
 class _AppLocalizationsDelegate
