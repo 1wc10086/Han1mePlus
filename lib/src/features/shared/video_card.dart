@@ -8,7 +8,8 @@ import '../settings/settings_controller.dart';
 
 int videoCardCacheWidth(double cardWidth, double devicePixelRatio) => (cardWidth * devicePixelRatio).round().clamp(240, 480).toInt();
 
-const _horizontalCardMetaHeight = 120.0;
+// 封面下方元信息实际高度: 标题 40 + 2 + 作者行 16 + 2 + 点赞行 16, 另加封面与元信息之间 8 的间距。
+const _horizontalCardMetaHeight = 84.0;
 
 class VideoCardMetrics {
   const VideoCardMetrics({required this.horizontal, required this.cardsPerRow, required this.cardWidth, required this.cardHeight});
