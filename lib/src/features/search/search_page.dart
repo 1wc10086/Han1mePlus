@@ -73,46 +73,48 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       if (_textController.text != next.text) _textController.value = _textController.value.copyWith(text: next.text, selection: TextSelection.collapsed(offset: next.text.length));
     });
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
-        title: Text(l10n.searchHint),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: SearchBar(
-              controller: _textController,
-              hintText: l10n.searchHint,
-              leading: const Icon(Icons.search),
-              trailing: [
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _textController,
-                  builder: (context, value, _) => value.text.isEmpty
-                      ? const SizedBox.shrink()
-                      : IconButton(
-                          tooltip: l10n.clear,
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            _textController.clear();
-                            notifier.text('');
-                          },
-                        ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+              child: Row(children: [
+                IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
+                Expanded(
+                  child: SearchBar(
+                    controller: _textController,
+                    hintText: l10n.searchHint,
+                    trailing: [
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _textController,
+                        builder: (context, value, _) => value.text.isEmpty
+                            ? const SizedBox.shrink()
+                            : IconButton(
+                                tooltip: l10n.clear,
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  _textController.clear();
+                                  notifier.text('');
+                                },
+                              ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.searchHistory,
+                        icon: const Icon(Icons.history),
+                        onPressed: () => _showHistory(context, ref, notifier),
+                      ),
+                    ],
+                    onSubmitted: (value) {
+                      notifier.text(value.trim());
+                      final next = ref.read(searchQueryProvider(request));
+                      unawaited(ref.read(searchHistoryProvider.notifier).record(next));
+                    },
+                  ),
                 ),
-                IconButton(
-                  tooltip: l10n.searchHistory,
-                  icon: const Icon(Icons.history),
-                  onPressed: () => _showHistory(context, ref, notifier),
-                ),
-              ],
-              onSubmitted: (value) {
-                notifier.text(value.trim());
-                final next = ref.read(searchQueryProvider(request));
-                unawaited(ref.read(searchHistoryProvider.notifier).record(next));
-              },
+              ]),
             ),
-          ),
-          _Filters(options: options, query: query, notifier: notifier),
+            _Filters(options: options, query: query, notifier: notifier),
           Expanded(
             child: result.when(
               loading: () => const Center(child: M3EContainedLoadingIndicator()),
@@ -143,7 +145,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             result: result.valueOrNull,
             onChanged: notifier.page,
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
