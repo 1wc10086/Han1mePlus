@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:m3e_core/m3e_core.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/desktop_platform.dart';
 import '../../data/local/library_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/video.dart';
@@ -21,36 +22,97 @@ VideoCard? nextEpisode(VideoDetail video) {
   return episodes.firstWhere((episode) => episode.id != video.id, orElse: () => const VideoCard(id: '', title: '', coverUrl: ''));
 }
 
-void _playNext(BuildContext context, VideoDetail video) {
+void _playNext(BuildContext context, VideoDetail video, {String homeTarget = '/'}) {
   final next = nextEpisode(video);
   if (next == null || next.id.isEmpty) return;
-  context.pushReplacement('/video/${next.id}');
+  context.pushReplacement('/video/${next.id}${_homeQuery(homeTarget)}');
 }
 
-void _playEpisode(BuildContext context, VideoCard episode) {
+void _playEpisode(BuildContext context, VideoCard episode, {String homeTarget = '/'}) {
   if (episode.id.isEmpty) return;
-  context.pushReplacement('/video/${episode.id}');
+  context.pushReplacement('/video/${episode.id}${_homeQuery(homeTarget)}');
 }
 
-class VideoPage extends ConsumerWidget {
-  const VideoPage({super.key, required this.id, this.localVideo});
+String _homeQuery(String homeTarget) => homeTarget == '/' ? '' : '?home=$homeTarget';
+
+class VideoPage extends ConsumerStatefulWidget {
+  const VideoPage({super.key, required this.id, this.localVideo, this.homeTarget = '/'});
 
   final String id;
   final VideoDetail? localVideo;
+  final String homeTarget;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Widget withBackButton(Widget child) => Stack(children: [child, const SafeArea(child: Padding(padding: EdgeInsets.all(8), child: BackButton()))]);
-    final content = localVideo == null
-        ? ref.watch(videoDetailProvider(id)).when(
-              loading: () => withBackButton(const Center(child: M3EContainedLoadingIndicator())),
-              error: (error, stackTrace) => withBackButton(_VideoError(id: id, error: error)),
-              data: (video) {
-                ref.read(libraryProvider.notifier).addSubscriptionVideo(video);
-                return _DetailBody(video: video);
-              },
-            )
-        : _DetailBody(video: localVideo!);
+  ConsumerState<VideoPage> createState() => _VideoPageState();
+}
+
+class _VideoPageState extends ConsumerState<VideoPage> {
+  var _offlinePromptShown = false;
+
+  VideoDetail _withLocalSources(VideoDetail online, VideoDetail local) => VideoDetail(
+        id: online.id,
+        title: online.title,
+        coverUrl: online.coverUrl,
+        duration: online.duration,
+        artist: online.artist,
+        artistId: online.artistId,
+        artistAvatarUrl: online.artistAvatarUrl,
+        uploader: online.uploader,
+        uploaderAvatarUrl: online.uploaderAvatarUrl,
+        genre: online.genre,
+        views: online.views,
+        rating: online.rating,
+        uploadDate: online.uploadDate,
+        captionTitle: online.captionTitle,
+        description: online.description,
+        downloadUrl: online.downloadUrl,
+        csrfToken: online.csrfToken,
+        currentUserId: online.currentUserId,
+        subscriptionUserId: online.subscriptionUserId,
+        commentCount: online.commentCount,
+        tags: online.tags,
+        sources: local.sources,
+        playlist: online.playlist,
+        related: online.related,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final localVideo = widget.localVideo;
+    Widget withBackButton(Widget child) => Stack(
+          children: [
+            child,
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const BackButton(),
+                  IconButton(tooltip: AppLocalizations.of(context)!.home, onPressed: () => context.go('/'), icon: const Icon(Icons.home_outlined)),
+                ]),
+              ),
+            ),
+          ],
+        );
+    Widget content;
+    if (localVideo == null) {
+      content = ref.watch(videoDetailProvider(widget.id)).when(
+            loading: () => withBackButton(const Center(child: M3EContainedLoadingIndicator())),
+            error: (error, stackTrace) => withBackButton(_VideoError(id: widget.id, error: error)),
+            data: (video) {
+              ref.read(libraryProvider.notifier).addSubscriptionVideo(video);
+              return _DetailBody(video: video, homeTarget: widget.homeTarget);
+            },
+          );
+    } else {
+      final online = ref.watch(videoDetailProvider(widget.id)).valueOrNull;
+      ref.listen(videoDetailProvider(widget.id), (previous, next) {
+        if (_offlinePromptShown || !next.hasError) return;
+        _offlinePromptShown = true;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.videoInfoOffline)));
+      });
+      content = _DetailBody(video: online == null ? localVideo : _withLocalSources(online, localVideo), homeTarget: widget.homeTarget);
+    }
     return Scaffold(backgroundColor: Theme.of(context).colorScheme.surface, body: content);
   }
 }
@@ -86,9 +148,10 @@ class _VideoError extends ConsumerWidget {
 }
 
 class _DetailBody extends ConsumerStatefulWidget {
-  const _DetailBody({required this.video});
+  const _DetailBody({required this.video, this.homeTarget = '/'});
 
   final VideoDetail video;
+  final String homeTarget;
 
   @override
   ConsumerState<_DetailBody> createState() => _DetailBodyState();
@@ -117,7 +180,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       bottom: false,
       child: Stack(
         children: [
-          if (isTablet) _TabletVideoLayout(video: video, scrollBehavior: _scrollBehavior) else _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior),
+          if (isTablet)
+            _TabletVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget)
+          else
+            _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget),
           Positioned(
             left: isTablet ? null : 0,
             right: isTablet ? 16 : 0,
@@ -131,30 +197,32 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
 }
 
 class _CompactVideoLayout extends StatelessWidget {
-  const _CompactVideoLayout({required this.video, required this.scrollBehavior});
+  const _CompactVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
+  final String homeTarget;
 
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1280), child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: true)),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1280), child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: true, homeTarget: homeTarget)),
       );
 }
 
 class _TabletVideoLayout extends StatelessWidget {
-  const _TabletVideoLayout({required this.video, required this.scrollBehavior});
+  const _TabletVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
+  final String homeTarget;
 
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Expanded(flex: 7, child: ColoredBox(color: Colors.black, child: Center(child: VideoPlayerPanel(video: video, onBack: () => Navigator.maybePop(context), onNext: () => _playNext(context, video), onEpisodeSelected: (episode) => _playEpisode(context, episode))))),
+          Expanded(flex: 7, child: ColoredBox(color: Colors.black, child: Center(child: VideoPlayerPanel(video: video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(homeTarget), onNext: () => _playNext(context, video, homeTarget: homeTarget), onEpisodeSelected: (episode) => _playEpisode(context, episode, homeTarget: homeTarget))))),
           const VerticalDivider(width: 1),
-          Expanded(flex: 3, child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: false)),
+          Expanded(flex: 3, child: ExcludeFocus(excluding: isDesktopPlatformService, child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: false, homeTarget: homeTarget))),
         ],
       );
 }
@@ -186,7 +254,7 @@ class _FloatingControls extends ConsumerWidget {
         return Transform.translate(
           offset: vertical ? Offset(-state.offset, 0) : Offset(0, -state.offset),
           child: ExcludeFocus(
-            excluding: state.collapsedFraction >= 1,
+            excluding: state.collapsedFraction >= 1 || isDesktopPlatformService,
             child: IgnorePointer(
               ignoring: state.collapsedFraction >= 1,
               child: child,
@@ -202,11 +270,12 @@ class _FloatingControls extends ConsumerWidget {
 }
 
 class _VideoTabsView extends ConsumerStatefulWidget {
-  const _VideoTabsView({required this.video, required this.scrollBehavior, required this.showPlayer});
+  const _VideoTabsView({required this.video, required this.scrollBehavior, required this.showPlayer, required this.homeTarget});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
   final bool showPlayer;
+  final String homeTarget;
 
   @override
   ConsumerState<_VideoTabsView> createState() => _VideoTabsViewState();
@@ -271,32 +340,38 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
         if (widget.showPlayer)
           ValueListenableBuilder<double>(
             valueListenable: _playerCollapse,
-            child: RepaintBoundary(child: VideoPlayerPanel(key: ValueKey(widget.video.id), video: widget.video, onBack: () => Navigator.maybePop(context), onNext: () => _playNext(context, widget.video), onEpisodeSelected: (episode) => _playEpisode(context, episode), onPlayingChanged: _setPlaying)),
+            child: RepaintBoundary(child: VideoPlayerPanel(key: ValueKey(widget.video.id), video: widget.video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(widget.homeTarget), onNext: () => _playNext(context, widget.video, homeTarget: widget.homeTarget), onEpisodeSelected: (episode) => _playEpisode(context, episode, homeTarget: widget.homeTarget), onPlayingChanged: _setPlaying)),
             builder: (context, collapse, player) => Column(children: [ClipRect(child: Align(heightFactor: 1 - collapse, alignment: Alignment.topCenter, child: player)), if (collapse >= .99) SizedBox(height: 40, width: double.infinity, child: TextButton.icon(onPressed: () => _playerCollapse.value = 0, icon: const Icon(Icons.play_arrow), label: Text(l10n.play)))]),
           ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(16, widget.showPlayer ? 12 : 8, 16, 4),
-          child: TabBar(
-            controller: _controller,
-            isScrollable: !widget.showPlayer,
-            tabAlignment: !widget.showPlayer ? TabAlignment.start : null,
-            tabs: [
-              Tab(text: l10n.description),
-              Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Text(l10n.comments), if (widget.video.commentCount case final count?) ...[const SizedBox(width: 5), Badge(label: Text('$count'))]])),
-              Tab(text: l10n.relatedVideos),
-            ],
+        ExcludeFocus(
+          excluding: isDesktopPlatformService,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, widget.showPlayer ? 12 : 8, 16, 4),
+            child: TabBar(
+              controller: _controller,
+              isScrollable: !widget.showPlayer,
+              tabAlignment: !widget.showPlayer ? TabAlignment.start : null,
+              tabs: [
+                Tab(text: l10n.description),
+                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Text(l10n.comments), if (widget.video.commentCount case final count?) ...[const SizedBox(width: 5), Badge(label: Text('$count'))]])),
+                Tab(text: l10n.relatedVideos),
+              ],
+            ),
           ),
         ),
         Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _handleScroll,
-            child: TabBarView(
-              controller: _controller,
-              children: [
-                M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video)),
-                M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoCommentsView(video: widget.video)),
-                M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: RelatedVideosView(videos: widget.video.related)),
-              ],
+          child: ExcludeFocus(
+            excluding: isDesktopPlatformService,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScroll,
+              child: TabBarView(
+                controller: _controller,
+                children: [
+                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video)),
+                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoCommentsView(video: widget.video)),
+                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: RelatedVideosView(videos: widget.video.related)),
+                ],
+              ),
             ),
           ),
         ),

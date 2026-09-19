@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_core/m3e_core.dart';
@@ -32,7 +34,7 @@ class VideoActionBar extends ConsumerWidget {
     final actions = <Widget>[
       IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),
       IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
-      IconButton(tooltip: l10n.download, icon: const Icon(Icons.download_outlined), onPressed: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref)),
+      IconButton(tooltip: l10n.download, icon: const Icon(Icons.download_outlined), onPressed: video.sources.isEmpty ? null : () => _autoDownload(context, ref), onLongPress: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref)),
       IconButton(tooltip: l10n.share, icon: const Icon(Icons.share_outlined), onPressed: () => Share.share('${video.title} (${video.id})', subject: video.title)),
     ];
     return vertical
@@ -134,9 +136,29 @@ class VideoActionBar extends ConsumerWidget {
         ),
       ),
     );
-    if (picked != null) {
-      await ref.read(downloadProvider.notifier).create(video, picked, 'default');
+    if (picked != null && context.mounted) await _enqueueDownload(context, ref, picked);
+  }
+
+  Future<void> _autoDownload(BuildContext context, WidgetRef ref) async {
+    final settings = await ref.read(settingsProvider.future);
+    if (!context.mounted) return;
+    final preferred = settings.downloadQuality;
+    int qualityOf(VideoSource source) => int.tryParse(RegExp(r'\d+').firstMatch(source.quality)?.group(0) ?? '') ?? 0;
+    final source = video.sources.reduce((best, item) {
+      final bestDistance = (qualityOf(best) - preferred).abs();
+      final itemDistance = (qualityOf(item) - preferred).abs();
+      if (itemDistance != bestDistance) return itemDistance < bestDistance ? item : best;
+      return qualityOf(item) < qualityOf(best) ? item : best;
+    });
+    await _enqueueDownload(context, ref, source);
+  }
+
+  Future<void> _enqueueDownload(BuildContext context, WidgetRef ref, VideoSource source) async {
+    try {
+      await ref.read(downloadProvider.notifier).create(video, source, 'default');
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.addedToDownloadQueue)));
+    } catch (error) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 }

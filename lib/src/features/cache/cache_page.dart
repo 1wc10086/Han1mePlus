@@ -12,7 +12,6 @@ import '../../domain/models/download.dart';
 import '../../domain/models/video.dart';
 import '../settings/settings_controller.dart';
 import '../shared/video_card.dart';
-import '../video/video_page.dart';
 import 'cache_controller.dart';
 
 class CachePage extends ConsumerStatefulWidget {
@@ -314,7 +313,7 @@ class _TaskCard extends ConsumerWidget {
       return;
     }
     final localVideo = VideoDetail(id: task.videoCode, title: task.title, coverUrl: task.coverUrl, sources: [VideoSource(quality: task.quality, url: task.localVideoPath!)], tags: const [], playlist: const [], related: const []);
-    if (context.mounted) await Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(builder: (_) => VideoPage(id: task.videoCode, localVideo: localVideo)));
+    if (context.mounted) await context.push('/video/${task.videoCode}?home=/cache', extra: localVideo);
   }
 }
 

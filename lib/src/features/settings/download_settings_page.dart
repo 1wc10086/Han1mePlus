@@ -23,6 +23,7 @@ class DownloadSettingsPage extends ConsumerWidget {
             SettingsCardList(children: [
               SettingsSliderItem(title: l10n.downloadSpeedLimit, subtitle: speed == 0 ? l10n.unlimited : '${speed.toStringAsFixed(1)} MB/s', value: speed, min: 0, max: 20, divisions: 40, label: speed == 0 ? l10n.unlimited : '${speed.toStringAsFixed(1)} MB/s', onChanged: (value) => controller.saveChanges((current) => current.copyWith(downloadSpeedLimitMbps: value))),
               SettingsSliderItem(title: l10n.concurrentDownloads, subtitle: l10n.concurrentDownloadsDescription(settings.concurrentDownloads), value: settings.concurrentDownloads.toDouble(), min: 1, max: 5, divisions: 4, label: '${settings.concurrentDownloads}', onChanged: (value) => controller.saveChanges((current) => current.copyWith(concurrentDownloads: value.round()))),
+              SettingsMenuItem<int>(title: l10n.downloadQuality, subtitle: l10n.downloadQualityDescription, leading: const Icon(Icons.high_quality_outlined), value: settings.downloadQuality, options: const [1080, 720, 480], label: (value) => l10n.downloadQualityValue(value), onSelected: (value) => controller.saveChanges((current) => current.copyWith(downloadQuality: value))),
            ]),
         ],
       ),

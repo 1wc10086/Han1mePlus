@@ -8,7 +8,8 @@ import '../settings/settings_controller.dart';
 
 int videoCardCacheWidth(double cardWidth, double devicePixelRatio) => (cardWidth * devicePixelRatio).round().clamp(240, 480).toInt();
 
-const _horizontalCardMetaHeight = 120.0;
+// 封面下方元信息实际高度: 标题 40 + 2 + 作者行 16 + 2 + 点赞行 16, 另加封面与元信息之间 8 的间距。
+const _horizontalCardMetaHeight = 84.0;
 
 class VideoCardMetrics {
   const VideoCardMetrics({required this.horizontal, required this.cardsPerRow, required this.cardWidth, required this.cardHeight});
@@ -157,10 +158,11 @@ class VideoCardTile extends StatelessWidget {
 }
 
 class VideoCardGrid extends ConsumerWidget {
-  const VideoCardGrid({super.key, required this.videos, this.itemBuilder});
+  const VideoCardGrid({super.key, required this.videos, this.itemBuilder, this.keyboardDismissBehavior});
 
   final List<VideoCard> videos;
   final Widget Function(BuildContext context, int index, VideoCard video, bool horizontal)? itemBuilder;
+  final ScrollViewKeyboardDismissBehavior? keyboardDismissBehavior;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -180,6 +182,7 @@ class VideoCardGrid extends ConsumerWidget {
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + MediaQuery.paddingOf(context).bottom),
           cacheExtent: 720,
+          keyboardDismissBehavior: keyboardDismissBehavior,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: effectiveCardsPerRow,
             mainAxisSpacing: mainAxisSpacing,

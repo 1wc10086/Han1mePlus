@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_core/m3e_core.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/desktop_platform.dart';
 import '../../core/playback_speed_policy.dart';
 import '../../core/platform_service.dart';
 import '../../core/settings.dart';
@@ -17,7 +19,7 @@ import '../settings/settings_controller.dart';
 import 'video_player_controls.dart';
 
 class VideoPlayerSurface extends ConsumerStatefulWidget {
-  const VideoPlayerSurface({required this.controller, required this.quality, required this.video, required this.fullscreen, required this.onFullscreen, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onBack, this.onNext, this.onEpisodeSelected, this.keyframes = const [], this.onKeyframes, this.onAddKeyframe, super.key});
+  const VideoPlayerSurface({required this.controller, required this.quality, required this.video, required this.fullscreen, required this.onFullscreen, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onBack, this.onHome, this.onNext, this.onEpisodeSelected, this.keyframes = const [], this.onKeyframes, this.onAddKeyframe, super.key});
   final ValueListenable<VideoPlayerController?> controller;
   final ValueListenable<String?> quality;
   final VideoDetail video;
@@ -26,6 +28,7 @@ class VideoPlayerSurface extends ConsumerStatefulWidget {
   final ValueChanged<VideoSource> onQualitySelected;
   final ValueChanged<SuperResolutionMode> onSuperResolutionSelected;
   final VoidCallback? onBack;
+  final VoidCallback? onHome;
   final VoidCallback? onNext;
   final ValueChanged<VideoCard>? onEpisodeSelected;
   final List<int> keyframes;
@@ -37,6 +40,8 @@ class VideoPlayerSurface extends ConsumerStatefulWidget {
 }
 
 class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
+  static const _keyboardSeekStep = Duration(seconds: 10);
+  static const _keyboardVolumeStep = 0.1;
   bool _showControls = true;
   bool _locked = false;
   double? _dragStartX;
@@ -47,6 +52,9 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   double _volume = 1;
   _Adjustment? _adjustment;
   Timer? _hideTimer;
+  Timer? _adjustmentClearTimer;
+  Timer? _speedBoostTimer;
+  double? _speedBeforeKeyBoost;
   double? _speedBeforeLongPress;
 
   @override
@@ -60,6 +68,8 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _adjustmentClearTimer?.cancel();
+    _speedBoostTimer?.cancel();
     super.dispose();
   }
 
@@ -81,6 +91,121 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     if (controller == null) return;
     controller.value.isPlaying ? controller.pause() : controller.play();
     _restartTimer();
+  }
+
+  void _handleMouseHover() {
+    if (_locked) return;
+    if (!_showControls) setState(() => _showControls = true);
+    _restartTimer();
+  }
+
+  void _showAdjustment(_Adjustment adjustment) {
+    _adjustmentClearTimer?.cancel();
+    setState(() => _adjustment = adjustment);
+    _adjustmentClearTimer = Timer(const Duration(milliseconds: 700), () { if (mounted) setState(() => _adjustment = null); });
+  }
+
+  Future<void> _applyVolume(VideoPlayerController controller, double value) async {
+    try {
+      if (isDesktopHttpPlatform) {
+        await controller.setVolume(value);
+      } else {
+        await PlatformService.setVolume(value);
+      }
+    } catch (_) {}
+  }
+
+  void _keyboardSeek(VideoPlayerController controller, int direction) {
+    final duration = controller.value.duration;
+    if (duration == Duration.zero) return;
+    final from = controller.value.position.inMilliseconds;
+    final target = (from + direction * _keyboardSeekStep.inMilliseconds).clamp(0, duration.inMilliseconds);
+    unawaited(controller.seekTo(Duration(milliseconds: target)));
+    _showAdjustment(_Adjustment.seek(target - from, Duration(milliseconds: target), duration));
+    _restartTimer();
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (!isDesktopHttpPlatform) return KeyEventResult.ignored;
+    if (event is KeyUpEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight && (_speedBoostTimer != null || _speedBeforeKeyBoost != null)) {
+        final wasPending = _speedBoostTimer != null;
+        _endKeySpeedBoost();
+        final controller = widget.controller.value;
+        if (wasPending && controller != null && controller.value.isInitialized) _keyboardSeek(controller, 1);
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    if (_locked) return KeyEventResult.ignored;
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus != null && focus.context?.findAncestorStateOfType<EditableTextState>() != null) return KeyEventResult.ignored;
+    final controller = widget.controller.value;
+    if (controller == null || !controller.value.isInitialized) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+      if (key == LogicalKeyboardKey.arrowRight) {
+        if (event is KeyDownEvent) _startKeySpeedBoost(controller);
+        return KeyEventResult.handled;
+      }
+      _keyboardSeek(controller, -1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
+      final delta = key == LogicalKeyboardKey.arrowUp ? _keyboardVolumeStep : -_keyboardVolumeStep;
+      final volume = (_volume + delta).clamp(0.0, 1.0).toDouble();
+      _volume = volume;
+      unawaited(_applyVolume(controller, volume));
+      _showAdjustment(_Adjustment.volume(volume));
+      _restartTimer();
+      return KeyEventResult.handled;
+    }
+    if (event is KeyDownEvent && key == LogicalKeyboardKey.keyF) {
+      unawaited(widget.onFullscreen());
+      _restartTimer();
+      return KeyEventResult.handled;
+    }
+    if (event is KeyDownEvent && key == LogicalKeyboardKey.escape && widget.onHome != null) {
+      widget.onHome!();
+      return KeyEventResult.handled;
+    }
+    const playbackKeys = [LogicalKeyboardKey.space, LogicalKeyboardKey.enter, LogicalKeyboardKey.numpadEnter, LogicalKeyboardKey.mediaPlayPause, LogicalKeyboardKey.mediaPlay, LogicalKeyboardKey.mediaPause];
+    if (playbackKeys.contains(key)) {
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _startKeySpeedBoost(VideoPlayerController controller) {
+    if (_speedBoostTimer != null || _speedBeforeKeyBoost != null) return;
+    _speedBoostTimer = Timer(const Duration(milliseconds: 450), () {
+      _speedBoostTimer = null;
+      if (!mounted || _locked) return;
+      final active = widget.controller.value;
+      if (active == null || !identical(active, controller) || !active.value.isInitialized || !active.value.isPlaying) return;
+      final settings = ref.read(settingsProvider).valueOrNull ?? const AppSettings();
+      _speedBeforeKeyBoost = active.value.playbackSpeed;
+      final speed = PlaybackSpeedPolicy.longPressSpeed(
+        settings,
+        isThreeDimensional: PlaybackSpeedPolicy.isThreeDimensional(widget.video.genre, widget.video.title),
+      );
+      unawaited(_applySpeed(active, speed));
+      _adjustmentClearTimer?.cancel();
+      setState(() => _adjustment = _Adjustment.speed(speed));
+    });
+  }
+
+  void _endKeySpeedBoost() {
+    _speedBoostTimer?.cancel();
+    _speedBoostTimer = null;
+    final saved = _speedBeforeKeyBoost;
+    if (saved == null) return;
+    _speedBeforeKeyBoost = null;
+    final active = widget.controller.value;
+    if (active != null && active.value.isInitialized) unawaited(_applySpeed(active, saved));
+    if (mounted) setState(() => _adjustment = null);
   }
 
   void _longPress(bool active) {
@@ -143,9 +268,9 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     }
     final value = (startX < size.width / 2 ? _brightness : _volume) - details.delta.dy / size.height;
     if (startX < size.width / 2) { _brightness = value.clamp(0.01, 1).toDouble(); PlatformService.setScreenBrightness(_brightness); setState(() => _adjustment = _Adjustment.brightness(_brightness)); }
-    else { _volume = value.clamp(0, 1).toDouble(); PlatformService.setVolume(_volume); setState(() => _adjustment = _Adjustment.volume(_volume)); }
+    else { _volume = value.clamp(0, 1).toDouble(); unawaited(_applyVolume(controller, _volume)); setState(() => _adjustment = _Adjustment.volume(_volume)); }
   }
-  void _dragEnd(DragEndDetails details) { _dragStartX = null; _dragStartY = null; _dragDirection = null; _seekStartPosition = null; Future<void>.delayed(const Duration(milliseconds: 700), () { if (mounted) setState(() => _adjustment = null); }); }
+  void _dragEnd(DragEndDetails details) { _dragStartX = null; _dragStartY = null; _dragDirection = null; _seekStartPosition = null; _adjustmentClearTimer?.cancel(); _adjustmentClearTimer = Timer(const Duration(milliseconds: 700), () { if (mounted) setState(() => _adjustment = null); }); }
 
   Future<void> _enterPictureInPicture(VideoPlayerController controller) async {
     var entered = false;
@@ -158,72 +283,92 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return ValueListenableBuilder<VideoPlayerController?>(
-      valueListenable: widget.controller,
-      builder: (context, activeController, _) {
-        final controller = activeController;
-        if (controller == null || !controller.value.isInitialized) {
-          return const Center(child: M3ELoadingIndicator(color: Colors.white));
-        }
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _toggleControls,
-          onDoubleTap: _togglePlayback,
-          onLongPressStart: (_) => _longPress(true),
-          onLongPressEnd: (_) => _longPress(false),
-          onPanStart: _dragStart,
-          onPanUpdate: _dragUpdate,
-          onPanEnd: _dragEnd,
-          child: Stack(fit: StackFit.expand, children: [
-            const ColoredBox(color: Colors.black),
-            _VideoViewport(controller: controller),
-            ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => value.isBuffering ? const Center(child: M3ELoadingIndicator(color: Colors.white)) : const SizedBox.shrink()),
-            ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => _showControls && !_locked ? VideoPlayerControls(controller: controller, fullscreen: widget.fullscreen, onFullscreen: widget.onFullscreen, onInteraction: _restartTimer, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected) : const SizedBox.shrink()),
-            if (_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.unlockControls, onPressed: () { setState(() => _locked = false); _restartTimer(); }, icon: const Icon(Icons.lock))),
-            if (_showControls && !_locked && widget.onBack != null) Positioned(top: 8, left: 8, child: BackButton(color: Colors.white, onPressed: widget.onBack)),
-            if (_showControls && widget.fullscreen && !_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.lockControls, onPressed: () => setState(() => _locked = true), icon: const Icon(Icons.lock_open_outlined))),
-            if (widget.fullscreen && widget.keyframes.isNotEmpty) _KeyframeCountdown(controller: controller, keyframes: widget.keyframes),
-            if (_showControls && widget.fullscreen && !_locked) Positioned(top: 8, left: 48, right: 212, child: _MarqueeTitle(title: widget.video.title)),
-            if (_showControls && !_locked)
-              Positioned(
-                top: 4,
-                right: widget.fullscreen && widget.onKeyframes != null ? 56 : 4,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    VideoPlayerSkipButton(controller: controller, onInteraction: _restartTimer),
-                    if (Platform.isAndroid) IconButton(color: Colors.white, tooltip: l10n.pictureInPicture, visualDensity: VisualDensity.compact, onPressed: () => _enterPictureInPicture(controller), icon: const Icon(Icons.picture_in_picture_alt_outlined)),
-                    widget.fullscreen
-                        ? VideoPlayerFullscreenMoreMenu(sources: widget.video.sources, quality: widget.quality)
-                        : VideoPlayerPortraitMoreMenu(controller: controller, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected),
-                  ],
-                ),
-              ),
-            if (_showControls && widget.fullscreen && !_locked && widget.onKeyframes != null)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Tooltip(
-                  message: l10n.longPressAddKeyframe,
-                  child: GestureDetector(
-                    onTap: widget.onKeyframes,
-                    onLongPress: widget.onAddKeyframe,
-                    child: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('🥵', style: TextStyle(fontSize: 24)),
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: ValueListenableBuilder<VideoPlayerController?>(
+        valueListenable: widget.controller,
+        builder: (context, activeController, _) {
+          final controller = activeController;
+          if (controller == null || !controller.value.isInitialized) {
+            return const Center(child: M3ELoadingIndicator(color: Colors.white));
+          }
+          return MouseRegion(
+            onHover: (_) => _handleMouseHover(),
+            onExit: (_) => _restartTimer(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _toggleControls,
+              onDoubleTap: _togglePlayback,
+              onLongPressStart: (_) => _longPress(true),
+              onLongPressEnd: (_) => _longPress(false),
+              onLongPressCancel: () => _longPress(false),
+              onSecondaryLongPressStart: (_) => _longPress(true),
+              onSecondaryLongPressEnd: (_) => _longPress(false),
+              onSecondaryLongPressCancel: () => _longPress(false),
+              onPanStart: _dragStart,
+              onPanUpdate: _dragUpdate,
+              onPanEnd: _dragEnd,
+              child: Stack(fit: StackFit.expand, children: [
+                const ColoredBox(color: Colors.black),
+                _VideoViewport(controller: controller),
+                ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => value.isBuffering ? const Center(child: M3ELoadingIndicator(color: Colors.white)) : const SizedBox.shrink()),
+                ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => _showControls && !_locked ? VideoPlayerControls(controller: controller, fullscreen: widget.fullscreen, onFullscreen: widget.onFullscreen, onInteraction: _restartTimer, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected) : const SizedBox.shrink()),
+                if (_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.unlockControls, onPressed: () { setState(() => _locked = false); _restartTimer(); }, icon: const Icon(Icons.lock))),
+                if (_showControls && !_locked && widget.onBack != null)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      BackButton(color: Colors.white, onPressed: widget.onBack),
+                      if (widget.onHome != null) IconButton(color: Colors.white, tooltip: l10n.home, onPressed: widget.onHome, icon: const Icon(Icons.home_outlined)),
+                    ]),
+                  ),
+                if (_showControls && widget.fullscreen && !_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.lockControls, onPressed: () => setState(() => _locked = true), icon: const Icon(Icons.lock_open_outlined))),
+                if (widget.fullscreen && widget.keyframes.isNotEmpty) _KeyframeCountdown(controller: controller, keyframes: widget.keyframes),
+                if (_showControls && widget.fullscreen && !_locked) Positioned(top: 8, left: widget.onHome != null ? 96 : 48, right: 212, child: _MarqueeTitle(title: widget.video.title)),
+                if (_showControls && !_locked)
+                  Positioned(
+                    top: 4,
+                    right: widget.fullscreen && widget.onKeyframes != null ? 56 : 4,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        VideoPlayerSkipButton(controller: controller, onInteraction: _restartTimer),
+                        if (Platform.isAndroid) IconButton(color: Colors.white, tooltip: l10n.pictureInPicture, visualDensity: VisualDensity.compact, onPressed: () => _enterPictureInPicture(controller), icon: const Icon(Icons.picture_in_picture_alt_outlined)),
+                        widget.fullscreen
+                            ? VideoPlayerFullscreenMoreMenu(sources: widget.video.sources, quality: widget.quality)
+                            : VideoPlayerPortraitMoreMenu(controller: controller, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected),
+                      ],
                     ),
                   ),
-                ),
-              ),
-            if (_adjustment != null)
-              switch (_adjustment!.kind) {
-                _AdjustmentKind.brightness => Positioned(top: 24, left: 16, child: _AdjustmentHud(adjustment: _adjustment!)),
-                _AdjustmentKind.volume => Positioned(top: 24, right: 16, child: _AdjustmentHud(adjustment: _adjustment!)),
-                _ => Positioned(top: 24, left: 0, right: 0, child: Center(child: _AdjustmentHud(adjustment: _adjustment!))),
-              },
-          ]),
-        );
-      },
+                if (_showControls && widget.fullscreen && !_locked && widget.onKeyframes != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Tooltip(
+                      message: l10n.longPressAddKeyframe,
+                      child: GestureDetector(
+                        onTap: widget.onKeyframes,
+                        onLongPress: widget.onAddKeyframe,
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text('🥵', style: TextStyle(fontSize: 24)),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_adjustment != null)
+                  switch (_adjustment!.kind) {
+                    _AdjustmentKind.brightness => Positioned(top: 24, left: 16, child: _AdjustmentHud(adjustment: _adjustment!)),
+                    _AdjustmentKind.volume => Positioned(top: 24, right: 16, child: _AdjustmentHud(adjustment: _adjustment!)),
+                    _ => Positioned(top: 24, left: 0, right: 0, child: Center(child: _AdjustmentHud(adjustment: _adjustment!))),
+                  },
+              ]),
+            ),
+          );
+        },
+      ),
     );
   }
 }

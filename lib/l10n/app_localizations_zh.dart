@@ -183,24 +183,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dohTimeoutSecondsDescription => '范围为 1 至 60 秒';
 
   @override
-  String get useEch => '启用 ECH';
-
-  @override
-  String get useEchDescription => '为 Hanime 站点加密 TLS ClientHello 中的域名信息';
-
-  @override
-  String get echLogs => 'ECH 日志';
-
-  @override
-  String get echLogsDescription => '查看 ECH 配置与连接状态';
-
-  @override
-  String get clearEchLogs => '清空日志';
-
-  @override
-  String get noEchLogs => '暂无 ECH 日志';
-
-  @override
   String get customMirrorSite => '自定义镜像站';
 
   @override
@@ -611,6 +593,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get failed => '失败';
 
   @override
+  String downloadSpeed(Object speed) {
+    return '$speed/s';
+  }
+
+  @override
+  String downloadProgressFull(Object speed, Object downloaded, Object total) {
+    return '$speed · $downloaded / $total';
+  }
+
+  @override
+  String downloadProgressPartial(Object speed, Object downloaded) {
+    return '$speed · $downloaded';
+  }
+
+  @override
   String commentsTitle(Object title) {
     return '$title 评论';
   }
@@ -1010,9 +1007,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String accountSummary(
-      Object id, int subscriberCount, int videoCount, Object joined) {
+    Object id,
+    int subscriberCount,
+    int videoCount,
+    Object joined,
+  ) {
     return '@$id\n$subscriberCount 位订阅者 · $videoCount 部影片\n$joined';
   }
+
+  @override
+  String subscriberVideoCount(int subscriberCount, int videoCount) {
+    return '$subscriberCount 位订阅者 · $videoCount 部影片';
+  }
+
+  @override
+  String joinedDate(Object date) {
+    return '加入于 $date';
+  }
+
+  @override
+  String get mine => '我的';
 
   @override
   String get tapToLogin => '点击前往登录';
@@ -1469,6 +1483,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoPlayNextDescription => '当前视频播放完成后自动播放下一集';
 
   @override
+  String get loopPlayback => '单片循环播放';
+
+  @override
+  String get loopPlaybackDescription => '当前视频播放完成后自动重新播放';
+
+  @override
   String get autoPictureInPicture => '自动切入画中画';
 
   @override
@@ -1657,6 +1677,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get invalidCookies => '请输入有效的 Cookies';
+
+  @override
+  String get videoInfoOffline => '视频信息加载失败,已显示缓存信息,请检查网络连接';
+
+  @override
+  String get homeFeatured => '首页推荐';
+
+  @override
+  String get homeFeaturedDescription => '在首页顶部显示推荐视频横幅';
+
+  @override
+  String get downloadQuality => '缓存分辨率';
+
+  @override
+  String get downloadQualityDescription =>
+      '下载时自动选择最接近的可用分辨率,1080p 不可用时自动降级到 720p、480p';
+
+  @override
+  String downloadQualityValue(Object quality) {
+    return '${quality}p';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1836,24 +1877,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get dohTimeoutSecondsDescription => '範圍為 1 至 60 秒';
-
-  @override
-  String get useEch => '啟用 ECH';
-
-  @override
-  String get useEchDescription => '為 Hanime 網站加密 TLS ClientHello 中的網域資訊';
-
-  @override
-  String get echLogs => 'ECH 日誌';
-
-  @override
-  String get echLogsDescription => '查看 ECH 設定與連線狀態';
-
-  @override
-  String get clearEchLogs => '清除日誌';
-
-  @override
-  String get noEchLogs => '尚無 ECH 日誌';
 
   @override
   String get customMirrorSite => '自訂鏡像站';
@@ -2266,6 +2289,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get failed => '失敗';
 
   @override
+  String downloadSpeed(Object speed) {
+    return '$speed/s';
+  }
+
+  @override
+  String downloadProgressFull(Object speed, Object downloaded, Object total) {
+    return '$speed · $downloaded / $total';
+  }
+
+  @override
+  String downloadProgressPartial(Object speed, Object downloaded) {
+    return '$speed · $downloaded';
+  }
+
+  @override
   String commentsTitle(Object title) {
     return '$title 評論';
   }
@@ -2665,9 +2703,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String accountSummary(
-      Object id, int subscriberCount, int videoCount, Object joined) {
+    Object id,
+    int subscriberCount,
+    int videoCount,
+    Object joined,
+  ) {
     return '@$id\n$subscriberCount 位訂閱者 · $videoCount 部影片\n$joined';
   }
+
+  @override
+  String subscriberVideoCount(int subscriberCount, int videoCount) {
+    return '$subscriberCount 位訂閱者 · $videoCount 部影片';
+  }
+
+  @override
+  String joinedDate(Object date) {
+    return '加入於 $date';
+  }
+
+  @override
+  String get mine => '我的';
 
   @override
   String get tapToLogin => '點擊前往登入';
@@ -3124,6 +3179,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get autoPlayNextDescription => '目前影片播放完成後自動播放下一集';
 
   @override
+  String get loopPlayback => '單片循環播放';
+
+  @override
+  String get loopPlaybackDescription => '目前影片播放完成後自動重新播放';
+
+  @override
   String get autoPictureInPicture => '自動切入子母畫面';
 
   @override
@@ -3312,4 +3373,25 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get invalidCookies => '請輸入有效的 Cookies';
+
+  @override
+  String get videoInfoOffline => '影片資訊載入失敗,已顯示快取資訊,請檢查網路連線';
+
+  @override
+  String get homeFeatured => '首頁推薦';
+
+  @override
+  String get homeFeaturedDescription => '在首頁頂部顯示推薦影片橫幅';
+
+  @override
+  String get downloadQuality => '快取解析度';
+
+  @override
+  String get downloadQualityDescription =>
+      '下載時自動選擇最接近的可用解析度,1080p 不可用時自動降級到 720p、480p';
+
+  @override
+  String downloadQualityValue(Object quality) {
+    return '${quality}p';
+  }
 }

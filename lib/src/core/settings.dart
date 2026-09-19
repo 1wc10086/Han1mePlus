@@ -67,6 +67,7 @@ class AppSettings {
     this.textScale = 1,
     this.downloadSpeedLimitMbps = 0,
     this.concurrentDownloads = 2,
+    this.downloadQuality = 1080,
     this.downloadPath = defaultDownloadPath,
     this.defaultPlaybackSpeed = 1,
     this.longPressPlaybackSpeed = 2,
@@ -95,6 +96,7 @@ class AppSettings {
     this.useNavigationDrawer = false,
     this.useLiquidGlassBottomBar = true,
     this.useHomeCategoryTabs = false,
+    this.showHomeFeatured = true,
     this.blockedVideoTitleKeywords = const [],
     this.blockedAuthors = const [],
     this.minimumVideoDurationSeconds = 0,
@@ -139,6 +141,7 @@ class AppSettings {
   final double textScale;
   final double downloadSpeedLimitMbps;
   final int concurrentDownloads;
+  final int downloadQuality;
   final String downloadPath;
   final double defaultPlaybackSpeed;
   final double longPressPlaybackSpeed;
@@ -167,6 +170,7 @@ class AppSettings {
   final bool useNavigationDrawer;
   final bool useLiquidGlassBottomBar;
   final bool useHomeCategoryTabs;
+  final bool showHomeFeatured;
   final List<String> blockedVideoTitleKeywords;
   final List<String> blockedAuthors;
   final int minimumVideoDurationSeconds;
@@ -231,6 +235,7 @@ class AppSettings {
         'textScale': textScale,
         'downloadSpeedLimitMbps': downloadSpeedLimitMbps,
         'concurrentDownloads': concurrentDownloads,
+        'downloadQuality': downloadQuality,
         'downloadPath': downloadPath,
         'defaultPlaybackSpeed': defaultPlaybackSpeed,
         'longPressPlaybackSpeed': longPressPlaybackSpeed,
@@ -259,6 +264,7 @@ class AppSettings {
         'useNavigationDrawer': useNavigationDrawer,
         'useLiquidGlassBottomBar': useLiquidGlassBottomBar,
         'useHomeCategoryTabs': useHomeCategoryTabs,
+        'showHomeFeatured': showHomeFeatured,
         'blockedVideoTitleKeywords': blockedVideoTitleKeywords,
         'blockedAuthors': blockedAuthors,
         'minimumVideoDurationSeconds': minimumVideoDurationSeconds,
@@ -304,6 +310,7 @@ class AppSettings {
         textScale: ((json['textScale'] as num?)?.toDouble() ?? 1).clamp(.8, 1.4).toDouble(),
         downloadSpeedLimitMbps: (json['downloadSpeedLimitMbps'] as num?)?.toDouble() ?? 0,
         concurrentDownloads: (json['concurrentDownloads'] as int? ?? 2).clamp(1, 5) as int,
+        downloadQuality: json['downloadQuality'] as int? ?? 1080,
         downloadPath: json['downloadPath'] as String? ?? defaultDownloadPath,
         defaultPlaybackSpeed: ((json['defaultPlaybackSpeed'] as num?)?.toDouble() ?? 1).clamp(.25, 3).toDouble(),
         longPressPlaybackSpeed: ((json['longPressPlaybackSpeed'] as num?)?.toDouble() ?? 2).clamp(1, 3).toDouble(),
@@ -332,6 +339,7 @@ class AppSettings {
         useNavigationDrawer: json['useNavigationDrawer'] as bool? ?? false,
         useLiquidGlassBottomBar: json['useLiquidGlassBottomBar'] as bool? ?? true,
         useHomeCategoryTabs: json['useHomeCategoryTabs'] as bool? ?? false,
+        showHomeFeatured: json['showHomeFeatured'] as bool? ?? true,
         blockedVideoTitleKeywords: (json['blockedVideoTitleKeywords'] as List? ?? const []).whereType<String>().toList(),
         blockedAuthors: (json['blockedAuthors'] as List? ?? const []).whereType<String>().toList(),
         minimumVideoDurationSeconds: (json['minimumVideoDurationSeconds'] as int? ?? 0).clamp(0, 86400) as int,
@@ -422,6 +430,7 @@ class AppSettings {
     double? textScale,
     double? downloadSpeedLimitMbps,
     int? concurrentDownloads,
+    int? downloadQuality,
     String? downloadPath,
     double? defaultPlaybackSpeed,
     double? longPressPlaybackSpeed,
@@ -450,6 +459,7 @@ class AppSettings {
     bool? useNavigationDrawer,
     bool? useLiquidGlassBottomBar,
     bool? useHomeCategoryTabs,
+    bool? showHomeFeatured,
     List<String>? blockedVideoTitleKeywords,
     List<String>? blockedAuthors,
     int? minimumVideoDurationSeconds,
@@ -494,6 +504,7 @@ class AppSettings {
         textScale: textScale ?? this.textScale,
         downloadSpeedLimitMbps: downloadSpeedLimitMbps ?? this.downloadSpeedLimitMbps,
         concurrentDownloads: concurrentDownloads ?? this.concurrentDownloads,
+        downloadQuality: downloadQuality ?? this.downloadQuality,
         downloadPath: downloadPath ?? this.downloadPath,
         defaultPlaybackSpeed: defaultPlaybackSpeed ?? this.defaultPlaybackSpeed,
         longPressPlaybackSpeed: longPressPlaybackSpeed ?? this.longPressPlaybackSpeed,
@@ -522,6 +533,7 @@ class AppSettings {
         useNavigationDrawer: useNavigationDrawer ?? this.useNavigationDrawer,
         useLiquidGlassBottomBar: useLiquidGlassBottomBar ?? this.useLiquidGlassBottomBar,
         useHomeCategoryTabs: useHomeCategoryTabs ?? this.useHomeCategoryTabs,
+        showHomeFeatured: showHomeFeatured ?? this.showHomeFeatured,
         blockedVideoTitleKeywords: blockedVideoTitleKeywords ?? this.blockedVideoTitleKeywords,
         blockedAuthors: blockedAuthors ?? this.blockedAuthors,
         minimumVideoDurationSeconds: minimumVideoDurationSeconds ?? this.minimumVideoDurationSeconds,

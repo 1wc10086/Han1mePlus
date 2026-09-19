@@ -20,7 +20,11 @@
   "editVideoTitle": "修改影片標題",
   "deleteVideoKeyframes": "刪除該影片的關鍵 H 幀",
   "deleteVideoKeyframesConfirmation": "刪除「{title}」的全部關鍵 H 幀？",
-  "@deleteVideoKeyframesConfirmation": {"placeholders": {"title": {}}},
+  "@deleteVideoKeyframesConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "editPosition": "修改時間點",
   "deleteKeyframe": "刪除關鍵 H 幀",
   "deleteKeyframeTitle": "刪除關鍵 H 幀",
@@ -69,13 +73,36 @@
   "customMirrorPathRootSummary": "例如 https://www.example.com/search；首頁一律使用上方輸入的網址",
   "testConnection": "測試連線",
   "customMirrorTestSuccess": "測試成功\n首頁：{homeUrl}\n其他介面基址：{apiBase}",
-  "@customMirrorTestSuccess": {"placeholders": {"homeUrl": {}, "apiBase": {}}},
+  "@customMirrorTestSuccess": {
+    "placeholders": {
+      "homeUrl": {},
+      "apiBase": {}
+    }
+  },
   "customMirrorTestPartialSuccess": "首頁測試成功，但其他介面測試失敗\n其他介面基址：{apiBase}\n原因：HTTP {statusCode}",
-  "@customMirrorTestPartialSuccess": {"placeholders": {"apiBase": {}, "statusCode": {"type": "int"}}},
+  "@customMirrorTestPartialSuccess": {
+    "placeholders": {
+      "apiBase": {},
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
   "customMirrorTestFailed": "測試失敗：{error}",
-  "@customMirrorTestFailed": {"placeholders": {"error": {}}},
+  "@customMirrorTestFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "customMirrorTestFailedHttp": "測試失敗：HTTP {statusCode}\n首頁：{url}",
-  "@customMirrorTestFailedHttp": {"placeholders": {"statusCode": {"type": "int"}, "url": {}}},
+  "@customMirrorTestFailedHttp": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      },
+      "url": {}
+    }
+  },
   "customMirrorTestParseFailed": "已連線，但首頁結構解析失敗",
   "customMirrorTestChallenge": "該網站受 Cloudflare 保護，可能無法使用",
   "custom": "自訂",
@@ -104,17 +131,39 @@
   "searchHint": "搜尋影片、作者、標籤…",
   "noSearchResults": "沒有找到符合的影片",
   "category": "分類：{value}",
-  "@category": {"placeholders": {"value": {}}},
+  "@category": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "sort": "排序：{value}",
-  "@sort": {"placeholders": {"value": {}}},
+  "@sort": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "releaseDate": "發布日期：{value}",
-  "@releaseDate": {"placeholders": {"value": {}}},
+  "@releaseDate": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "releaseDateTitle": "發布日期",
   "duration": "時長：{value}",
-  "@duration": {"placeholders": {"value": {}}},
+  "@duration": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "searchAuthors": "搜尋作者",
   "tagsSelected": "標籤：已選 {count}",
-  "@tagsSelected": {"placeholders": {"count": {"type": "int"}}},
+  "@tagsSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "broadMatch": "廣泛配對",
   "broadMatchDescription": "配對任一已選標籤，結果較多但精準度較低。",
   "tagVideoAttributes": "影片屬性",
@@ -140,20 +189,34 @@
   "previews": "新番預告",
   "getchuPreviews": "Getchu 新番預告",
   "getchuPreviewMonth": "Getchu {month} 新番表",
-  "@getchuPreviewMonth": {"placeholders": {"month": {}}},
+  "@getchuPreviewMonth": {
+    "placeholders": {
+      "month": {}
+    }
+  },
   "getchuPreviewUnavailable": "Getchu 新番預告暫時無法使用",
   "noGetchuPreviews": "這個月還沒有 Getchu 新番預告",
   "getchuPreviewDetail": "Getchu 新番詳情",
   "openGetchu": "開啟 Getchu",
   "playTrailer": "播放預告片",
   "trailerNumber": "預告片 {number}",
-  "@trailerNumber": {"placeholders": {"number": {"type": "int"}}},
+  "@trailerNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "productIntroduction": "商品介紹",
   "story": "故事",
   "staff": "製作人員",
   "getchuSeries": "系列商品",
   "previewMonth": "{month} 新番表",
-  "@previewMonth": {"placeholders": {"month": {}}},
+  "@previewMonth": {
+    "placeholders": {
+      "month": {}
+    }
+  },
   "previousMonth": "上個月",
   "nextMonth": "下個月",
   "previewUnavailable": "本月新番預告暫時無法使用",
@@ -162,17 +225,40 @@
   "noPreviewsDescription": "新番資料發布後會在這裡顯示，也可以先瀏覽此前月份。",
   "watchVideo": "觀看影片",
   "previewImages": "預告圖片（{count}）",
-  "@previewImages": {"placeholders": {"count": {"type": "int"}}},
+  "@previewImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "statistics": "統計",
   "watchDuration": "觀看時長  {duration}",
-  "@watchDuration": {"placeholders": {"duration": {}}},
+  "@watchDuration": {
+    "placeholders": {
+      "duration": {}
+    }
+  },
   "noWatchHistory": "暫無觀看紀錄",
   "hoursMinutes": "{hours}時{minutes}分",
-  "@hoursMinutes": {"placeholders": {"hours": {}, "minutes": {}}},
+  "@hoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
   "minutes": "{value}分鐘",
-  "@minutes": {"placeholders": {"value": {}}},
+  "@minutes": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "seconds": "{value}秒",
-  "@seconds": {"placeholders": {"value": {}}},
+  "@seconds": {
+    "placeholders": {
+      "value": {}
+    }
+  },
   "myLibrary": "我的收藏",
   "watchLater": "稍後觀看",
   "favoriteVideos": "喜歡的影片",
@@ -181,7 +267,13 @@
   "noFavoriteVideos": "暫無喜歡的影片",
   "noSubscriptionVideos": "暫無訂閱影片",
   "selectedItems": "已選 {count} 項",
-  "@selectedItems": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "select": "選擇",
   "deleteSelectedCache": "刪除所選快取",
   "createGroup": "新增群組",
@@ -189,9 +281,17 @@
   "localVideoMissing": "本機影片檔案不存在，請刪除該快取後重新下載",
   "deleteCache": "刪除快取",
   "deleteCacheConfirmation": "刪除「{title}」的本機快取？",
-  "@deleteCacheConfirmation": {"placeholders": {"title": {}}},
+  "@deleteCacheConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "deleteGroupTitle": "刪除「{name}」",
-  "@deleteGroupTitle": {"placeholders": {"name": {}}},
+  "@deleteGroupTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "moveGroupCacheToDefault": "該群組中的快取將移至預設群組。",
   "groupName": "群組名稱",
   "confirm": "確定",
@@ -201,15 +301,46 @@
   "completed": "已完成",
   "failed": "失敗",
   "downloadSpeed": "{speed}/s",
-  "@downloadSpeed": {"placeholders": {"speed": {}}},
+  "@downloadSpeed": {
+    "placeholders": {
+      "speed": {}
+    }
+  },
   "downloadProgressFull": "{speed} · {downloaded} / {total}",
-  "@downloadProgressFull": {"placeholders": {"speed": {}, "downloaded": {}, "total": {}}},
+  "@downloadProgressFull": {
+    "placeholders": {
+      "speed": {},
+      "downloaded": {},
+      "total": {}
+    }
+  },
   "downloadProgressPartial": "{speed} · {downloaded}",
-  "@downloadProgressPartial": {"placeholders": {"speed": {}, "downloaded": {}}},
+  "@downloadProgressPartial": {
+    "placeholders": {
+      "speed": {},
+      "downloaded": {}
+    }
+  },
   "commentsTitle": "{title} 評論",
-  "@commentsTitle": {"placeholders": {"title": {}}},
+  "@commentsTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "date": "{year}年{month}月{day}日",
-  "@date": {"placeholders": {"year": {"type": "int"}, "month": {"type": "int"}, "day": {"type": "int"}}},
+  "@date": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "thirdPartyClient": "第三方 Hanime1 用戶端",
   "version": "版本",
   "dataSource": "資料來源",
@@ -226,7 +357,13 @@
   "pauseBeforeAddingKeyframe": "請先暫停影片，再新增關鍵 H 幀",
   "addKeyframe": "新增關鍵 H 幀",
   "addKeyframeConfirmation": "將目前暫停位置加入關鍵 H 幀？\n\n目前時間：{position} ms\n相鄰關鍵幀至少間隔 10 秒。",
-  "@addKeyframeConfirmation": {"placeholders": {"position": {"type": "int"}}},
+  "@addKeyframeConfirmation": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      }
+    }
+  },
   "add": "新增",
   "keyframeAdded": "已新增關鍵 H 幀",
   "keyframeTooClose": "與已有關鍵幀間隔不足 10 秒",
@@ -236,7 +373,11 @@
   "deleteCurrentVideoKeyframesConfirmation": "刪除目前影片的全部關鍵 H 幀？",
   "editKeyframe": "修改關鍵 H 幀",
   "keyframeCountdown": "關鍵 H 幀還有 {seconds} 秒",
-  "@keyframeCountdown": {"placeholders": {"seconds": {}}},
+  "@keyframeCountdown": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
   "episodeList": "劇集清單",
   "seriesVideos": "系列影片",
   "relatedVideos": "相關推薦",
@@ -254,7 +395,13 @@
   "description": "簡介",
   "commentsLoadFailed": "評論載入失敗",
   "keyframeCount": "{count} 個關鍵幀",
-  "@keyframeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@keyframeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "themeMode": "主題模式",
   "followSystem": "跟隨系統",
   "light": "淺色",
@@ -272,7 +419,11 @@
   "keyframeSettingsDescription": "管理開關及各影片的關鍵 H 幀",
   "latestVersion": "目前已是最新版本",
   "newVersionAvailable": "發現新版本 {version}",
-  "@newVersionAvailable": {"placeholders": {"version": {}}},
+  "@newVersionAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
   "newVersionReleased": "已發布新版本。",
   "later": "稍後",
   "updateNow": "現在更新",
@@ -281,7 +432,11 @@
   "downloadingUpdate": "正在下載更新",
   "connecting": "正在連線...",
   "updateFailed": "更新失敗：{error}",
-  "@updateFailed": {"placeholders": {"error": {}}},
+  "@updateFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "close": "關閉",
   "monetColors": "莫內取色",
   "monetColorsDescription": "使用系統桌布動態配色",
@@ -291,7 +446,13 @@
   "unlimited": "不限速",
   "concurrentDownloads": "同時下載數量限制",
   "concurrentDownloadsDescription": "同時下載 {count} 部影片",
-  "@concurrentDownloadsDescription": {"placeholders": {"count": {"type": "int"}}},
+  "@concurrentDownloadsDescription": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "downloadPath": "下載路徑",
   "defaultDownloadPath": "/storage/emulated/0/Android/data/com.liar.han1meplus/files/Download/",
   "exportDownloads": "匯出下載項目",
@@ -307,11 +468,25 @@
   "noPlaylists": "暫無播放清單",
   "deletePlaylist": "刪除播放清單",
   "deletePlaylistConfirmation": "確定刪除「{title}」嗎？",
-  "@deletePlaylistConfirmation": {"placeholders": {"title": {}}},
+  "@deletePlaylistConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "videoCount": "{count} 部影片",
-  "@videoCount": {"placeholders": {"count": {"type": "int"}}},
+  "@videoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "loadFailed": "載入失敗：{error}",
-  "@loadFailed": {"placeholders": {"error": {}}},
+  "@loadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "playlistEmpty": "播放清單為空",
   "writeComment": "發表評論",
   "commentHint": "輸入評論內容",
@@ -319,9 +494,22 @@
   "popular": "熱門",
   "oldest": "最早",
   "playlistCreatedBy": "由 {name} 建立",
-  "@playlistCreatedBy": {"placeholders": {"name": {}}},
+  "@playlistCreatedBy": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "playlistStats": "播放清單 • {count} 部影片 • 觀看次數：{views} 次",
-  "@playlistStats": {"placeholders": {"count": {"type": "int"}, "views": {"type": "int"}}},
+  "@playlistStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "views": {
+        "type": "int"
+      }
+    }
+  },
   "playAll": "全部播放",
   "earliest": "最早",
   "mostReplies": "回覆最多",
@@ -329,7 +517,13 @@
   "mostDislikes": "最多倒讚",
   "viewReplies": "查看回覆",
   "viewRepliesCount": "查看回覆 ({count})",
-  "@viewRepliesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@viewRepliesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reply": "回覆",
   "replyComment": "回覆評論",
   "send": "傳送",
@@ -344,11 +538,35 @@
   "signedIn": "已登入",
   "signedOut": "未登入",
   "accountSummary": "@{id}\n{subscriberCount} 位訂閱者 · {videoCount} 部影片\n{joined}",
-  "@accountSummary": {"placeholders": {"id": {}, "subscriberCount": {"type": "int"}, "videoCount": {"type": "int"}, "joined": {}}},
+  "@accountSummary": {
+    "placeholders": {
+      "id": {},
+      "subscriberCount": {
+        "type": "int"
+      },
+      "videoCount": {
+        "type": "int"
+      },
+      "joined": {}
+    }
+  },
   "subscriberVideoCount": "{subscriberCount} 位訂閱者 · {videoCount} 部影片",
-  "@subscriberVideoCount": {"placeholders": {"subscriberCount": {"type": "int"}, "videoCount": {"type": "int"}}},
+  "@subscriberVideoCount": {
+    "placeholders": {
+      "subscriberCount": {
+        "type": "int"
+      },
+      "videoCount": {
+        "type": "int"
+      }
+    }
+  },
   "joinedDate": "加入於 {date}",
-  "@joinedDate": {"placeholders": {"date": {}}},
+  "@joinedDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "mine": "我的",
   "tapToLogin": "點擊前往登入",
   "editProfile": "編輯個人資料",
@@ -398,7 +616,13 @@
   "expandHomeVideoCardsDescription": "關閉時首頁每個分類橫向顯示一行影片；開啟後使用影片卡片每行數量設定",
   "searchCardsPerRow": "影片卡片每行數量",
   "searchCardsPerRowValue": "每行 {count} 個",
-  "@searchCardsPerRowValue": {"placeholders": {"count": {"type": "int"}}},
+  "@searchCardsPerRowValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "comicModeDescription": "開啟後首頁、收藏和快取僅顯示漫畫內容",
   "comicBrowse": "漫畫篩選",
   "trendingComics": "發燒漫畫",
@@ -407,7 +631,13 @@
   "comicDetails": "漫畫詳情",
   "read": "閱讀",
   "pageCount": "{count} 頁",
-  "@pageCount": {"placeholders": {"count": {"type": "int"}}},
+  "@pageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tags": "標籤",
   "chapter": "目錄",
   "chapterOne": "第 1 章",
@@ -439,7 +669,13 @@
   "seekSensitivity": "進度滑動靈敏度",
   "seekSensitivityDescription": "調低可減少左右滑動時的跳轉幅度",
   "seekSensitivityValue": "{value}%",
-  "@seekSensitivityValue": {"placeholders": {"value": {"type": "int"}}},
+  "@seekSensitivityValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "playerSettings": "播放器設定",
   "playerSettingsDescription": "解碼器、渲染器及進階 libmpv 選項",
   "hardwareDecode": "硬體解碼",
@@ -470,7 +706,13 @@
   "accountManage": "帳號管理",
   "accountManageSubtitleEmpty": "新增或切換此站點的帳號",
   "accountManageSubtitleCount": "此站點已保存 {count} 個帳號",
-  "@accountManageSubtitleCount": {"placeholders": {"count": {"type": "int"}}},
+  "@accountManageSubtitleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "removeAccount": "移除帳號",
   "addAccount": "新增帳號",
   "defaultCategory": "預設",
@@ -532,10 +774,21 @@
   "deleteSearchHistory": "刪除搜尋歷史",
   "restoreSearchHistory": "搜尋此組合",
   "searchHistorySummary": "{query} · {filters}",
-  "@searchHistorySummary": {"placeholders": {"query": {}, "filters": {}}},
+  "@searchHistorySummary": {
+    "placeholders": {
+      "query": {},
+      "filters": {}
+    }
+  },
   "searchHistoryAll": "全部",
   "searchHistoryTags": "{count} 個標籤",
-  "@searchHistoryTags": {"placeholders": {"count": {"type": "int"}}},
+  "@searchHistoryTags": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "externalPlayback": "外部播放",
   "addTags": "新增標籤",
   "removeTags": "移除標籤",
@@ -566,5 +819,16 @@
   "chooseFolder": "選擇資料夾",
   "manualCookieLogin": "手動輸入 Cookies",
   "cookies": "Cookies",
-  "invalidCookies": "請輸入有效的 Cookies"
+  "invalidCookies": "請輸入有效的 Cookies",
+  "videoInfoOffline": "影片資訊載入失敗,已顯示快取資訊,請檢查網路連線",
+  "homeFeatured": "首頁推薦",
+  "homeFeaturedDescription": "在首頁頂部顯示推薦影片橫幅",
+  "downloadQuality": "快取解析度",
+  "downloadQualityDescription": "下載時自動選擇最接近的可用解析度,1080p 不可用時自動降級到 720p、480p",
+  "downloadQualityValue": "{quality}p",
+  "@downloadQualityValue": {
+    "placeholders": {
+      "quality": {}
+    }
+  }
 }

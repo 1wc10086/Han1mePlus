@@ -77,10 +77,11 @@ class CompactVideoCard extends StatelessWidget {
 }
 
 class CompactVideoCardGrid extends StatelessWidget {
-  const CompactVideoCardGrid({super.key, required this.videos, this.itemBuilder});
+  const CompactVideoCardGrid({super.key, required this.videos, this.itemBuilder, this.keyboardDismissBehavior});
 
   final List<VideoCard> videos;
   final Widget Function(BuildContext context, int index, VideoCard video)? itemBuilder;
+  final ScrollViewKeyboardDismissBehavior? keyboardDismissBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +95,7 @@ class CompactVideoCardGrid extends StatelessWidget {
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + MediaQuery.paddingOf(context).bottom),
           cacheExtent: 720,
+          keyboardDismissBehavior: keyboardDismissBehavior,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: compactVideoCardsPerRow,
             mainAxisSpacing: mainAxisSpacing,
