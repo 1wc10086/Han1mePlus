@@ -371,7 +371,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome)));
+      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
     } finally {
       _fullscreenOpen = false;
       try {
@@ -391,6 +391,19 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
         }
       }
     }
+  }
+
+  // Stops and releases the active controller right away (used when leaving
+  // the player entirely from fullscreen); deferring here would keep audio
+  // playing if the route unwinds out of order.
+  void _disposeActiveController() {
+    final controller = _controllerNotifier.value;
+    _controllerNotifier.value = null;
+    if (controller == null) return;
+    if (controller.value.isInitialized) unawaited(controller.pause().catchError((_) {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_queueDisposal(controller));
+    });
   }
 
   void _disposeNotifiers() {
@@ -417,6 +430,11 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (identical(VideoPlayerShutdown.pipActive, controller)) VideoPlayerShutdown.pipActive = null;
     if (controller != null) {
       if (_fullscreenOpen) {
+        // Disposal is deferred until the fullscreen route unwinds, but playback
+        // must stop immediately (e.g. navigating home while in fullscreen).
+        if (controller.value.isInitialized) {
+          unawaited(controller.pause().catchError((_) {}));
+        }
         _pendingDispose = controller;
       } else {
         if (controller.value.isInitialized) {
@@ -532,7 +550,7 @@ class _FullscreenPlayer extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       endDrawer: VideoKeyframeDrawer(video: video, controller: controller),
-       body: SafeArea(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome, onEpisodeSelected: onEpisodeSelected, onNext: onNext, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
+       body: SafeArea(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome == null ? null : () { Navigator.of(context).pop(); onHome?.call(); }, onEpisodeSelected: onEpisodeSelected, onNext: onNext, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
     );
   }
 

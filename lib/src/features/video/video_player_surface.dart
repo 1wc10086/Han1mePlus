@@ -161,6 +161,15 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
       _restartTimer();
       return KeyEventResult.handled;
     }
+    if (event is KeyDownEvent && key == LogicalKeyboardKey.keyF) {
+      unawaited(widget.onFullscreen());
+      _restartTimer();
+      return KeyEventResult.handled;
+    }
+    if (event is KeyDownEvent && key == LogicalKeyboardKey.escape && widget.onHome != null) {
+      widget.onHome!();
+      return KeyEventResult.handled;
+    }
     const playbackKeys = [LogicalKeyboardKey.space, LogicalKeyboardKey.enter, LogicalKeyboardKey.numpadEnter, LogicalKeyboardKey.mediaPlayPause, LogicalKeyboardKey.mediaPlay, LogicalKeyboardKey.mediaPause];
     if (playbackKeys.contains(key)) {
       _togglePlayback();
