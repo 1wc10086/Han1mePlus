@@ -1680,6 +1680,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoInfoOffline => '视频信息加载失败,已显示缓存信息,请检查网络连接';
+
+  @override
+  String get homeFeatured => '首页推荐';
+
+  @override
+  String get homeFeaturedDescription => '在首页顶部显示推荐视频横幅';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -3358,4 +3364,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get videoInfoOffline => '影片資訊載入失敗,已顯示快取資訊,請檢查網路連線';
+
+  @override
+  String get homeFeatured => '首頁推薦';
+
+  @override
+  String get homeFeaturedDescription => '在首頁頂部顯示推薦影片橫幅';
 }

@@ -79,10 +79,15 @@ class _HomeFeedBody extends ConsumerWidget {
         .where((section) => section.videos.isNotEmpty)
         .toList();
     Future<void> refresh() => ref.read(homeSectionsProvider.notifier).refresh();
-    if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: sections));
+    final showFeatured = settings?.showHomeFeatured ?? true;
+    if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: showFeatured ? feed.featured : null, sections: sections));
     return DefaultTabController(length: sections.length, child: Column(children: [
       TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: sections.map((section) => Tab(text: section.title)).toList()),
-      Expanded(child: TabBarView(children: sections.map((section) => M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: feed.featured, sections: [section], forceExpanded: true))).toList())),
+      Expanded(child: TabBarView(children: sections.asMap().entries.map((entry) {
+        final index = entry.key;
+        final section = entry.value;
+        return M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: index == 0 && showFeatured ? feed.featured : null, sections: [section], forceExpanded: true));
+      }).toList())),
     ]));
   }
 
@@ -193,7 +198,7 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
     );
     return SliverMainAxisGroup(
       slivers: [
-        SliverToBoxAdapter(child: _MaxWidth(child: _SectionHeader(section: widget.section, showMore: !widget.forceExpanded))),
+        SliverToBoxAdapter(child: _MaxWidth(child: _SectionHeader(section: widget.section))),
         if (expanded)
           SliverConstrainedCrossAxis(
             maxExtent: _maxContentWidth,
@@ -219,6 +224,22 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: _maxContentWidth),
                 child: _VideoRow(videos: widget.section.videos, horizontal: horizontal, cardWidth: metrics.cardWidth, cardHeight: metrics.cardHeight),
+              ),
+            ),
+          ),
+        if (widget.forceExpanded && widget.section.moreUrl != null)
+          SliverToBoxAdapter(
+            child: _MaxWidth(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Center(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/search', extra: SearchRouteRequest(initialUrl: widget.section.moreUrl)),
+                    iconAlignment: IconAlignment.end,
+                    icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                    label: Text(AppLocalizations.of(context)!.more),
+                  ),
+                ),
               ),
             ),
           ),
@@ -262,17 +283,16 @@ class _MaxWidth extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.section, this.showMore = true});
+  const _SectionHeader({required this.section});
 
   final HomeSection section;
-  final bool showMore;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
         child: Row(children: [
           Expanded(child: Text(section.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
-          if (section.moreUrl != null && showMore)
+          if (section.moreUrl != null)
             TextButton.icon(onPressed: () => context.push('/search', extra: SearchRouteRequest(initialUrl: section.moreUrl)),  iconAlignment: IconAlignment.end, icon: const Icon(Icons.arrow_forward_ios, size: 14), label: Text(AppLocalizations.of(context)!.more)),
         ]),
       );

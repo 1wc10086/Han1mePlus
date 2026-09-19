@@ -820,5 +820,7 @@
   "manualCookieLogin": "手動輸入 Cookies",
   "cookies": "Cookies",
   "invalidCookies": "請輸入有效的 Cookies",
-  "videoInfoOffline": "影片資訊載入失敗,已顯示快取資訊,請檢查網路連線"
+  "videoInfoOffline": "影片資訊載入失敗,已顯示快取資訊,請檢查網路連線",
+  "homeFeatured": "首頁推薦",
+  "homeFeaturedDescription": "在首頁頂部顯示推薦影片橫幅"
 }

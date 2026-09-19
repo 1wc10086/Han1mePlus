@@ -83,7 +83,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: SearchBar(
               controller: _textController,
-              autoFocus: request.initialUrl == null,
               hintText: l10n.searchHint,
               leading: const Icon(Icons.search),
               trailing: [
@@ -123,6 +122,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   : useCompactCards
                       ? CompactVideoCardGrid(
                           videos: page.items,
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           itemBuilder: (context, index, video) => CompactVideoCard(
                             video: video,
                             onTap: video.id.isEmpty ? null : () => context.push('/video/${video.id}'),
@@ -130,6 +130,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         )
                       : VideoCardGrid(
                           videos: page.items,
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           itemBuilder: (context, index, video, horizontal) => VideoCardTile(
                             video: video,
                             horizontal: horizontal,

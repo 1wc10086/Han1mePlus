@@ -3229,6 +3229,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load video info. Showing cached info, please check your network connection'**
   String get videoInfoOffline;
+
+  /// No description provided for @homeFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Featured Video'**
+  String get homeFeatured;
+
+  /// No description provided for @homeFeaturedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the featured video banner at the top of the home page'**
+  String get homeFeaturedDescription;
 }
 
 class _AppLocalizationsDelegate

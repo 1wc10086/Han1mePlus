@@ -95,6 +95,7 @@ class AppSettings {
     this.useNavigationDrawer = false,
     this.useLiquidGlassBottomBar = true,
     this.useHomeCategoryTabs = false,
+    this.showHomeFeatured = true,
     this.blockedVideoTitleKeywords = const [],
     this.blockedAuthors = const [],
     this.minimumVideoDurationSeconds = 0,
@@ -167,6 +168,7 @@ class AppSettings {
   final bool useNavigationDrawer;
   final bool useLiquidGlassBottomBar;
   final bool useHomeCategoryTabs;
+  final bool showHomeFeatured;
   final List<String> blockedVideoTitleKeywords;
   final List<String> blockedAuthors;
   final int minimumVideoDurationSeconds;
@@ -259,6 +261,7 @@ class AppSettings {
         'useNavigationDrawer': useNavigationDrawer,
         'useLiquidGlassBottomBar': useLiquidGlassBottomBar,
         'useHomeCategoryTabs': useHomeCategoryTabs,
+        'showHomeFeatured': showHomeFeatured,
         'blockedVideoTitleKeywords': blockedVideoTitleKeywords,
         'blockedAuthors': blockedAuthors,
         'minimumVideoDurationSeconds': minimumVideoDurationSeconds,
@@ -332,6 +335,7 @@ class AppSettings {
         useNavigationDrawer: json['useNavigationDrawer'] as bool? ?? false,
         useLiquidGlassBottomBar: json['useLiquidGlassBottomBar'] as bool? ?? true,
         useHomeCategoryTabs: json['useHomeCategoryTabs'] as bool? ?? false,
+        showHomeFeatured: json['showHomeFeatured'] as bool? ?? true,
         blockedVideoTitleKeywords: (json['blockedVideoTitleKeywords'] as List? ?? const []).whereType<String>().toList(),
         blockedAuthors: (json['blockedAuthors'] as List? ?? const []).whereType<String>().toList(),
         minimumVideoDurationSeconds: (json['minimumVideoDurationSeconds'] as int? ?? 0).clamp(0, 86400) as int,
@@ -450,6 +454,7 @@ class AppSettings {
     bool? useNavigationDrawer,
     bool? useLiquidGlassBottomBar,
     bool? useHomeCategoryTabs,
+    bool? showHomeFeatured,
     List<String>? blockedVideoTitleKeywords,
     List<String>? blockedAuthors,
     int? minimumVideoDurationSeconds,
@@ -522,6 +527,7 @@ class AppSettings {
         useNavigationDrawer: useNavigationDrawer ?? this.useNavigationDrawer,
         useLiquidGlassBottomBar: useLiquidGlassBottomBar ?? this.useLiquidGlassBottomBar,
         useHomeCategoryTabs: useHomeCategoryTabs ?? this.useHomeCategoryTabs,
+        showHomeFeatured: showHomeFeatured ?? this.showHomeFeatured,
         blockedVideoTitleKeywords: blockedVideoTitleKeywords ?? this.blockedVideoTitleKeywords,
         blockedAuthors: blockedAuthors ?? this.blockedAuthors,
         minimumVideoDurationSeconds: minimumVideoDurationSeconds ?? this.minimumVideoDurationSeconds,

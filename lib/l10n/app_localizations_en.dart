@@ -1736,4 +1736,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoInfoOffline =>
       'Failed to load video info. Showing cached info, please check your network connection';
+
+  @override
+  String get homeFeatured => 'Home Featured Video';
+
+  @override
+  String get homeFeaturedDescription =>
+      'Show the featured video banner at the top of the home page';
 }

@@ -820,5 +820,7 @@
   "manualCookieLogin": "Enter Cookies Manually",
   "cookies": "Cookies",
   "invalidCookies": "Enter valid cookies",
-  "videoInfoOffline": "Failed to load video info. Showing cached info, please check your network connection"
+  "videoInfoOffline": "Failed to load video info. Showing cached info, please check your network connection",
+  "homeFeatured": "Home Featured Video",
+  "homeFeaturedDescription": "Show the featured video banner at the top of the home page"
 }
