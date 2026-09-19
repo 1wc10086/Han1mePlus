@@ -1,7 +1,7 @@
 # Han1mePlus
 
 <p align="center">
-  <img src="assets/logo.png" alt="Han1mePlus Logo" width="160">
+  <img src="assets/logo.png" alt="Han1mePlus Logo" width="80">
 </p>
 
 基于 Material Design 3 设计语言，使用 Dart & Flutter 构建的 Hanime1 第三方客户端

@@ -3276,6 +3276,66 @@ class _AppLocalizationsDelegate
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
+
+  /// No description provided for @homeSectionLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Sections'**
+  String get homeSectionLayout;
+
+  /// No description provided for @homeSectionLayoutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder or hide home page sections'**
+  String get homeSectionLayoutDescription;
+
+  /// No description provided for @homeSectionLayoutSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the handle to reorder, use the switch to show or hide a section.'**
+  String get homeSectionLayoutSummary;
+
+  /// No description provided for @homeSectionLayoutUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Home sections are unavailable right now.'**
+  String get homeSectionLayoutUnavailable;
+
+  /// No description provided for @resetDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get resetDefaults;
+
+  /// No description provided for @removeFromPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from playlist'**
+  String get removeFromPlaylist;
+
+  /// No description provided for @upcomingPreviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get upcomingPreviews;
+
+  /// No description provided for @playlistSortRecentlyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get playlistSortRecentlyAdded;
+
+  /// No description provided for @playlistSortOldestAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest added'**
+  String get playlistSortOldestAdded;
+
+  /// No description provided for @playlistSortByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get playlistSortByName;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {

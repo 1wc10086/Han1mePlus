@@ -34,7 +34,7 @@ class CompactVideoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 SizedBox(
-                  height: 40,
+                  height: MediaQuery.textScalerOf(context).scale(40),
                   child: Text(
                     video.title,
                     maxLines: 2,
@@ -71,6 +71,8 @@ class CompactVideoCard extends StatelessWidget {
             ),
             if (video.duration != null)
               Positioned(right: 6, bottom: 6, child: _OverlayText(text: video.duration!)),
+            if (video.uploadTime != null)
+              Positioned(left: 6, bottom: 6, child: _OverlayText(text: video.uploadTime!)),
           ],
         ),
       );
@@ -91,7 +93,7 @@ class CompactVideoCardGrid extends StatelessWidget {
         const crossAxisSpacing = 10.0;
         const mainAxisSpacing = 12.0;
         final cardWidth = (constraints.maxWidth - horizontalPadding - crossAxisSpacing * (compactVideoCardsPerRow - 1)) / compactVideoCardsPerRow;
-        final cardHeight = cardWidth * 4 / 3 + 46;
+        final cardHeight = cardWidth * 4 / 3 + 6 + MediaQuery.textScalerOf(context).scale(40);
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + MediaQuery.paddingOf(context).bottom),
           cacheExtent: 720,

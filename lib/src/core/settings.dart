@@ -97,6 +97,8 @@ class AppSettings {
     this.useLiquidGlassBottomBar = true,
     this.useHomeCategoryTabs = false,
     this.showHomeFeatured = true,
+    this.homeSectionOrder = const [],
+    this.hiddenHomeSections = const [],
     this.blockedVideoTitleKeywords = const [],
     this.blockedAuthors = const [],
     this.minimumVideoDurationSeconds = 0,
@@ -171,6 +173,8 @@ class AppSettings {
   final bool useLiquidGlassBottomBar;
   final bool useHomeCategoryTabs;
   final bool showHomeFeatured;
+  final List<String> homeSectionOrder;
+  final List<String> hiddenHomeSections;
   final List<String> blockedVideoTitleKeywords;
   final List<String> blockedAuthors;
   final int minimumVideoDurationSeconds;
@@ -265,6 +269,8 @@ class AppSettings {
         'useLiquidGlassBottomBar': useLiquidGlassBottomBar,
         'useHomeCategoryTabs': useHomeCategoryTabs,
         'showHomeFeatured': showHomeFeatured,
+        'homeSectionOrder': homeSectionOrder,
+        'hiddenHomeSections': hiddenHomeSections,
         'blockedVideoTitleKeywords': blockedVideoTitleKeywords,
         'blockedAuthors': blockedAuthors,
         'minimumVideoDurationSeconds': minimumVideoDurationSeconds,
@@ -340,6 +346,8 @@ class AppSettings {
         useLiquidGlassBottomBar: json['useLiquidGlassBottomBar'] as bool? ?? true,
         useHomeCategoryTabs: json['useHomeCategoryTabs'] as bool? ?? false,
         showHomeFeatured: json['showHomeFeatured'] as bool? ?? true,
+        homeSectionOrder: (json['homeSectionOrder'] as List? ?? const []).whereType<String>().toList(),
+        hiddenHomeSections: (json['hiddenHomeSections'] as List? ?? const []).whereType<String>().toList(),
         blockedVideoTitleKeywords: (json['blockedVideoTitleKeywords'] as List? ?? const []).whereType<String>().toList(),
         blockedAuthors: (json['blockedAuthors'] as List? ?? const []).whereType<String>().toList(),
         minimumVideoDurationSeconds: (json['minimumVideoDurationSeconds'] as int? ?? 0).clamp(0, 86400) as int,
@@ -460,6 +468,8 @@ class AppSettings {
     bool? useLiquidGlassBottomBar,
     bool? useHomeCategoryTabs,
     bool? showHomeFeatured,
+    List<String>? homeSectionOrder,
+    List<String>? hiddenHomeSections,
     List<String>? blockedVideoTitleKeywords,
     List<String>? blockedAuthors,
     int? minimumVideoDurationSeconds,
@@ -534,6 +544,8 @@ class AppSettings {
         useLiquidGlassBottomBar: useLiquidGlassBottomBar ?? this.useLiquidGlassBottomBar,
         useHomeCategoryTabs: useHomeCategoryTabs ?? this.useHomeCategoryTabs,
         showHomeFeatured: showHomeFeatured ?? this.showHomeFeatured,
+        homeSectionOrder: homeSectionOrder ?? this.homeSectionOrder,
+        hiddenHomeSections: hiddenHomeSections ?? this.hiddenHomeSections,
         blockedVideoTitleKeywords: blockedVideoTitleKeywords ?? this.blockedVideoTitleKeywords,
         blockedAuthors: blockedAuthors ?? this.blockedAuthors,
         minimumVideoDurationSeconds: minimumVideoDurationSeconds ?? this.minimumVideoDurationSeconds,

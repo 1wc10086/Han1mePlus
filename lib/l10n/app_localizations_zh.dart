@@ -1698,9 +1698,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String downloadQualityValue(Object quality) {
     return '${quality}p';
   }
+
+  @override
+  String get homeSectionLayout => '首页栏目排序与隐藏';
+
+  @override
+  String get homeSectionLayoutDescription => '调整首页栏目的顺序与显示';
+
+  @override
+  String get homeSectionLayoutSummary => '拖动右侧手柄调整顺序，开关控制栏目显示或隐藏。';
+
+  @override
+  String get homeSectionLayoutUnavailable => '暂时无法获取首页栏目。';
+
+  @override
+  String get resetDefaults => '恢复默认';
+
+  @override
+  String get removeFromPlaylist => '从播放清单移除';
+
+  @override
+  String get upcomingPreviews => '新番预告';
+
+  @override
+  String get playlistSortRecentlyAdded => '最近添加';
+
+  @override
+  String get playlistSortOldestAdded => '最早添加';
+
+  @override
+  String get playlistSortByName => '标题';
 }
 
-/// The translations for Chinese, as used in Taiwan (`zh_TW`).
 class AppLocalizationsZhTw extends AppLocalizationsZh {
   AppLocalizationsZhTw() : super('zh_TW');
 
@@ -3394,4 +3423,34 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String downloadQualityValue(Object quality) {
     return '${quality}p';
   }
+
+  @override
+  String get homeSectionLayout => '首頁欄目排序與隱藏';
+
+  @override
+  String get homeSectionLayoutDescription => '調整首頁欄目的順序與顯示';
+
+  @override
+  String get homeSectionLayoutSummary => '拖動右側把手調整順序，開關控制欄目顯示或隱藏。';
+
+  @override
+  String get homeSectionLayoutUnavailable => '暫時無法取得首頁欄目。';
+
+  @override
+  String get resetDefaults => '恢復預設';
+
+  @override
+  String get removeFromPlaylist => '從播放清單移除';
+
+  @override
+  String get upcomingPreviews => '新番預告';
+
+  @override
+  String get playlistSortRecentlyAdded => '最近加入';
+
+  @override
+  String get playlistSortOldestAdded => '最早加入';
+
+  @override
+  String get playlistSortByName => '標題';
 }

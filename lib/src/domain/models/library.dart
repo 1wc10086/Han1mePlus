@@ -52,14 +52,45 @@ class WatchHistory {
 }
 
 class Playlist {
-  const Playlist({required this.id, required this.title, required this.count, this.coverUrl, this.videos = const []});
+  const Playlist({required this.id, required this.title, required this.count, this.coverUrl, this.videos = const [], this.description, this.createdAt, this.sort = PlaylistSortOrder.recentlyAdded});
   final String id;
   final String title;
   final int count;
   final String? coverUrl;
   final List<FollowingVideo> videos;
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'count': count, 'coverUrl': coverUrl, 'videos': videos.map((item) => item.toJson()).toList()}..removeWhere((key, value) => value == null);
-  factory Playlist.fromJson(Map<String, dynamic> json) => Playlist(id: json['id'] as String? ?? '', title: json['title'] as String? ?? '', count: json['count'] as int? ?? 0, coverUrl: json['coverUrl'] as String?, videos: ((json['videos'] as List?) ?? const []).whereType<Map>().map((item) => FollowingVideo.fromJson(Map<String, dynamic>.from(item))).toList());
+  final String? description;
+  final int? createdAt;
+  final PlaylistSortOrder sort;
+
+  Playlist copyWith({String? title, String? coverUrl, List<FollowingVideo>? videos, String? description, int? createdAt, PlaylistSortOrder? sort}) => Playlist(
+        id: id,
+        title: title ?? this.title,
+        count: videos?.length ?? count,
+        coverUrl: coverUrl ?? this.coverUrl,
+        videos: videos ?? this.videos,
+        description: description ?? this.description,
+        createdAt: createdAt ?? this.createdAt,
+        sort: sort ?? this.sort,
+      );
+
+  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'count': count, 'coverUrl': coverUrl, 'videos': videos.map((item) => item.toJson()).toList(), 'description': description, 'createdAt': createdAt, 'sort': sort.name}..removeWhere((key, value) => value == null);
+  factory Playlist.fromJson(Map<String, dynamic> json) => Playlist(id: json['id'] as String? ?? '', title: json['title'] as String? ?? '', count: json['count'] as int? ?? 0, coverUrl: json['coverUrl'] as String?, videos: ((json['videos'] as List?) ?? const []).whereType<Map>().map((item) => FollowingVideo.fromJson(Map<String, dynamic>.from(item))).toList(), description: json['description'] as String?, createdAt: json['createdAt'] as int?, sort: PlaylistSortOrder.values.where((value) => value.name == json['sort']).firstOrNull ?? PlaylistSortOrder.recentlyAdded);
+}
+
+enum PlaylistSortOrder { recentlyAdded, oldestAdded, title }
+
+extension PlaylistSortOrderX on PlaylistSortOrder {
+  List<FollowingVideo> apply(List<FollowingVideo> videos) {
+    final items = [...videos];
+    if (this == PlaylistSortOrder.title) {
+      items.sort((left, right) => left.title.toLowerCase().compareTo(right.title.toLowerCase()));
+    } else if (this == PlaylistSortOrder.oldestAdded) {
+      items.sort((left, right) => left.addedAt.compareTo(right.addedAt));
+    } else {
+      items.sort((left, right) => right.addedAt.compareTo(left.addedAt));
+    }
+    return items;
+  }
 }
 
 class PlaylistDetail {

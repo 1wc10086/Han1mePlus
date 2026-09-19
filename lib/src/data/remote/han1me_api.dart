@@ -31,6 +31,8 @@ class Han1meApi {
   String? _cookie;
   final _resolvedOrigins = <String, String>{};
 
+  static const _upcomingGenre = '新番預告';
+
   static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
 
   void setCookie(String value) => _cookie = _mergeCookies(_cookie, value);
@@ -131,6 +133,38 @@ class Han1meApi {
   }
 
   Future<PreviewFeed> previews(String baseUrl, String month) async {
+    if (month.compareTo(_currentMonth()) >= 0) return _upcomingPreviews(baseUrl);
+    try {
+      final feed = await _monthlyPreviews(baseUrl, month);
+      if (feed.items.isNotEmpty) return feed;
+    } catch (_) {}
+    return _upcomingPreviews(baseUrl);
+  }
+
+  Future<PreviewFeed> _upcomingPreviews(String baseUrl) async {
+    final uri = Uri.parse('$baseUrl/search').replace(queryParameters: {'genre': _upcomingGenre});
+    final document = await _document(uri.toString());
+    final items = document
+        .querySelectorAll('#home-rows-wrapper a[href*="watch?v="]')
+        .map((anchor) {
+          final card = anchor.querySelector('.home-rows-videos-div, .video-card-inner, .horizontal-card') ?? anchor;
+          return PreviewItem(
+            id: Uri.tryParse(anchor.attributes['href'] ?? '')?.queryParameters['v'] ?? '',
+            title: card.querySelector('.home-rows-videos-title, .title')?.text.trim() ?? '',
+            coverUrl: _absolute(baseUrl, card.querySelector('img')?.attributes['src']),
+          );
+        })
+        .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
+        .fold<List<PreviewItem>>([], (list, item) => list.any((existing) => existing.id == item.id) ? list : [...list, item]);
+    return PreviewFeed(
+      title: _documentTitle(document, _upcomingGenre),
+      description: '',
+      coverUrl: items.isEmpty ? null : items.first.coverUrl,
+      items: items,
+    );
+  }
+
+  Future<PreviewFeed> _monthlyPreviews(String baseUrl, String month) async {
     final document = await _document('$baseUrl/previews/$month');
     final header = document.querySelector('.preview-top-content');
     final rows = document.querySelectorAll('.content-padding > div.row[id]');
@@ -476,13 +510,13 @@ class Han1meApi {
   List<FollowingVideo> _libraryVideos(String baseUrl, dom.Document document) => document.querySelectorAll('div[class^="user-tab-item-wrapper"]').map((card) {
         final link = card.querySelector('a')?.attributes['href'] ?? '';
         final image = card.querySelector('img');
-        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.title, .video-title')?.text.trim() ?? image?.attributes['alt']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a, .meta-author a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: card.querySelector('.meta-stats span')?.text.trim(), addedAt: 0, playlistItemId: null);
+        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.title, .video-title')?.text.trim() ?? image?.attributes['alt']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a, .meta-author a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: _uploadTime(card), addedAt: 0, playlistItemId: null);
       }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
 
   List<FollowingVideo> _playlistVideos(String baseUrl, dom.Document document) => document.querySelectorAll('.playlist-video-list > div.user-tab-item-wrapper').map((card) {
         final link = card.querySelector('a[href*="watch"]')?.attributes['href'] ?? card.querySelector('[data-href]')?.attributes['data-href'] ?? '';
         final image = card.querySelector('img.main-thumb');
-        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.video-title')?.text.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.meta-author a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: card.querySelector('.meta-stats span')?.text.trim(), addedAt: 0, playlistItemId: RegExp(r'playlist-item-(\d+)').firstMatch(card.id)?.group(1));
+        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.video-title')?.text.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.meta-author a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: _uploadTime(card), addedAt: 0, playlistItemId: RegExp(r'playlist-item-(\d+)').firstMatch(card.id)?.group(1));
       }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
 
   List<SubscribedArtist> _subscriptionArtists(String baseUrl, dom.Document document) => document.querySelectorAll('.subscriptions-nav .subscriptions-artist-card').map((card) {
@@ -494,7 +528,7 @@ class Han1meApi {
   List<FollowingVideo> _subscriptionVideos(String baseUrl, dom.Document document) => document.querySelectorAll('.content-padding-new div[class^="video-item-container"]').map((card) {
         final link = card.querySelector('a[class^="video-link"]')?.attributes['href'] ?? '';
         final image = card.querySelector('img[class^="main-thumb"]');
-        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.attributes['title']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: card.querySelector('.meta-stats span')?.text.trim(), addedAt: 0);
+        return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.attributes['title']?.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.subtitle a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: _uploadTime(card), addedAt: 0);
       }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
 
   int _pageCount(dom.Document document) => document.querySelectorAll('ul.pagination a.page-link[href]').map((link) => int.tryParse(Uri.tryParse(link.attributes['href'] ?? '')?.queryParameters['page'] ?? '') ?? 1).fold(1, (count, page) => page > count ? page : count);
@@ -528,8 +562,13 @@ class Han1meApi {
       views: views,
       rating: rating,
       artist: artistNode?.text.trim(),
-      uploadTime: element.querySelector('.meta-stats span')?.text.trim(),
+      uploadTime: _uploadTime(element),
     );
+  }
+
+  String? _uploadTime(dom.Element element) {
+    final text = element.querySelector('.subtitle-time, .meta-stats span, .subtitle span[class*="time"]')?.text.replaceAll('•', ' ').replaceAll('\u00a0', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return text == null || text.isEmpty ? null : text;
   }
 
   String? _statText(dom.Element? element) {
@@ -544,10 +583,16 @@ class Han1meApi {
     final href = element.attributes['href'] ?? element.attributes['data-href'] ?? element.querySelector('a')?.attributes['href'] ?? element.parent?.attributes['href'] ?? element.parent?.attributes['data-href'] ?? '';
     final id = Uri.tryParse(href)?.queryParameters['v'] ?? element.attributes['data-id'] ?? element.querySelector('[data-id]')?.attributes['data-id'] ?? '';
     final image = element.querySelector('img');
+    final card = element.querySelector('.home-rows-videos-div, .video-card-inner') ?? element;
     return VideoCard(
       id: id,
       title: element.querySelector('.home-rows-videos-title, .owl-home-rows-title')?.text.trim() ?? element.parent?.querySelector('.home-rows-videos-title, .owl-home-rows-title')?.text.trim() ?? image?.attributes['alt']?.trim() ?? '',
       coverUrl: image?.attributes['src'] ?? '',
+      duration: card.querySelector('.duration')?.text.trim(),
+      views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull),
+      rating: _statText(card.querySelector('.stats-container .stat-item')),
+      artist: card.querySelector('.subtitle a, .meta-author a')?.text.trim(),
+      uploadTime: _uploadTime(card),
     );
   }
 
@@ -572,6 +617,18 @@ class Han1meApi {
   String? _extractViews(String text) {
     final match = RegExp(r'(?:观看次数|觀看次數)\s*[:：]?\s*([^\s&]+(?:次)?)').firstMatch(text);
     return match?.group(1)?.trim();
+  }
+
+  String _currentMonth() {
+    final now = DateTime.now();
+    return '${now.year}${now.month.toString().padLeft(2, '0')}';
+  }
+
+  String _documentTitle(dom.Document document, String fallback) {
+    final raw = document.querySelector('meta[name="title"]')?.attributes['content']?.trim() ?? document.querySelector('title')?.text.trim() ?? '';
+    final parts = raw.split('-').map((part) => part.trim()).where((part) => part.isNotEmpty).toList(growable: false);
+    if (parts.contains(fallback)) return fallback;
+    return parts.length > 1 && parts[1] != 'Hanime1.me' ? parts[1] : fallback;
   }
 
   String? _extractDate(String text) {

@@ -43,6 +43,8 @@ class DownloadController extends AsyncNotifier<DownloadState> {
   final _running = <String>{};
   final _jobs = <String, ({VideoDetail detail, VideoSource source})>{};
   Future<void> _writeQueue = Future<void>.value();
+  DateTime _lastProgressWrite = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _progressWriteInterval = Duration(milliseconds: 700);
 
   @override
   Future<DownloadState> build() async {
@@ -60,37 +62,144 @@ class DownloadController extends AsyncNotifier<DownloadState> {
     final settings = await ref.read(settingsProvider.future);
     _root = Directory(await normalizeDownloadPath(settings.downloadPath));
     await _root.create(recursive: true);
-    final file = File(path.join(_root.path, 'download_store.json'));
+    final loaded = _restoreJobs(await _readStore());
+    final restored = await _mergeRecovered(loaded);
+    if (!identical(restored, loaded)) await _persist(restored);
+    Timer.run(_schedule);
+    return restored;
+  }
+
+  File get _storeFile => File(path.join(_root.path, 'download_store.json'));
+  File get _backupStoreFile => File(path.join(_root.path, 'download_store.json.bak'));
+
+  DownloadState _restoreJobs(DownloadState loaded) {
+    final tasks = loaded.tasks.map((task) {
+      if (task.status == DownloadStatus.completed) return task;
+      if (task.sourceUrl?.isEmpty != false) return task.copyWith(status: DownloadStatus.failed, errorMessage: 'Download interrupted');
+      _jobs[task.id] = (
+        detail: VideoDetail(id: task.videoCode, title: task.title, coverUrl: task.coverUrl, sources: const [], tags: const [], playlist: const [], related: const []),
+        source: VideoSource(quality: task.quality, url: task.sourceUrl!),
+      );
+      return task.copyWith(status: DownloadStatus.queued, clearError: true);
+    }).toList();
+    return DownloadState(groups: loaded.groups, tasks: tasks);
+  }
+
+  Future<DownloadState> _readStore() async {
+    final store = await _decodeStore(_storeFile);
+    if (store != null) return store;
+    final backup = await _decodeStore(_backupStoreFile);
+    return backup ?? const DownloadState();
+  }
+
+  Future<DownloadState?> _decodeStore(File file) async {
     try {
-      final loaded = DownloadState.fromJson(jsonDecode(await file.readAsString()) as Map<String, dynamic>);
-      final tasks = loaded.tasks.map((task) {
-        if (task.status == DownloadStatus.completed) return task;
-        if (task.sourceUrl?.isEmpty != false) return task.copyWith(status: DownloadStatus.failed, errorMessage: 'Download interrupted');
-        _jobs[task.id] = (
-          detail: VideoDetail(id: task.videoCode, title: task.title, coverUrl: task.coverUrl, sources: const [], tags: const [], playlist: const [], related: const []),
-          source: VideoSource(quality: task.quality, url: task.sourceUrl!),
-        );
-        return task.copyWith(status: DownloadStatus.queued, clearError: true);
-      }).toList();
-      final restored = DownloadState(groups: loaded.groups, tasks: tasks);
-      Timer.run(_schedule);
-      return restored;
+      if (!await file.exists()) return null;
+      return DownloadState.fromJson(Map<String, dynamic>.from(jsonDecode(await file.readAsString()) as Map));
     } catch (_) {
-      return const DownloadState();
+      return null;
     }
+  }
+
+  Future<DownloadState> _mergeRecovered(DownloadState value) async {
+    final known = value.tasks.map((task) => task.videoCode).toSet();
+    final recovered = <DownloadTask>[];
+    try {
+      final entries = await _root.list().toList();
+      for (final entry in entries) {
+        if (entry is! Directory) continue;
+        final code = path.basename(entry.path);
+        if (code.isEmpty || known.contains(code)) continue;
+        final task = await _recover(entry, code);
+        if (task != null) recovered.add(task);
+      }
+    } catch (error) {
+      debugPrint('Failed to scan download directory: $error');
+    }
+    if (recovered.isEmpty) return value;
+    return DownloadState(groups: value.groups, tasks: [...value.tasks, ...recovered]);
+  }
+
+  Future<DownloadTask?> _recover(Directory directory, String videoCode) async {
+    final meta = File(path.join(directory.path, 'detail.json'));
+    if (!await meta.exists()) return null;
+    final Map<String, dynamic> data;
+    try {
+      data = Map<String, dynamic>.from(jsonDecode(await meta.readAsString()) as Map);
+    } catch (_) {
+      return null;
+    }
+    final video = await _videoFile(directory);
+    if (video == null) return null;
+    final stat = await video.stat();
+    final cover = File(path.join(directory.path, 'cover.jpg'));
+    return DownloadTask(
+      id: videoCode,
+      videoCode: videoCode,
+      title: data['title'] as String? ?? videoCode,
+      coverUrl: data['coverUrl'] as String?,
+      duration: data['duration'] as String?,
+      views: data['viewsText'] as String?,
+      rating: data['rating'] as String?,
+      uploadTime: data['uploadDate'] as String?,
+      sourceUrl: data['sourceUrl'] as String?,
+      groupIds: const {},
+      quality: data['sourceQuality'] as String? ?? path.basenameWithoutExtension(video.path).replaceFirst('video_', ''),
+      status: DownloadStatus.completed,
+      progress: 1,
+      downloadedBytes: stat.size,
+      totalBytes: stat.size,
+      createdAt: stat.modified.millisecondsSinceEpoch,
+      updatedAt: stat.modified.millisecondsSinceEpoch,
+      localVideoPath: video.path,
+      localCoverPath: await cover.exists() ? cover.path : null,
+      localMetaPath: meta.path,
+    );
+  }
+
+  Future<File?> _videoFile(Directory directory) async {
+    try {
+      await for (final entity in directory.list()) {
+        if (entity is! File) continue;
+        final name = path.basename(entity.path);
+        if (name.startsWith('video_') && name.endsWith('.mp4')) return entity;
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _save(DownloadState value) async {
     state = AsyncData(value);
-    final file = File(path.join(_root.path, 'download_store.json'));
+    await _persist(value);
+  }
+
+  Future<void> _persist(DownloadState value) async {
+    final store = _storeFile;
+    final temporary = File('${store.path}.tmp');
+    final backup = _backupStoreFile;
     _writeQueue = _writeQueue.then((_) async {
       try {
-        await file.writeAsString(jsonEncode(value.toJson()), flush: true);
+        await temporary.writeAsString(jsonEncode(value.toJson()), flush: true);
+        if (await store.exists()) {
+          try {
+            await store.copy(backup.path);
+          } catch (_) {}
+        }
+        await temporary.rename(store.path);
       } catch (error) {
         debugPrint('Failed to persist download store: $error');
       }
     });
     await _writeQueue;
+  }
+
+  Future<void> _progress(String id, DownloadTask Function(DownloadTask) update) async {
+    final current = state.value ?? const DownloadState();
+    state = AsyncData(DownloadState(groups: current.groups, tasks: current.tasks.map((task) => task.id == id ? update(task) : task).toList()));
+    final now = DateTime.now();
+    if (now.difference(_lastProgressWrite) < _progressWriteInterval) return;
+    _lastProgressWrite = now;
+    await _persist(state.value ?? const DownloadState());
   }
 
   Future<String?> addGroup(String name, DownloadGroupSort sort) async {
@@ -228,7 +337,7 @@ class DownloadController extends AsyncNotifier<DownloadState> {
       final directory = Directory(path.join(_root.path, task.videoCode));
       await directory.create(recursive: true);
       final meta = File(path.join(directory.path, 'detail.json'));
-      await meta.writeAsString(jsonEncode({'videoCode': detail.id, 'title': detail.title, 'coverUrl': detail.coverUrl, 'artistName': detail.artist, 'genre': detail.genre, 'viewsText': detail.views, 'uploadDate': detail.uploadDate, 'introduction': detail.description, 'tags': detail.tags.map((tag) => tag.name).toList(), 'sourceQuality': source.quality, 'sourceUrl': source.url}));
+      await meta.writeAsString(jsonEncode({'videoCode': detail.id, 'title': detail.title, 'coverUrl': detail.coverUrl, 'artistName': detail.artist, 'genre': detail.genre, 'duration': detail.duration, 'rating': detail.rating, 'viewsText': detail.views, 'uploadDate': detail.uploadDate, 'introduction': detail.description, 'tags': detail.tags.map((tag) => tag.name).toList(), 'sourceQuality': source.quality, 'sourceUrl': source.url}));
       await _replace(task.id, (value) => value.copyWith(status: DownloadStatus.downloading));
       final localCoverPath = await _downloadCover(detail.coverUrl, directory);
       if (localCoverPath != null) await _replace(task.id, (value) => value.copyWith(localCoverPath: localCoverPath));
@@ -272,7 +381,7 @@ class DownloadController extends AsyncNotifier<DownloadState> {
           speedStart = DateTime.now();
           speedBytes = 0;
         }
-        await _replace(taskId, (value) => value.copyWith(progress: total <= 0 ? 0 : downloaded / total, downloadedBytes: downloaded, totalBytes: total, speedBytesPerSecond: speed));
+        await _progress(taskId, (value) => value.copyWith(progress: total <= 0 ? 0 : downloaded / total, downloadedBytes: downloaded, totalBytes: total, speedBytesPerSecond: speed));
         final limit = ref.read(settingsProvider).value?.downloadSpeedLimitMbps ?? 0;
         if (limit > 0) {
           final elapsed = DateTime.now().difference(windowStart);

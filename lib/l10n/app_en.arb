@@ -830,5 +830,15 @@
     "placeholders": {
       "quality": {}
     }
-  }
+  },
+  "homeSectionLayout": "Home Sections",
+  "homeSectionLayoutDescription": "Reorder or hide home page sections",
+  "homeSectionLayoutSummary": "Drag the handle to reorder, use the switch to show or hide a section.",
+  "homeSectionLayoutUnavailable": "Home sections are unavailable right now.",
+  "resetDefaults": "Reset",
+  "removeFromPlaylist": "Remove from playlist",
+  "upcomingPreviews": "Upcoming",
+  "playlistSortRecentlyAdded": "Recently added",
+  "playlistSortOldestAdded": "Oldest added",
+  "playlistSortByName": "Title"
 }

@@ -26,7 +26,7 @@ class PreviewsPage extends ConsumerWidget {
     final result = ref.watch(previewsProvider(month));
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.previews),
+        title: Text(selectedMonth.isCurrentOrFuture ? l10n.upcomingPreviews : l10n.previews),
         actions: [
           IconButton(
             tooltip: l10n.getchuPreviews,

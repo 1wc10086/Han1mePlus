@@ -12,6 +12,7 @@ import '../../data/local/library_repository.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/video.dart';
 import '../account/account_controller.dart';
+import '../library/playlists/playlist_shared.dart';
 import '../library/remote_library_controller.dart';
 import '../settings/settings_controller.dart';
 import 'video_controller.dart';
@@ -83,9 +84,9 @@ class VideoActionBar extends ConsumerWidget {
       await controller.saveToPlaylist(video, selected);
       return;
     }
-    final result = await showDialog<String>(context: context, builder: (_) => const _PlaylistNameDialog());
-    if (result?.isEmpty != false) return;
-    await controller.createPlaylist(video, result!);
+    final result = await showDialog<PlaylistEditorResult>(context: context, builder: (_) => const PlaylistEditorDialog());
+    if (result == null || result.title.isEmpty) return;
+    await controller.createPlaylistWithVideo(video, result.title, description: result.description);
   }
 
   Future<void> _pickPlaylist(BuildContext context, WidgetRef ref, String? token, RemoteLibrary? library) async {
@@ -160,29 +161,6 @@ class VideoActionBar extends ConsumerWidget {
     } catch (error) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }
-  }
-}
-
-class _PlaylistNameDialog extends StatefulWidget {
-  const _PlaylistNameDialog();
-
-  @override
-  State<_PlaylistNameDialog> createState() => _PlaylistNameDialogState();
-}
-
-class _PlaylistNameDialogState extends State<_PlaylistNameDialog> {
-  final _title = TextEditingController();
-
-  @override
-  void dispose() {
-    _title.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(title: Text(l10n.newPlaylist), content: TextField(controller: _title, autofocus: true, decoration: InputDecoration(labelText: l10n.name)), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, _title.text.trim()), child: Text(l10n.create))]);
   }
 }
 

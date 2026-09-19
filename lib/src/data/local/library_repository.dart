@@ -37,11 +37,50 @@ class LibraryController extends AsyncNotifier<LibraryState> {
   Future<void> setFavorite(VideoDetail video, bool enabled) async { final current = state.value ?? const LibraryState(); final items = current.favorites.where((item) => item.videoCode != video.id).toList(); if (enabled) items.insert(0, _item(video)); await _save(_copy(current, favorites: items)); }
   Future<void> removeFavorites(Set<String> videoCodes) async { final current = state.value ?? const LibraryState(); final items = current.favorites.where((item) => !videoCodes.contains(item.videoCode)).toList(); if (items.length == current.favorites.length) return; await _save(_copy(current, favorites: items)); }
   Future<void> removeWatchLater(Set<String> videoCodes) async { final current = state.value ?? const LibraryState(); final items = current.watchLater.where((item) => !videoCodes.contains(item.videoCode)).toList(); if (items.length == current.watchLater.length) return; await _save(_copy(current, watchLater: items)); }
-  Future<void> createPlaylist(VideoDetail video, String title) async { final current = state.value ?? const LibraryState(); final playlist = Playlist(id: '${DateTime.now().microsecondsSinceEpoch}', title: title, count: 1, coverUrl: video.coverUrl, videos: [_item(video)]); await _save(_copy(current, playlists: [playlist, ...current.playlists])); }
+  Future<String> createPlaylist(String title, {String description = ''}) async {
+    final current = state.value ?? const LibraryState();
+    final playlist = Playlist(id: '${DateTime.now().microsecondsSinceEpoch}', title: title, count: 0, description: description.isEmpty ? null : description, createdAt: DateTime.now().millisecondsSinceEpoch);
+    await _save(_copy(current, playlists: [playlist, ...current.playlists]));
+    return playlist.id;
+  }
+  Future<void> createPlaylistWithVideo(VideoDetail video, String title, {String description = ''}) async {
+    final current = state.value ?? const LibraryState();
+    final playlist = Playlist(id: '${DateTime.now().microsecondsSinceEpoch}', title: title, count: 1, coverUrl: video.coverUrl, description: description.isEmpty ? null : description, createdAt: DateTime.now().millisecondsSinceEpoch, videos: [_item(video)]);
+    await _save(_copy(current, playlists: [playlist, ...current.playlists]));
+  }
   Future<void> saveToPlaylist(VideoDetail video, String playlistId) async { final current = state.value ?? const LibraryState(); final playlists = current.playlists.map((playlist) { if (playlist.id != playlistId) return playlist; final videos = [
         _item(video),
         ...playlist.videos.where((item) => item.videoCode != video.id),
-      ]; return Playlist(id: playlist.id, title: playlist.title, count: videos.length, coverUrl: video.coverUrl ?? playlist.coverUrl, videos: videos); }).toList(); await _save(_copy(current, playlists: playlists)); }
+      ]; return Playlist(id: playlist.id, title: playlist.title, count: videos.length, coverUrl: video.coverUrl ?? playlist.coverUrl, videos: videos, description: playlist.description, createdAt: playlist.createdAt, sort: playlist.sort); }).toList(); await _save(_copy(current, playlists: playlists)); }
+  Future<void> updatePlaylist(String playlistId, {String? title, String? description}) async {
+    final current = state.value ?? const LibraryState();
+    final playlists = current.playlists.map((playlist) {
+      if (playlist.id != playlistId) return playlist;
+      final nextTitle = title?.trim();
+      return playlist.copyWith(title: nextTitle == null || nextTitle.isEmpty ? null : nextTitle, description: description?.trim());
+    }).toList();
+    await _save(_copy(current, playlists: playlists));
+  }
+  Future<void> setPlaylistSort(String playlistId, PlaylistSortOrder sort) async {
+    final current = state.value ?? const LibraryState();
+    final playlists = current.playlists.map((playlist) => playlist.id == playlistId ? Playlist(id: playlist.id, title: playlist.title, count: playlist.count, coverUrl: playlist.coverUrl, videos: playlist.videos, description: playlist.description, createdAt: playlist.createdAt, sort: sort) : playlist).toList();
+    await _save(_copy(current, playlists: playlists));
+  }
+  Future<void> deletePlaylist(String playlistId) async {
+    final current = state.value ?? const LibraryState();
+    final playlists = current.playlists.where((playlist) => playlist.id != playlistId).toList();
+    if (playlists.length == current.playlists.length) return;
+    await _save(_copy(current, playlists: playlists));
+  }
+  Future<void> removePlaylistVideos(String playlistId, Set<String> videoCodes) async {
+    final current = state.value ?? const LibraryState();
+    final playlists = current.playlists.map((playlist) {
+      if (playlist.id != playlistId) return playlist;
+      final videos = playlist.videos.where((item) => !videoCodes.contains(item.videoCode)).toList();
+      return Playlist(id: playlist.id, title: playlist.title, count: videos.length, coverUrl: videos.isEmpty ? null : playlist.coverUrl, videos: videos, description: playlist.description, createdAt: playlist.createdAt, sort: playlist.sort);
+    }).toList();
+    await _save(_copy(current, playlists: playlists));
+  }
   Future<void> setSubscription(VideoDetail video, bool enabled) async { final name = video.artist?.trim() ?? ''; if (name.isEmpty) return; final current = state.value ?? const LibraryState(); final id = _artistId(name); final artists = current.artists.where((artist) => artist.id != id).toList(); final videos = Map<String, List<FollowingVideo>>.from(current.subscriptionVideos); if (enabled) { artists.insert(0, SubscribedArtist(id: id, name: name, avatarUrl: video.artistAvatarUrl, genre: video.genre, addedAt: DateTime.now().millisecondsSinceEpoch)); videos[id] = [_item(video), ...?videos[id]?.where((item) => item.videoCode != video.id)]; } else { videos.remove(id); } await _save(_copy(current, artists: artists, subscriptionVideos: videos)); }
   Future<void> addSubscriptionVideo(VideoDetail video) async { final current = state.value ?? const LibraryState(); final name = video.artist?.trim() ?? ''; final id = _artistId(name); if (name.isEmpty || !current.artists.any((artist) => artist.id == id)) return; final videos = Map<String, List<FollowingVideo>>.from(current.subscriptionVideos); videos[id] = [_item(video), ...?videos[id]?.where((item) => item.videoCode != video.id)]; await _save(_copy(current, subscriptionVideos: videos)); }
   Future<void> cacheRemote(RemoteLibrary remote) async {

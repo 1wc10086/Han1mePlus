@@ -1755,4 +1755,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String downloadQualityValue(Object quality) {
     return '${quality}p';
   }
+
+  @override
+  String get homeSectionLayout => 'Home Sections';
+
+  @override
+  String get homeSectionLayoutDescription => 'Reorder or hide home page sections';
+
+  @override
+  String get homeSectionLayoutSummary => 'Drag the handle to reorder, use the switch to show or hide a section.';
+
+  @override
+  String get homeSectionLayoutUnavailable => 'Home sections are unavailable right now.';
+
+  @override
+  String get resetDefaults => 'Reset';
+
+  @override
+  String get removeFromPlaylist => 'Remove from playlist';
+
+  @override
+  String get upcomingPreviews => 'Upcoming';
+
+  @override
+  String get playlistSortRecentlyAdded => 'Recently added';
+
+  @override
+  String get playlistSortOldestAdded => 'Oldest added';
+
+  @override
+  String get playlistSortByName => 'Title';
 }

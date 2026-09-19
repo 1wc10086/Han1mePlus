@@ -8,8 +8,16 @@ import '../settings/settings_controller.dart';
 
 int videoCardCacheWidth(double cardWidth, double devicePixelRatio) => (cardWidth * devicePixelRatio).round().clamp(240, 480).toInt();
 
-// 封面下方元信息实际高度: 标题 40 + 2 + 作者行 16 + 2 + 点赞行 16, 另加封面与元信息之间 8 的间距。
-const _horizontalCardMetaHeight = 84.0;
+const _metaGap = 8.0;
+const _titleBoxHeight = 40.0;
+const _metaLineHeight = 17.0;
+
+double videoCardDetailsHeightFor(TextScaler textScaler) =>
+    textScaler.scale(_titleBoxHeight) + 2 + textScaler.scale(_metaLineHeight) + 2 + textScaler.scale(_metaLineHeight);
+
+double videoCardMetaHeightFor(TextScaler textScaler) => _metaGap + videoCardDetailsHeightFor(textScaler);
+
+double videoCardMetaHeight(BuildContext context) => videoCardMetaHeightFor(MediaQuery.textScalerOf(context));
 
 class VideoCardMetrics {
   const VideoCardMetrics({required this.horizontal, required this.cardsPerRow, required this.cardWidth, required this.cardHeight});
@@ -25,18 +33,20 @@ VideoCardMetrics videoCardMetrics({
   required bool horizontal,
   required int cardsPerRow,
   required bool expanded,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
   const spacing = 10.0;
   const padding = 32.0;
+  final metaHeight = videoCardMetaHeightFor(textScaler);
   if (expanded) {
     final effective = viewportWidth >= 1200 ? (viewportWidth / 300).floor().clamp(cardsPerRow, 6).toInt() : cardsPerRow;
     final cardWidth = (viewportWidth - padding - spacing * (effective - 1)) / effective;
-    final cardHeight = horizontal ? cardWidth * 9 / 16 + _horizontalCardMetaHeight : cardWidth / .58;
+    final cardHeight = horizontal ? cardWidth * 9 / 16 + metaHeight : cardWidth / .58;
     return VideoCardMetrics(horizontal: horizontal, cardsPerRow: effective, cardWidth: cardWidth, cardHeight: cardHeight);
   }
   final desktop = viewportWidth >= 700;
   final cardWidth = horizontal ? (desktop ? 220.0 : 154.0) : (desktop ? 170.0 : 132.0);
-  final cardHeight = horizontal ? cardWidth * 9 / 16 + _horizontalCardMetaHeight : cardWidth / .58;
+  final cardHeight = horizontal ? cardWidth * 9 / 16 + metaHeight : cardWidth / .58;
   return VideoCardMetrics(horizontal: horizontal, cardsPerRow: 1, cardWidth: cardWidth, cardHeight: cardHeight);
 }
 
@@ -55,6 +65,7 @@ class VideoCardTile extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final theme = Theme.of(context);
+        final textScaler = MediaQuery.textScalerOf(context);
         final cacheWidth = videoCardCacheWidth(constraints.maxWidth, MediaQuery.devicePixelRatioOf(context));
         return Material(
           color: selected ? theme.colorScheme.secondaryContainer : Colors.transparent,
@@ -67,29 +78,29 @@ class VideoCardTile extends StatelessWidget {
             onTap: onTap ?? (video.id.isEmpty ? null : () => context.push('/video/${video.id}')),
             onLongPress: onLongPress,
             child: horizontal
-                ? _horizontalContent(theme, cacheWidth)
-                : _verticalContent(theme, cacheWidth),
+                ? _horizontalContent(theme, textScaler, cacheWidth)
+                : _verticalContent(theme, textScaler, cacheWidth),
           ),
         );
       },
     );
   }
 
-  Widget _verticalContent(ThemeData theme, int cacheWidth) => Column(
+  Widget _verticalContent(ThemeData theme, TextScaler textScaler, int cacheWidth) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: _cover(theme, cacheWidth)),
-          const SizedBox(height: 8),
-          _details(theme),
+          const SizedBox(height: _metaGap),
+          _details(theme, textScaler, shrinkable: false),
         ],
       );
 
-  Widget _horizontalContent(ThemeData theme, int cacheWidth) => Column(
+  Widget _horizontalContent(ThemeData theme, TextScaler textScaler, int cacheWidth) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AspectRatio(aspectRatio: 16 / 9, child: _cover(theme, cacheWidth)),
-          const SizedBox(height: 8),
-          _details(theme),
+          const SizedBox(height: _metaGap),
+          Flexible(fit: FlexFit.loose, child: _details(theme, textScaler, shrinkable: true)),
         ],
       );
 
@@ -128,12 +139,18 @@ class VideoCardTile extends StatelessWidget {
         ),
       );
 
-  Widget _details(ThemeData theme) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+  Widget _details(ThemeData theme, TextScaler textScaler, {required bool shrinkable}) {
+    Widget line(Widget child) => shrinkable ? Flexible(fit: FlexFit.loose, child: child) : child;
+    final rating = video.rating;
+    final uploadTime = video.uploadTime;
+    final artist = video.artist;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        line(
           SizedBox(
-            height: 40,
+            height: textScaler.scale(_titleBoxHeight),
             child: Text(
               video.title,
               maxLines: 2,
@@ -143,18 +160,20 @@ class VideoCardTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 2),
-          if (video.artist != null)
-            Text(video.artist!, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Expanded(child: video.rating == null ? const SizedBox.shrink() : Row(children: [Icon(Icons.thumb_up_outlined, size: 14, color: theme.colorScheme.outline), const SizedBox(width: 4), Flexible(child: Text(video.rating!, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)))])),
-              if (video.uploadTime != null) Text(video.uploadTime!, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)),
-            ],
-          ),
-        ],
-      );
+        ),
+        const SizedBox(height: 2),
+        if (artist != null && artist.isNotEmpty)
+          line(Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline))),
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            Expanded(child: rating == null || rating.isEmpty ? const SizedBox.shrink() : Row(children: [Icon(Icons.thumb_up_outlined, size: 14, color: theme.colorScheme.outline), const SizedBox(width: 4), Flexible(child: Text(rating, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)))])),
+            if (uploadTime != null && uploadTime.isNotEmpty) Text(uploadTime, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class VideoCardGrid extends ConsumerWidget {
@@ -178,7 +197,7 @@ class VideoCardGrid extends ConsumerWidget {
             ? (constraints.maxWidth / 300).floor().clamp(cardsPerRow, 6).toInt()
             : cardsPerRow;
         final cardWidth = (constraints.maxWidth - horizontalPadding - crossAxisSpacing * (effectiveCardsPerRow - 1)) / effectiveCardsPerRow;
-        final cardHeight = horizontal ? cardWidth * 9 / 16 + _horizontalCardMetaHeight : cardWidth / .58;
+        final cardHeight = horizontal ? cardWidth * 9 / 16 + videoCardMetaHeight(context) : cardWidth / .58;
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + MediaQuery.paddingOf(context).bottom),
           cacheExtent: 720,

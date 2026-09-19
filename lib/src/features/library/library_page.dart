@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:m3e_core/m3e_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
 
@@ -14,6 +13,9 @@ import '../../domain/models/library.dart';
 import '../../domain/models/search_query.dart';
 import '../../domain/models/video.dart';
 import '../shared/video_card.dart';
+import 'playlists/local_playlist_page.dart';
+import 'playlists/playlist_shared.dart';
+import 'playlists/remote_playlist_page.dart';
 import '../account/account_controller.dart';
 import '../settings/settings_controller.dart';
 import 'remote_library_controller.dart';
@@ -338,39 +340,59 @@ class _SubscribedArtistCard extends StatelessWidget {
   }
 }
 
-class _LocalPlaylists extends StatelessWidget {
+class _LocalPlaylists extends ConsumerWidget {
   const _LocalPlaylists({required this.playlists});
 
   final List<Playlist> playlists;
 
   @override
-  Widget build(BuildContext context) => _LocalPlaylistList(playlists: playlists);
-}
-
-class _LocalPlaylistList extends StatelessWidget {
-  const _LocalPlaylistList({required this.playlists});
-
-  final List<Playlist> playlists;
-
-  @override
-  Widget build(BuildContext context) {
-    if (playlists.isEmpty) return Center(child: Text(AppLocalizations.of(context)!.noPlaylists));
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: playlists.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 1.45),
-      itemBuilder: (context, index) => _LocalPlaylistCard(playlist: playlists[index]),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Stack(
+      children: [
+        playlists.isEmpty
+            ? Center(child: Text(l10n.noPlaylists))
+            : GridView.builder(
+                padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.paddingOf(context).bottom),
+                itemCount: playlists.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 1.45),
+                itemBuilder: (context, index) {
+                  final playlist = playlists[index];
+                  return PlaylistCoverCard(
+                    playlist: playlist,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LocalPlaylistPage(playlistId: playlist.id))),
+                    onLongPress: () => _delete(context, ref, playlist),
+                  );
+                },
+              ),
+        Positioned(
+          right: 16,
+          bottom: 16 + MediaQuery.paddingOf(context).bottom,
+          child: FloatingActionButton(tooltip: l10n.newPlaylist, onPressed: () => _create(context, ref), child: const Icon(Icons.playlist_add)),
+        ),
+      ],
     );
   }
-}
 
-class _LocalPlaylistCard extends StatelessWidget {
-  const _LocalPlaylistCard({required this.playlist});
+  Future<void> _create(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<PlaylistEditorResult>(context: context, builder: (_) => const PlaylistEditorDialog());
+    if (result == null || result.title.isEmpty) return;
+    await ref.read(libraryProvider.notifier).createPlaylist(result.title, description: result.description);
+  }
 
-  final Playlist playlist;
-
-  @override
-  Widget build(BuildContext context) => _PlaylistGridCard(playlist: playlist, onTap: () => showModalBottomSheet<void>(context: context, showDragHandle: true, isScrollControlled: true, builder: (context) => _LocalPlaylistItemsSheet(playlist: playlist)));
+  Future<void> _delete(BuildContext context, WidgetRef ref, Playlist playlist) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deletePlaylist),
+        content: Text(l10n.deletePlaylistConfirmation(playlist.title)),
+        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete))],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(libraryProvider.notifier).deletePlaylist(playlist.id);
+  }
 }
 
 class _Playlists extends ConsumerWidget {
@@ -526,202 +548,7 @@ class _PlaylistCardState extends ConsumerState<_PlaylistCard> {
   }
 
   @override
-  Widget build(BuildContext context) => _PlaylistGridCard(playlist: widget.playlist, onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _PlaylistItemsPage(playlist: widget.playlist))), onLongPress: _delete);
-}
-
-class _PlaylistGridCard extends StatelessWidget {
-  const _PlaylistGridCard({required this.playlist, required this.onTap, this.onLongPress});
-
-  final Playlist playlist;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: SizedBox(width: double.infinity, child: playlist.coverUrl?.isNotEmpty == true ? Image.network(playlist.coverUrl!, fit: BoxFit.cover, cacheWidth: 480) : ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest, child: const Icon(Icons.playlist_play, size: 40)))),
-            Padding(padding: const EdgeInsets.fromLTRB(10, 8, 10, 2), child: Text(playlist.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall)),
-            Padding(padding: const EdgeInsets.fromLTRB(10, 0, 10, 8), child: Text(AppLocalizations.of(context)!.videoCount(playlist.count), style: Theme.of(context).textTheme.bodySmall)),
-          ]),
-        ),
-      );
-}
-
-class _LocalPlaylistItemsSheet extends StatelessWidget {
-  const _LocalPlaylistItemsSheet({required this.playlist});
-
-  final Playlist playlist;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * .78,
-          child: Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(24, 4, 24, 12), child: Align(alignment: Alignment.centerLeft, child: Text(playlist.title, style: Theme.of(context).textTheme.titleLarge))),
-            Expanded(child: playlist.videos.isEmpty ? Center(child: Text(AppLocalizations.of(context)!.playlistEmpty)) : _Videos(videos: playlist.videos, message: AppLocalizations.of(context)!.playlistEmpty)),
-          ]),
-        ),
-      );
-}
-
-class _PlaylistItemsPage extends ConsumerStatefulWidget {
-  const _PlaylistItemsPage({required this.playlist});
-
-  final Playlist playlist;
-
-  @override
-  ConsumerState<_PlaylistItemsPage> createState() => _PlaylistItemsPageState();
-}
-
-class _PlaylistItemsPageState extends ConsumerState<_PlaylistItemsPage> {
-  var _sort = 'latest';
-  var _editing = false;
-  final _selectedItems = <String>{};
-  late Future<PlaylistDetail> _playlist = _load();
-
-  Future<PlaylistDetail> _load() async {
-    final settings = await ref.read(settingsProvider.future);
-    return ref.read(han1meRepositoryProvider).playlist(settings.resolvedBaseUrl, widget.playlist.id, _sort);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final account = ref.watch(accountProvider).valueOrNull;
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.playlist.title)),
-      body: FutureBuilder<PlaylistDetail>(
-        future: _playlist,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text(l10n.loadFailed('${snapshot.error}')));
-          if (!snapshot.hasData) return const Center(child: M3EContainedLoadingIndicator());
-          final playlist = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
-              if (playlist.playlist.coverUrl?.isNotEmpty == true) ClipRRect(borderRadius: BorderRadius.circular(16), child: AspectRatio(aspectRatio: 16 / 9, child: Image.network(playlist.playlist.coverUrl!, fit: BoxFit.cover, cacheWidth: 960))),
-              const SizedBox(height: 16),
-              Text(playlist.playlist.title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              if (playlist.author?.isNotEmpty == true) Text(l10n.playlistCreatedBy(playlist.author!), style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 4),
-              Text(l10n.playlistStats(playlist.playlist.count, playlist.viewCount ?? 0), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline)),
-              if (playlist.description?.isNotEmpty == true) Padding(padding: const EdgeInsets.only(top: 8), child: Text(playlist.description!)),
-              const SizedBox(height: 16),
-              Row(children: [Expanded(child: FilledButton.icon(onPressed: playlist.videos.isEmpty ? null : () => context.push('/video/${playlist.videos.first.videoCode}'), icon: const Icon(Icons.play_arrow), label: Text(l10n.playAll))), const SizedBox(width: 8), IconButton.filledTonal(onPressed: account?.csrfToken == null ? null : () => _edit(playlist), icon: const Icon(Icons.edit_outlined)), const SizedBox(width: 8), IconButton.filledTonal(onPressed: () => Share.share('https://hanimeone.me/playlist?list=${playlist.playlist.id}', subject: playlist.playlist.title), icon: const Icon(Icons.share_outlined))]),
-              const SizedBox(height: 20),
-              Row(children: [for (final value in ['latest', 'popular', 'oldest']) Padding(padding: const EdgeInsets.only(right: 8), child: ChoiceChip(label: Text(_sortLabel(l10n, value)), selected: _sort == value, onSelected: _editing ? null : (_) => _changeSort(value))), const Spacer(), TextButton.icon(onPressed: _editing ? _removeSelected : () => setState(() => _editing = true), icon: Icon(_editing ? Icons.delete_outline : Icons.edit_outlined), label: Text(_editing ? l10n.delete : l10n.edit))]),
-              const SizedBox(height: 4),
-              if (playlist.videos.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(l10n.playlistEmpty))) else _PlaylistVideoGrid(videos: playlist.videos, editing: _editing, selected: _selectedItems, onToggle: _toggleItem),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  String _sortLabel(AppLocalizations l10n, String value) => switch (value) {'latest' => l10n.latest, 'popular' => l10n.popular, _ => l10n.oldest};
-
-  void _changeSort(String value) => setState(() { _sort = value; _playlist = _load(); });
-
-  Future<void> _edit(PlaylistDetail playlist) async {
-    final result = await showDialog<(String, String, bool)>(context: context, builder: (_) => _PlaylistEditDialog(playlist: playlist));
-    if (result == null) return;
-    final account = ref.read(accountProvider).valueOrNull;
-    if (account?.csrfToken == null) return;
-    final settings = await ref.read(settingsProvider.future);
-    await ref.read(han1meRepositoryProvider).updatePlaylist(settings.resolvedBaseUrl, account!.csrfToken!, playlist.playlist.id, result.$1, result.$2, result.$3);
-    if (!mounted) return;
-    if (result.$3) {
-      Navigator.pop(context);
-      ref.invalidate(remoteLibraryProvider);
-      return;
-    }
-    setState(() => _playlist = _load());
-    ref.invalidate(remoteLibraryProvider);
-  }
-
-  void _toggleItem(FollowingVideo video) {
-    final id = video.playlistItemId;
-    if (id == null) return;
-    setState(() => _selectedItems.contains(id) ? _selectedItems.remove(id) : _selectedItems.add(id));
-  }
-
-  Future<void> _removeSelected() async {
-    if (_selectedItems.isEmpty) {
-      setState(() => _editing = false);
-      return;
-    }
-    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text(AppLocalizations.of(context)!.delete), content: Text(AppLocalizations.of(context)!.selectedItems(_selectedItems.length)), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.cancel)), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(AppLocalizations.of(context)!.delete))]));
-    final account = ref.read(accountProvider).valueOrNull;
-    if (confirmed != true || account?.csrfToken == null) return;
-    final settings = await ref.read(settingsProvider.future);
-    await Future.wait(_selectedItems.map((id) => ref.read(han1meRepositoryProvider).removePlaylistItem(settings.resolvedBaseUrl, account!.csrfToken!, id)));
-    if (mounted) setState(() { _editing = false; _selectedItems.clear(); _playlist = _load(); });
-  }
-}
-
-class _PlaylistVideoGrid extends StatelessWidget {
-  const _PlaylistVideoGrid({required this.videos, required this.editing, required this.selected, required this.onToggle});
-
-  final List<FollowingVideo> videos;
-  final bool editing;
-  final Set<String> selected;
-  final ValueChanged<FollowingVideo> onToggle;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) {
-          const spacing = 10.0;
-          final cardWidth = (constraints.maxWidth - spacing) / 2;
-          final cardHeight = cardWidth * 9 / 16 + 120;
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: spacing, mainAxisExtent: cardHeight),
-            itemCount: videos.length,
-            itemBuilder: (context, index) {
-              final video = videos[index];
-              final isSelected = selected.contains(video.playlistItemId);
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  VideoCardTile(video: _videoCard(video), horizontal: true, onTap: editing ? () => onToggle(video) : null),
-                  if (editing) Positioned(top: 4, right: 4, child: Checkbox(value: isSelected, onChanged: (value) => onToggle(video))),
-                ],
-              );
-            },
-          );
-        },
-      );
-}
-
-class _PlaylistEditDialog extends StatefulWidget {
-  const _PlaylistEditDialog({required this.playlist});
-
-  final PlaylistDetail playlist;
-
-  @override
-  State<_PlaylistEditDialog> createState() => _PlaylistEditDialogState();
-}
-
-class _PlaylistEditDialogState extends State<_PlaylistEditDialog> {
-  late final _title = TextEditingController(text: widget.playlist.playlist.title);
-  late final _description = TextEditingController(text: widget.playlist.description ?? '');
-  var _delete = false;
-
-  @override
-  void dispose() { _title.dispose(); _description.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(title: Text(l10n.edit), content: Column(mainAxisSize: MainAxisSize.min, children: [TextField(controller: _title, decoration: InputDecoration(labelText: l10n.name)), TextField(controller: _description, minLines: 3, maxLines: 5, decoration: InputDecoration(labelText: l10n.description)), CheckboxListTile(contentPadding: EdgeInsets.zero, value: _delete, onChanged: (value) => setState(() => _delete = value ?? false), title: Text(l10n.deletePlaylist))]), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)), FilledButton(onPressed: _title.text.trim().isEmpty ? null : () => Navigator.pop(context, (_title.text.trim(), _description.text.trim(), _delete)), child: Text(l10n.confirm))]);
-  }
+  Widget build(BuildContext context) => PlaylistCoverCard(playlist: widget.playlist, onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => RemotePlaylistPage(playlist: widget.playlist))), onLongPress: _delete);
 }
 
 class _Videos extends StatelessWidget {

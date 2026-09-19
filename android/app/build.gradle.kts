@@ -14,8 +14,8 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "19"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.8"
+val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "20"
+val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.1.9"
 
 android {
     namespace = "com.liar.han1meplus"
@@ -42,7 +42,7 @@ android {
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
@@ -56,6 +56,13 @@ android {
 
 flutter {
     source = "../.."
+}
+
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType != "debug") return@onVariants
+        variant.packaging.jniLibs.excludes.addAll(listOf("lib/armeabi-v7a/**", "lib/x86/**", "lib/x86_64/**"))
+    }
 }
 
 dependencies {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../explore/explore_controller.dart';
+import '../explore/home_section_layout.dart';
 import 'settings_controller.dart';
 import 'settings_card_list.dart';
 
@@ -27,6 +28,7 @@ class LayoutSettingsPage extends ConsumerWidget {
         SettingsCardItem(title: l10n.expandHomeVideoCards, subtitle: l10n.expandHomeVideoCardsDescription, leading: const Icon(Icons.unfold_more_outlined), trailing: Switch(value: settings.expandHomeVideoCards, onChanged: (value) => controller.saveChanges((current) => current.copyWith(expandHomeVideoCards: value)))),
         SettingsCardItem(title: l10n.homeCategoryTabs, subtitle: l10n.homeCategoryTabsDescription, leading: const Icon(Icons.tab_outlined), trailing: Switch(value: settings.useHomeCategoryTabs, onChanged: (value) => controller.saveChanges((current) => current.copyWith(useHomeCategoryTabs: value)))),
         SettingsCardItem(title: l10n.homeFeatured, subtitle: l10n.homeFeaturedDescription, leading: const Icon(Icons.recommend_outlined), trailing: Switch(value: settings.showHomeFeatured, onChanged: (value) => controller.saveChanges((current) => current.copyWith(showHomeFeatured: value)))),
+        SettingsCardItem(title: l10n.homeSectionLayout, subtitle: l10n.homeSectionLayoutDescription, leading: const Icon(Icons.view_agenda_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => showHomeSectionLayoutDialog(context, ref)),
         SettingsCardItem(title: l10n.recommendationFilters, leading: const Icon(Icons.filter_alt_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/recommendations')),
         SettingsMenuItem(title: l10n.searchCardsPerRow, subtitle: l10n.searchCardsPerRowValue(settings.searchCardsPerRow), leading: const Icon(Icons.grid_view_outlined), value: settings.searchCardsPerRow, options: const [1, 2, 3], label: l10n.searchCardsPerRowValue, onSelected: (value) => controller.saveChanges((current) => current.copyWith(searchCardsPerRow: value))),
       ]),

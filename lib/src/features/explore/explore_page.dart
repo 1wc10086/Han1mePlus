@@ -17,6 +17,7 @@ import '../../core/settings.dart';
 import '../settings/settings_controller.dart';
 import '../shared/video_card.dart';
 import 'explore_controller.dart';
+import 'home_section_layout.dart';
 
 const _maxContentWidth = 1440.0;
 
@@ -69,13 +70,15 @@ class _HomeFeedBody extends ConsumerWidget {
     final catalog = ref.watch(searchOptionCatalogProvider).valueOrNull;
     final locale = searchOptionLocaleKey(Localizations.localeOf(context));
     final subscribed = ref.watch(libraryProvider).valueOrNull?.artists.map((artist) => artist.name.toLowerCase()).toSet() ?? <String>{};
-    final sections = feed.sections
+    final localized = feed.sections
         .map((section) => HomeSection(
               title: _localizedSectionTitle(section, catalog, locale),
               videos: section.videos.where((video) => _visible(video, settings, subscribed)).toList(),
               moreUrl: section.moreUrl,
               isFeatured: section.isFeatured,
             ))
+        .toList(growable: false);
+    final sections = applyHomeSectionLayout(localized, settings?.homeSectionOrder ?? const [], settings?.hiddenHomeSections ?? const [])
         .where((section) => section.videos.isNotEmpty)
         .toList();
     Future<void> refresh() => ref.read(homeSectionsProvider.notifier).refresh();
@@ -168,6 +171,7 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
       horizontal: settings?.useHorizontalSearchCards ?? true,
       cardsPerRow: settings?.searchCardsPerRow ?? 2,
       expanded: widget.forceExpanded || (settings?.expandHomeVideoCards ?? false),
+      textScaler: MediaQuery.textScalerOf(context),
     );
     final cacheWidth = videoCardCacheWidth(metrics.cardWidth, pixelRatio);
     final count = metrics.cardsPerRow > 1 ? metrics.cardsPerRow * 2 : (screenWidth / metrics.cardWidth).ceil() + 2;
@@ -195,6 +199,7 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
       horizontal: horizontal,
       cardsPerRow: cardsPerRow,
       expanded: expanded,
+      textScaler: MediaQuery.textScalerOf(context),
     );
     return SliverMainAxisGroup(
       slivers: [

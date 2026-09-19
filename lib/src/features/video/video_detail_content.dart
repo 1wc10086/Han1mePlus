@@ -304,6 +304,8 @@ class _TagListState extends ConsumerState<_TagList> {
   }
 }
 
+const _seriesCardWidth = 180.0;
+
 class _SeriesVideos extends StatelessWidget {
   const _SeriesVideos({required this.videos, required this.currentVideoId});
 
@@ -314,7 +316,7 @@ class _SeriesVideos extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           Padding(padding: const EdgeInsets.fromLTRB(16, 16, 8, 8), child: Row(children: [Expanded(child: Text(AppLocalizations.of(context)!.seriesVideos, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => _showAll(context), child: Text(AppLocalizations.of(context)!.more))])),
-          SizedBox(height: 190, child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: videos.length, separatorBuilder: (context, index) => const SizedBox(width: 12), itemBuilder: (context, index) => SizedBox(width: 180, child: VideoCardTile(video: videos[index], horizontal: true, selected: videos[index].id == currentVideoId)))),
+          SizedBox(height: _seriesCardWidth * 9 / 16 + videoCardMetaHeight(context), child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: videos.length, separatorBuilder: (context, index) => const SizedBox(width: 12), itemBuilder: (context, index) => SizedBox(width: _seriesCardWidth, child: VideoCardTile(video: videos[index], horizontal: true, selected: videos[index].id == currentVideoId)))),
         ],
       );
 

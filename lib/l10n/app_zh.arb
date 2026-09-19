@@ -830,5 +830,15 @@
     "placeholders": {
       "quality": {}
     }
-  }
+  },
+  "homeSectionLayout": "首页栏目排序与隐藏",
+  "homeSectionLayoutDescription": "调整首页栏目的顺序与显示",
+  "homeSectionLayoutSummary": "拖动右侧手柄调整顺序，开关控制栏目显示或隐藏。",
+  "homeSectionLayoutUnavailable": "暂时无法获取首页栏目。",
+  "resetDefaults": "恢复默认",
+  "removeFromPlaylist": "从播放清单移除",
+  "upcomingPreviews": "新番预告",
+  "playlistSortRecentlyAdded": "最近添加",
+  "playlistSortOldestAdded": "最早添加",
+  "playlistSortByName": "标题"
 }

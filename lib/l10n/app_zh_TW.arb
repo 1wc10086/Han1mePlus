@@ -830,5 +830,15 @@
     "placeholders": {
       "quality": {}
     }
-  }
+  },
+  "homeSectionLayout": "首頁欄目排序與隱藏",
+  "homeSectionLayoutDescription": "調整首頁欄目的順序與顯示",
+  "homeSectionLayoutSummary": "拖動右側把手調整順序，開關控制欄目顯示或隱藏。",
+  "homeSectionLayoutUnavailable": "暫時無法取得首頁欄目。",
+  "resetDefaults": "恢復預設",
+  "removeFromPlaylist": "從播放清單移除",
+  "upcomingPreviews": "新番預告",
+  "playlistSortRecentlyAdded": "最近加入",
+  "playlistSortOldestAdded": "最早加入",
+  "playlistSortByName": "標題"
 }
