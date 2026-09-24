@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 
 import '../../core/desktop_platform.dart';
+import '../../core/site_hosts.dart';
 import 'windows_http_overrides.dart';
 
 class Han1meHttpResponse {
@@ -30,7 +31,10 @@ class Han1meHttpClient {
       return;
     }
     final host = Uri.tryParse(url ?? '')?.host;
-    if (host != null && host.isNotEmpty) _desktopCookies[host] = _mergeCookies(_desktopCookies[host], cookies);
+    if (host == null || host.isEmpty) return;
+    for (final target in _cookieHosts(host)) {
+      _desktopCookies[target] = _mergeCookies(_desktopCookies[target], cookies);
+    }
   }
 
   Future<void> clearCookies({String? url}) async {
@@ -39,7 +43,13 @@ class Han1meHttpClient {
       return;
     }
     final host = Uri.tryParse(url ?? '')?.host;
-    if (host == null || host.isEmpty) _desktopCookies.clear(); else _desktopCookies.remove(host);
+    if (host == null || host.isEmpty) {
+      _desktopCookies.clear();
+    } else {
+      for (final target in _cookieHosts(host)) {
+        _desktopCookies.remove(target);
+      }
+    }
   }
 
   Future<String> webViewCookies(String url) async {
@@ -48,6 +58,14 @@ class Han1meHttpClient {
     final value = cookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
     if (value.isNotEmpty) await saveCookies(value, url: url);
     return value;
+  }
+
+  Future<String> webViewCookiesFor(Iterable<String> urls) async {
+    var merged = '';
+    for (final url in urls) {
+      merged = _mergeCookies(merged, await webViewCookies(url));
+    }
+    return merged;
   }
 
   Future<void> clearWebViewCookies() async {
@@ -171,6 +189,8 @@ class Han1meHttpClient {
     if (cookies.isEmpty) return;
     saveCookies(cookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; '), url: uri.toString());
   }
+
+  Iterable<String> _cookieHosts(String host) => hanimeSiteHosts.contains(host) ? hanimeSiteHosts : [host];
 
   String _mergeCookies(String? current, String next) {
     final cookies = <String, String>{};

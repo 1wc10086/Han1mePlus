@@ -83,6 +83,7 @@ class _HomeFeedBody extends ConsumerWidget {
         .toList();
     Future<void> refresh() => ref.read(homeSectionsProvider.notifier).refresh();
     final showFeatured = settings?.showHomeFeatured ?? true;
+    if (sections.isEmpty && (!showFeatured || feed.featured == null)) return _EmptyHomeView(onRetry: () => ref.read(homeSectionsProvider.notifier).refresh());
     if (settings?.useHomeCategoryTabs != true || sections.isEmpty) return M3EPullToRefreshIndicator(onRefresh: refresh, child: _HomeScroll(featured: showFeatured ? feed.featured : null, sections: sections));
     return DefaultTabController(length: sections.length, child: Column(children: [
       TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: sections.map((section) => Tab(text: section.title)).toList()),
@@ -366,6 +367,29 @@ class _FeaturedVideoSurface extends StatelessWidget {
                   ]),
                 ),
               ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _EmptyHomeView extends StatelessWidget {
+  const _EmptyHomeView({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.home_outlined, size: 56),
+              const SizedBox(height: 12),
+              Text(AppLocalizations.of(context)!.noSearchResults, style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.retry)),
             ],
           ),
         ),
