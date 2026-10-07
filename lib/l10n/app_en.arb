@@ -727,6 +727,7 @@
   "videoTitleKeywordFilterDescription": "Hide videos whose titles contain a keyword",
   "minimumVideoDuration": "Minimum Video Duration",
   "minimumVideoViews": "Minimum Views",
+  "viewCountUnit": "×10k",
   "noFilter": "No Filter",
   "value": "Value",
   "authorFilter": "Author Filter",

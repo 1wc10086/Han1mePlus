@@ -1426,6 +1426,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoTitleKeywordFilterDescription => '隐藏标题包含关键词的影片';
 
   @override
+  String get viewCountUnit => '万';
+
+  @override
   String get minimumVideoDuration => '视频时长过滤';
 
   @override
@@ -3149,6 +3152,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get videoTitleKeywordFilterDescription => '隱藏標題包含關鍵詞的影片';
+
+  @override
+  String get viewCountUnit => '萬';
 
   @override
   String get minimumVideoDuration => '影片時長過濾';

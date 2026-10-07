@@ -727,6 +727,7 @@
   "videoTitleKeywordFilterDescription": "隱藏標題包含關鍵詞的影片",
   "minimumVideoDuration": "影片時長過濾",
   "minimumVideoViews": "播放量過濾",
+  "viewCountUnit": "萬",
   "noFilter": "不過濾",
   "value": "數值",
   "authorFilter": "作者過濾",

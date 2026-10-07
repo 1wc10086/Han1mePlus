@@ -39,6 +39,7 @@
         </activity>
         <activity
             android:name=".CloudflareActivity"
+            android:launchMode="singleTop"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:theme="@style/NormalTheme" />

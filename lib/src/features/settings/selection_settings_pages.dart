@@ -10,11 +10,12 @@ import '../../core/settings.dart';
 import '../account/account_controller.dart';
 import '../explore/explore_controller.dart';
 import 'settings_controller.dart';
+import 'settings_surface.dart';
 
 class SiteSettingsPage extends ConsumerWidget {
   const SiteSettingsPage({super.key});
 
-  static const _hosts = ['https://hanime1.com', 'https://hanimeone.me', 'https://hanime1.me', 'https://javchu.com'];
+  static const _hosts = ['https://hanime1.com', 'https://hanimeone.me', 'https://hanime1.me', 'https://javchu.com', 'https://www.hanime169.net'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,26 +26,28 @@ class SiteSettingsPage extends ConsumerWidget {
     final hosts = settings.comicMode ? const ['https://hanimeone.me'] : _hosts;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.site)),
-      body: SettingsList(
-        sections: [
-          SettingsSection(
-            title: Text(l10n.site, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-            tiles: [
-              for (final host in hosts)
-                SettingsTile<String>.radioTile(
-                  radioValue: host,
-                  groupValue: current,
-                  title: Text(host),
-                  onChanged: (value) async {
-                    if (value == null || value == current) return;
-                    await ref.read(settingsProvider.notifier).saveChanges((settings) => settings.copyWith(baseUrl: value, videoBaseUrl: settings.comicMode ? settings.videoBaseUrl : value, useCustomMirrorSite: false, customMirrorSite: ''));
-                    ref.invalidate(accountProvider);
-                    ref.invalidate(homeSectionsProvider);
-                  },
-                ),
-            ],
-          ),
-        ],
+      body: SettingsSurface(
+        child: SettingsList(
+          sections: [
+            SettingsSection(
+              title: Text(l10n.site, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+              tiles: [
+                for (final host in hosts)
+                  SettingsTile<String>.radioTile(
+                    radioValue: host,
+                    groupValue: current,
+                    title: Text(host),
+                    onChanged: (value) async {
+                      if (value == null || value == current) return;
+                      await ref.read(settingsProvider.notifier).saveChanges((settings) => settings.copyWith(baseUrl: value, videoBaseUrl: settings.comicMode ? settings.videoBaseUrl : value, useCustomMirrorSite: false, customMirrorSite: ''));
+                      ref.invalidate(accountProvider);
+                      ref.invalidate(homeSectionsProvider);
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -113,16 +116,18 @@ class _RadioSettingsPage<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text(title)),
-        body: SettingsList(
-          sections: [
-            SettingsSection(
-              title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-              tiles: [
-                for (final option in options)
-                  SettingsTile<T>.radioTile(radioValue: option, groupValue: current, title: Text(label(option)), onChanged: (value) { if (value != null) onChanged(value); }),
-              ],
-            ),
-          ],
+        body: SettingsSurface(
+          child: SettingsList(
+            sections: [
+              SettingsSection(
+                title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                tiles: [
+                  for (final option in options)
+                    SettingsTile<T>.radioTile(radioValue: option, groupValue: current, title: Text(label(option)), onChanged: (value) { if (value != null) onChanged(value); }),
+                ],
+              ),
+            ],
+          ),
         ),
       );
 }

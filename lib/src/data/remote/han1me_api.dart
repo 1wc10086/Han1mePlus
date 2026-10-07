@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 
+import '../../core/site_url.dart';
 import '../../domain/models/account.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/video.dart';
@@ -39,7 +40,7 @@ class Han1meApi {
   void replaceCookie(String value) => _cookie = value;
 
   Future<HomeFeed> home(String baseUrl) async {
-    final document = await _document('$baseUrl/');
+    final document = await _document(siteHomeUrl(baseUrl));
     final sections = <HomeSection>[];
     final rowsWrapper = document.querySelectorAll('#home-rows-wrapper > a.horizontal-row-title');
     for (final titleAnchor in rowsWrapper) {
@@ -98,7 +99,7 @@ class Han1meApi {
       if (broad) 'broad': 'on',
       if (type.isNotEmpty) 'type': type,
     };
-    final searchUri = Uri.parse('$baseUrl/search').replace(
+    final searchUri = Uri.parse(siteEndpointUrl(baseUrl, 'search')).replace(
       queryParameters: {...queryParameters, if (tags.isNotEmpty) 'tags[]': tags},
     );
     final document = await _document(searchUri.toString());
@@ -142,7 +143,7 @@ class Han1meApi {
   }
 
   Future<PreviewFeed> _upcomingPreviews(String baseUrl) async {
-    final uri = Uri.parse('$baseUrl/search').replace(queryParameters: {'genre': _upcomingGenre});
+    final uri = Uri.parse(siteEndpointUrl(baseUrl, 'search')).replace(queryParameters: {'genre': _upcomingGenre});
     final document = await _document(uri.toString());
     final items = document
         .querySelectorAll('#home-rows-wrapper a[href*="watch?v="]')
@@ -165,7 +166,7 @@ class Han1meApi {
   }
 
   Future<PreviewFeed> _monthlyPreviews(String baseUrl, String month) async {
-    final document = await _document('$baseUrl/previews/$month');
+    final document = await _document(siteEndpointUrl(baseUrl, 'previews/$month'));
     final header = document.querySelector('.preview-top-content');
     final rows = document.querySelectorAll('.content-padding > div.row[id]');
     final items = rows.map((row) {
@@ -191,7 +192,7 @@ class Han1meApi {
   }
 
   Future<VideoDetail> video(String baseUrl, String id) async {
-    final document = await _document('$baseUrl/watch?v=$id', referer: '$baseUrl/');
+    final document = await _document(siteEndpointUrl(baseUrl, 'watch?v=$id'), referer: siteHomeUrl(baseUrl));
     final player = document.querySelector('video#player');
     final sources = (player == null ? const <dom.Element>[] : player.querySelectorAll('source'))
         .map((source) => VideoSource(
@@ -289,12 +290,12 @@ class Han1meApi {
   }
 
   Future<Account> account(String baseUrl) async {
-    final home = await _document('$baseUrl/', referer: '$baseUrl/', skipCache: true);
+    final home = await _document(siteHomeUrl(baseUrl), referer: siteHomeUrl(baseUrl), skipCache: true);
     final profile = home.querySelector('#user-modal-trigger');
     final id = RegExp(r'/user/(\d+)').firstMatch(profile?.attributes['href'] ?? '')?.group(1) ??
         RegExp(r'\d+').firstMatch(home.querySelector('.profile-sub-stats-id')?.text ?? '')?.group(0);
     if (id == null) throw StateError('Account profile is unavailable');
-    final document = await _document('$baseUrl/user/$id/edit', referer: '$baseUrl/', skipCache: true);
+    final document = await _document(siteEndpointUrl(baseUrl, 'user/$id/edit'), referer: siteHomeUrl(baseUrl), skipCache: true);
     final stats = home.querySelector('.profile-sub-stats-new-line')?.text ?? '';
     final numbers = RegExp(r'\d+').allMatches(stats).map((match) => int.parse(match.group(0)!)).toList();
     final avatar = document.querySelector('img#playlist-avatar') ?? home.querySelector('#user-modal-dp-wrapper img, .profile-avatar-wrapper img');
@@ -311,24 +312,24 @@ class Han1meApi {
     );
   }
 
-  Future<void> updateProfile(String baseUrl, String userId, String token, String name, String email) => _form('$baseUrl/user/$userId', {'_token': token, '_method': 'patch', 'type': 'profile', 'name': name, 'email': email}, token);
+  Future<void> updateProfile(String baseUrl, String userId, String token, String name, String email) => _form(siteEndpointUrl(baseUrl, 'user/$userId'), {'_token': token, '_method': 'patch', 'type': 'profile', 'name': name, 'email': email}, token);
 
-  Future<void> updatePassword(String baseUrl, String userId, String token, String oldPassword, String password, String confirmation) => _form('$baseUrl/user/$userId', {'_token': token, '_method': 'patch', 'type': 'password', 'password_old': oldPassword, 'password_new': password, 'password_new_confirm': confirmation}, token);
+  Future<void> updatePassword(String baseUrl, String userId, String token, String oldPassword, String password, String confirmation) => _form(siteEndpointUrl(baseUrl, 'user/$userId'), {'_token': token, '_method': 'patch', 'type': 'password', 'password_old': oldPassword, 'password_new': password, 'password_new_confirm': confirmation}, token);
 
   Future<RemoteLibrary> library(String baseUrl, String userId) async {
     final pages = await Future.wait([
-      _document('$baseUrl/user/$userId/saves', skipCache: true),
-      _document('$baseUrl/user/$userId/likes', skipCache: true),
-      _document('$baseUrl/user/$userId/playlists', skipCache: true),
-      _document('$baseUrl/user/$userId/histories?sort=latest&page=1', skipCache: true),
+      _document(siteEndpointUrl(baseUrl, 'user/$userId/saves'), skipCache: true),
+      _document(siteEndpointUrl(baseUrl, 'user/$userId/likes'), skipCache: true),
+      _document(siteEndpointUrl(baseUrl, 'user/$userId/playlists'), skipCache: true),
+      _document(siteEndpointUrl(baseUrl, 'user/$userId/histories?sort=latest&page=1'), skipCache: true),
     ]);
-    final subscriptionPage = await _document('$baseUrl/subscriptions?page=1', skipCache: true);
+    final subscriptionPage = await _document(siteEndpointUrl(baseUrl, 'subscriptions?page=1'), skipCache: true);
     final subscriptionArtists = _subscriptionArtists(baseUrl, subscriptionPage);
     final subscriptionPages = _pageCount(subscriptionPage);
     final subscriptionVideos = <FollowingVideo>[
       ..._subscriptionVideos(baseUrl, subscriptionPage),
       for (final page in await Future.wait([
-        for (var number = 2; number <= subscriptionPages; number++) _document('$baseUrl/subscriptions?page=$number', skipCache: true),
+        for (var number = 2; number <= subscriptionPages; number++) _document(siteEndpointUrl(baseUrl, 'subscriptions?page=$number'), skipCache: true),
       ]))
         ..._subscriptionVideos(baseUrl, page),
     ];
@@ -340,38 +341,38 @@ class Han1meApi {
     return RemoteLibrary(watchLater: _libraryVideos(baseUrl, pages[0]), favorites: _libraryVideos(baseUrl, pages[1]), playlists: playlists, subscriptionArtists: subscriptionArtists, subscriptions: subscriptionVideos, history: _libraryVideos(baseUrl, pages[3]), csrfToken: [playlistPage, pages[0], pages[1], pages[3]].map((page) => page.querySelector('meta[name="csrf-token"]')?.attributes['content'] ?? page.querySelector('input[name="_token"]')?.attributes['value']).whereType<String>().firstOrNull);
   }
 
-  Future<void> saveToPlaylist(String baseUrl, String token, String listId, String videoId, bool checked) => _form('$baseUrl/save', {'_token': token, 'input_id': listId, 'video_id': videoId, 'is_checked': '$checked', 'user_id': ''}, token);
-  Future<void> setSubscription(String baseUrl, String token, String userId, String artistId, bool enabled) => _form('$baseUrl/subscribe', {'_token': token, 'subscribe-user-id': userId, 'subscribe-artist-id': artistId, 'subscribe-status': enabled ? '' : '1'}, token);
-  Future<void> createPlaylist(String baseUrl, String token, String videoId, String title, String description) => _form('$baseUrl/createPlaylist', {'_token': token, 'create-playlist-video-id': videoId, 'playlist-title': title, 'playlist-description': description}, token);
-  Future<void> setFavorite(String baseUrl, String token, String userId, String videoId, bool enabled) => _form('$baseUrl/like', {'like-foreign-id': videoId, 'like-status': enabled ? '' : '1', '_token': token, 'like-user-id': userId, 'like-is-positive': '1'}, token);
+  Future<void> saveToPlaylist(String baseUrl, String token, String listId, String videoId, bool checked) => _form(siteEndpointUrl(baseUrl, 'save'), {'_token': token, 'input_id': listId, 'video_id': videoId, 'is_checked': '$checked', 'user_id': ''}, token);
+  Future<void> setSubscription(String baseUrl, String token, String userId, String artistId, bool enabled) => _form(siteEndpointUrl(baseUrl, 'subscribe'), {'_token': token, 'subscribe-user-id': userId, 'subscribe-artist-id': artistId, 'subscribe-status': enabled ? '' : '1'}, token);
+  Future<void> createPlaylist(String baseUrl, String token, String videoId, String title, String description) => _form(siteEndpointUrl(baseUrl, 'createPlaylist'), {'_token': token, 'create-playlist-video-id': videoId, 'playlist-title': title, 'playlist-description': description}, token);
+  Future<void> setFavorite(String baseUrl, String token, String userId, String videoId, bool enabled) => _form(siteEndpointUrl(baseUrl, 'like'), {'like-foreign-id': videoId, 'like-status': enabled ? '' : '1', '_token': token, 'like-user-id': userId, 'like-is-positive': '1'}, token);
   Future<PlaylistDetail> playlist(String baseUrl, String playlistId, String sort) async {
-    final document = await _document('$baseUrl/playlist?list=$playlistId&sort=$sort&page=1', skipCache: true);
+    final document = await _document(siteEndpointUrl(baseUrl, 'playlist?list=$playlistId&sort=$sort&page=1'), skipCache: true);
     final count = int.tryParse(document.querySelector('#sidebar-video-count')?.text.trim() ?? '');
     final views = int.tryParse(RegExp(r'(?:觀看次數|观看次数)\s*[:：]\s*(\d+)').firstMatch(document.querySelector('.playlist-stats')?.text ?? '')?.group(1) ?? '');
     final playlist = Playlist(id: playlistId, title: document.querySelector('.playlist-title')?.text.trim() ?? '', count: count ?? 0, coverUrl: _absolute(baseUrl, document.querySelector('.playlist-main-thumbnail')?.attributes['src']));
     return PlaylistDetail(playlist: playlist, author: document.querySelector('.playlist-author-info a')?.text.trim(), description: document.querySelector('.playlist-description')?.text.trim(), viewCount: views, videos: _playlistVideos(baseUrl, document));
   }
-  Future<void> deletePlaylist(String baseUrl, String token, String playlistId) => _form('$baseUrl/playlist/$playlistId', {'_token': token, '_method': 'PUT', 'playlist-title': '', 'playlist-description': '', 'playlist-delete': 'on'}, token);
-  Future<void> updatePlaylist(String baseUrl, String token, String playlistId, String title, String description, bool delete) => _form('$baseUrl/playlist/$playlistId', {'_token': token, '_method': 'PUT', 'playlist-title': title, 'playlist-description': description, if (delete) 'playlist-delete': 'on'}, token);
+  Future<void> deletePlaylist(String baseUrl, String token, String playlistId) => _form(siteEndpointUrl(baseUrl, 'playlist/$playlistId'), {'_token': token, '_method': 'PUT', 'playlist-title': '', 'playlist-description': '', 'playlist-delete': 'on'}, token);
+  Future<void> updatePlaylist(String baseUrl, String token, String playlistId, String title, String description, bool delete) => _form(siteEndpointUrl(baseUrl, 'playlist/$playlistId'), {'_token': token, '_method': 'PUT', 'playlist-title': title, 'playlist-description': description, if (delete) 'playlist-delete': 'on'}, token);
   Future<void> removePlaylistItem(String baseUrl, String token, String itemId) async {
     final origin = _resolvedOrigin(baseUrl);
     final currentToken = await _csrfToken(origin) ?? token;
     final response = await _http.delete('$origin/playlist/items/$itemId', const {}, headers: {'X-CSRF-TOKEN': currentToken, 'Accept': 'application/json', 'Referer': '$origin/'}, json: true);
-    if (response.statusCode >= 400) throw DioException(requestOptions: RequestOptions(path: '$baseUrl/playlist/items/$itemId'), message: 'Request failed: HTTP ${response.statusCode}');
+    if (response.statusCode >= 400) throw DioException(requestOptions: RequestOptions(path: siteEndpointUrl(baseUrl, 'playlist/items/$itemId')), message: 'Request failed: HTTP ${response.statusCode}');
     final body = jsonDecode(response.body);
-    if (body is! Map || body['success'] != true) throw DioException(requestOptions: RequestOptions(path: '$baseUrl/playlist/items/$itemId'), message: 'Playlist item removal failed');
+    if (body is! Map || body['success'] != true) throw DioException(requestOptions: RequestOptions(path: siteEndpointUrl(baseUrl, 'playlist/items/$itemId')), message: 'Playlist item removal failed');
   }
   Future<void> deleteHistory(String baseUrl, String token, String videoId) async {
     final origin = _resolvedOrigin(baseUrl);
     final currentToken = await _csrfToken(origin) ?? token;
     final response = await _http.delete('$origin/user/tab-item/$videoId', {'tab': 'histories'}, headers: {'X-CSRF-TOKEN': currentToken, 'Referer': '$origin/'});
-    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException('$baseUrl/user/tab-item/$videoId');
-    if (response.statusCode >= 400) throw DioException(requestOptions: RequestOptions(path: '$baseUrl/user/tab-item/$videoId'), message: 'Request failed: HTTP ${response.statusCode}');
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(siteEndpointUrl(baseUrl, 'user/tab-item/$videoId'));
+    if (response.statusCode >= 400) throw DioException(requestOptions: RequestOptions(path: siteEndpointUrl(baseUrl, 'user/tab-item/$videoId')), message: 'Request failed: HTTP ${response.statusCode}');
     try {
       final body = jsonDecode(response.body);
-      if (body is Map && body['success'] != true) throw DioException(requestOptions: RequestOptions(path: '$baseUrl/user/tab-item/$videoId'), message: 'History deletion failed');
+      if (body is Map && body['success'] != true) throw DioException(requestOptions: RequestOptions(path: siteEndpointUrl(baseUrl, 'user/tab-item/$videoId')), message: 'History deletion failed');
     } on FormatException {
-      throw DioException(requestOptions: RequestOptions(path: '$baseUrl/user/tab-item/$videoId'), message: 'History deletion returned an invalid response');
+      throw DioException(requestOptions: RequestOptions(path: siteEndpointUrl(baseUrl, 'user/tab-item/$videoId')), message: 'History deletion returned an invalid response');
     }
   }
 
@@ -440,8 +441,8 @@ class Han1meApi {
   }
 
   Future<CommentPage> replies(String baseUrl, String commentId) async {
-    final response = await _http.get(Uri.parse('$baseUrl/loadReplies').replace(queryParameters: {'id': commentId}).toString());
-    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException('$baseUrl/loadReplies');
+    final response = await _http.get(Uri.parse(siteEndpointUrl(baseUrl, 'loadReplies')).replace(queryParameters: {'id': commentId}).toString());
+    if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(siteEndpointUrl(baseUrl, 'loadReplies'));
     final decoded = jsonDecode(response.body) as Map;
     final document = html_parser.parse(decoded['replies'] as String? ?? '');
     final root = document.querySelector('div[id^="reply-start"]');
@@ -457,10 +458,10 @@ class Han1meApi {
     return CommentPage(comments: comments);
   }
 
-  Future<void> postComment(String baseUrl, String token, String userId, String type, String targetId, String text) => _form('$baseUrl/createComment', {'_token': token, 'comment-user-id': userId, 'comment-type': type, 'comment-foreign-id': targetId, 'comment-text': text, 'comment-count': '1', 'comment-is-political': '0'}, token);
-  Future<void> replyComment(String baseUrl, String token, String commentId, String text) => _form('$baseUrl/replyComment', {'_token': token, 'reply-comment-id': commentId, 'reply-comment-text': text}, token);
-  Future<void> voteComment(String baseUrl, String token, Comment comment, bool positive) => _form('$baseUrl/commentLike', {'_token': token, 'foreign_type': comment.id.isEmpty ? 'reply' : 'comment', 'foreign_id': comment.foreignId ?? '', 'is_positive': positive ? '1' : '0', 'comment-like-user-id': comment.likeUserId ?? '', 'comment-likes-count': '${comment.likesCount ?? 0}', 'comment-likes-sum': '${comment.likesSum ?? 0}', 'like-comment-status': comment.liked ? '1' : '0', 'unlike-comment-status': comment.disliked ? '1' : '0'}, token);
-  Future<void> reportComment(String baseUrl, String token, String userId, Comment comment, String reason) => _form('$baseUrl/user/$userId/report', {'redirect-url': '', 'reportable-id': comment.reportableId ?? comment.foreignId ?? '', 'reportable-type': comment.reportableType ?? (comment.id.isEmpty ? 'reply' : 'comment'), 'reason': reason}, token);
+  Future<void> postComment(String baseUrl, String token, String userId, String type, String targetId, String text) => _form(siteEndpointUrl(baseUrl, 'createComment'), {'_token': token, 'comment-user-id': userId, 'comment-type': type, 'comment-foreign-id': targetId, 'comment-text': text, 'comment-count': '1', 'comment-is-political': '0'}, token);
+  Future<void> replyComment(String baseUrl, String token, String commentId, String text) => _form(siteEndpointUrl(baseUrl, 'replyComment'), {'_token': token, 'reply-comment-id': commentId, 'reply-comment-text': text}, token);
+  Future<void> voteComment(String baseUrl, String token, Comment comment, bool positive) => _form(siteEndpointUrl(baseUrl, 'commentLike'), {'_token': token, 'foreign_type': comment.id.isEmpty ? 'reply' : 'comment', 'foreign_id': comment.foreignId ?? '', 'is_positive': positive ? '1' : '0', 'comment-like-user-id': comment.likeUserId ?? '', 'comment-likes-count': '${comment.likesCount ?? 0}', 'comment-likes-sum': '${comment.likesSum ?? 0}', 'like-comment-status': comment.liked ? '1' : '0', 'unlike-comment-status': comment.disliked ? '1' : '0'}, token);
+  Future<void> reportComment(String baseUrl, String token, String userId, Comment comment, String reason) => _form(siteEndpointUrl(baseUrl, 'user/$userId/report'), {'redirect-url': '', 'reportable-id': comment.reportableId ?? comment.foreignId ?? '', 'reportable-type': comment.reportableType ?? (comment.id.isEmpty ? 'reply' : 'comment'), 'reason': reason}, token);
 
   Future<dom.Document> _document(String url, {String? referer, bool skipCache = false}) async {
     final response = await _http.get(url, headers: referer == null ? null : {'Referer': referer});
@@ -492,7 +493,7 @@ class Han1meApi {
   }
 
   Future<String?> _csrfToken(String baseUrl) async {
-    final response = await _http.get('$baseUrl/', headers: {'Referer': '$baseUrl/'});
+    final response = await _http.get(siteHomeUrl(baseUrl), headers: {'Referer': siteHomeUrl(baseUrl)});
     if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(baseUrl);
     if (response.statusCode >= 400) return null;
     final document = html_parser.parse(response.body);

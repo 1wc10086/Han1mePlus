@@ -200,13 +200,13 @@ class _TaskGrid extends ConsumerWidget {
     final preferredCards = settings?.searchCardsPerRow ?? 2;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final textScaler = MediaQuery.textScalerOf(context);
-        final metrics = videoCardMetrics(viewportWidth: constraints.maxWidth, horizontal: horizontal, cardsPerRow: preferredCards, expanded: true, textScaler: textScaler);
+        final metrics = videoCardMetrics(context: context, viewportWidth: constraints.maxWidth, horizontal: horizontal, cardsPerRow: preferredCards, expanded: true);
+        final textMetrics = VideoCardTextMetrics.of(context);
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + textScaler.scale(48)),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + textMetrics.metaLineHeight * 2 + 12),
           itemCount: tasks.length,
           itemBuilder: (context, index) => _TaskCard(task: tasks[index], horizontal: horizontal, cardHeight: metrics.cardHeight),
         );

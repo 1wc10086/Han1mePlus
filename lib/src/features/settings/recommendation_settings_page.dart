@@ -25,7 +25,7 @@ class RecommendationSettingsPage extends ConsumerWidget {
             children: [
               SettingsCardItem(title: l10n.videoTitleKeywordFilter, subtitle: l10n.videoTitleKeywordFilterDescription, leading: const Icon(Icons.title_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/recommendations/titles')),
               SettingsMenuItem(title: l10n.minimumVideoDuration, leading: const Icon(Icons.timer_outlined), value: settings.minimumVideoDurationSeconds, options: const [0, 30, 60, 90, 120, -1], label: (value) => value == -1 ? l10n.custom : value == 0 ? l10n.noFilter : l10n.seconds(value), onSelected: (value) => _selectCustom(context, value, settings.minimumVideoDurationSeconds, (result) => controller.saveChanges((current) => current.copyWith(minimumVideoDurationSeconds: result)))),
-              SettingsMenuItem(title: l10n.minimumVideoViews, leading: const Icon(Icons.visibility_outlined), value: settings.minimumVideoViews, options: const [0, 50, 100, 500, 1000, -1], label: (value) => value == -1 ? l10n.custom : value == 0 ? l10n.noFilter : '$value', onSelected: (value) => _selectCustom(context, value, settings.minimumVideoViews, (result) => controller.saveChanges((current) => current.copyWith(minimumVideoViews: result)))),
+              SettingsMenuItem(title: l10n.minimumVideoViews, leading: const Icon(Icons.visibility_outlined), value: settings.minimumVideoViews, options: const [0, 50, 100, 500, 1000, -1], label: (value) => value == -1 ? l10n.custom : value == 0 ? l10n.noFilter : '$value${l10n.viewCountUnit}', onSelected: (value) => _selectCustom(context, value, settings.minimumVideoViews, (result) => controller.saveChanges((current) => current.copyWith(minimumVideoViews: result)), label: l10n.minimumVideoViews, suffix: l10n.viewCountUnit)),
               SettingsCardItem(title: l10n.authorFilter, subtitle: l10n.authorFilterDescription, leading: const Icon(Icons.person_off_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/recommendations/authors')),
               SettingsCardItem(title: l10n.exemptSubscribedAuthors, subtitle: l10n.exemptSubscribedAuthorsDescription, leading: const Icon(Icons.person_add_alt_1_outlined), trailing: Switch(value: settings.exemptSubscribedAuthors, onChanged: (value) => controller.saveChanges((current) => current.copyWith(exemptSubscribedAuthors: value)))),
               SettingsCardItem(title: l10n.applyFiltersToRelated, subtitle: l10n.applyFiltersToRelatedDescription, leading: const Icon(Icons.video_library_outlined), trailing: Switch(value: settings.applyRecommendationFiltersToRelated, onChanged: (value) => controller.saveChanges((current) => current.copyWith(applyRecommendationFiltersToRelated: value)))),
@@ -37,19 +37,21 @@ class RecommendationSettingsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _selectCustom(BuildContext context, int value, int current, ValueChanged<int> onSelected) async {
+  Future<void> _selectCustom(BuildContext context, int value, int current, ValueChanged<int> onSelected, {String? label, String? suffix}) async {
     if (value != -1) {
       onSelected(value);
       return;
     }
-    final result = await showDialog<int>(context: context, builder: (_) => _CustomValueDialog(initialValue: current == 0 ? '' : '$current'));
+    final result = await showDialog<int>(context: context, builder: (_) => _CustomValueDialog(initialValue: current == 0 ? '' : '$current', label: label, suffix: suffix));
     if (result != null && result >= 0) onSelected(result);
   }
 }
 
 class _CustomValueDialog extends StatefulWidget {
-  const _CustomValueDialog({required this.initialValue});
+  const _CustomValueDialog({required this.initialValue, this.label, this.suffix});
   final String initialValue;
+  final String? label;
+  final String? suffix;
 
   @override
   State<_CustomValueDialog> createState() => _CustomValueDialogState();
@@ -69,7 +71,7 @@ class _CustomValueDialogState extends State<_CustomValueDialog> {
     final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(l10n.custom),
-      content: TextField(controller: _controller, autofocus: true, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.value)),
+      content: TextField(controller: _controller, autofocus: true, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: widget.label ?? l10n.value, suffixText: widget.suffix)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
         FilledButton(onPressed: () => Navigator.pop(context, int.tryParse(_controller.text.trim())), child: Text(l10n.save)),

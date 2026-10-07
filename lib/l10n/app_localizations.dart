@@ -2732,6 +2732,8 @@ abstract class AppLocalizations {
   /// **'Hide videos whose titles contain a keyword'**
   String get videoTitleKeywordFilterDescription;
 
+  String get viewCountUnit;
+
   /// No description provided for @minimumVideoDuration.
   ///
   /// In en, this message translates to:

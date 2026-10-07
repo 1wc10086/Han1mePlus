@@ -3,6 +3,8 @@ import 'package:card_settings_ui/list/settings_list.dart';
 import 'package:card_settings_ui/section/settings_section.dart';
 import 'package:card_settings_ui/tile/settings_tile.dart';
 
+import 'settings_surface.dart';
+
 class SettingsCardList extends StatelessWidget {
   const SettingsCardList({super.key, required this.children, this.title, this.padding = EdgeInsets.zero});
 
@@ -20,16 +22,18 @@ class SettingsCardList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (tiles.isNotEmpty)
-            SettingsList(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              contentPadding: EdgeInsets.zero,
-              sections: [
-                SettingsSection(
-                  title: title == null ? null : Text(title!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                  tiles: tiles.map((item) => item.tile).toList(),
-                ),
-              ],
+            SettingsSurface(
+              child: SettingsList(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                contentPadding: EdgeInsets.zero,
+                sections: [
+                  SettingsSection(
+                    title: title == null ? null : Text(title!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                    tiles: tiles.map((item) => item.tile).toList(),
+                  ),
+                ],
+              ),
             ),
           for (final child in content)
             Padding(

@@ -8,6 +8,7 @@ import android.app.Activity
 import android.app.PictureInPictureParams
 import android.media.AudioManager
 import android.os.Build
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.webkit.CookieManager
@@ -34,6 +35,7 @@ import java.net.InetAddress
 import java.nio.charset.Charset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 
 @Keep
 class MainActivity : FlutterActivity() {
@@ -70,7 +72,7 @@ class MainActivity : FlutterActivity() {
 
         private fun cookieHosts(host: String) = if (host in hanimeHosts) hanimeHosts else setOf(host)
 
-        private val hanimeHosts = setOf("hanime1.me", "hanime1.com", "hanimeone.me", "javchu.com")
+        private val hanimeHosts = setOf("hanime1.me", "hanime1.com", "hanimeone.me", "javchu.com", "hanime169.net", "www.hanime169.net")
     }
 
     private val channelName = "com.liar.han1meplus/http"
@@ -500,24 +502,42 @@ private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns
     }
 }
 
+private object CloudflareVerification {
+    private const val cooldownMillis = 5_000L
+    private val lock = ReentrantLock()
+    @Volatile private var lastRunAt = 0L
+
+    fun await(context: Context, url: String) {
+        lock.lock()
+        try {
+            val now = SystemClock.elapsedRealtime()
+            if (lastRunAt != 0L && now - lastRunAt < cooldownMillis) return
+            lastRunAt = now
+            val latch = CountDownLatch(1)
+            CloudflareActivity.onFinished = { latch.countDown() }
+            try {
+                context.startActivity(
+                    Intent(context, CloudflareActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .putExtra(CloudflareActivity.requestUrlKey, url),
+                )
+                latch.await(3, TimeUnit.MINUTES)
+            } catch (_: Exception) {
+                CloudflareActivity.onFinished?.invoke()
+            }
+        } finally {
+            lock.unlock()
+        }
+    }
+}
+
 private class CloudflareInterceptor(private val context: Context) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)
         if (response.code != 403 || response.header("cf-mitigated")?.equals("challenge", true) != true) return response
         response.close()
-        val latch = CountDownLatch(1)
-        CloudflareActivity.onFinished = { latch.countDown() }
-        try {
-            context.startActivity(
-                android.content.Intent(context, CloudflareActivity::class.java)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra(CloudflareActivity.requestUrlKey, request.url.toString()),
-            )
-            latch.await()
-        } catch (_: Exception) {
-            CloudflareActivity.onFinished?.invoke()
-        }
+        CloudflareVerification.await(context, request.url.toString())
         return chain.proceed(request)
     }
 }

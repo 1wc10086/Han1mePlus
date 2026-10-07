@@ -727,6 +727,7 @@
   "videoTitleKeywordFilterDescription": "隐藏标题包含关键词的影片",
   "minimumVideoDuration": "视频时长过滤",
   "minimumVideoViews": "播放量过滤",
+  "viewCountUnit": "万",
   "noFilter": "不过滤",
   "value": "数值",
   "authorFilter": "作者过滤",

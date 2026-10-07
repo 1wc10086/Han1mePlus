@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../core/settings.dart';
 import '../../core/platform_paths.dart';
+import '../../core/site_url.dart';
 import '../../data/local/download_repository.dart';
 import '../../data/remote/han1me_http_client.dart';
 import '../account/account_controller.dart';
@@ -127,11 +128,11 @@ class _MirrorSettingsDialogState extends State<_MirrorSettingsDialog> {
     final apiBase = _appendPath ? homeUrl : Uri.parse(homeUrl).origin;
     final http = Han1meHttpClient();
     try {
-      final home = await http.get('$homeUrl/');
+      final home = await http.get(siteHomeUrl(homeUrl));
       if (home.statusCode >= 400) return l10n.customMirrorTestFailedHttp(home.statusCode, home.url);
       if (home.statusCode == 403 || home.body.contains('cf-chl-')) return l10n.customMirrorTestChallenge;
       if (!home.body.contains('home-rows-wrapper')) return l10n.customMirrorTestParseFailed;
-      final search = await http.get('$apiBase/search');
+      final search = await http.get(siteEndpointUrl(apiBase, 'search'));
       if (search.statusCode >= 400) return l10n.customMirrorTestPartialSuccess(apiBase, search.statusCode);
       return l10n.customMirrorTestSuccess(home.url, apiBase);
     } catch (error) {

@@ -8,6 +8,8 @@ import 'package:m3e_core/m3e_core.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/app_shell.dart';
+import '../../core/app_scroll_behavior.dart';
+import '../../core/video_view_count.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/search_query.dart';
@@ -101,13 +103,12 @@ class _HomeFeedBody extends ConsumerWidget {
     if (!(settings.exemptSubscribedAuthors && subscribedAuthor)) {
       if (settings.blockedVideoTitleKeywords.any((keyword) => video.title.toLowerCase().contains(keyword.toLowerCase()))) return false;
       if (settings.blockedAuthors.any((author) => (video.artist ?? '').toLowerCase().contains(author.toLowerCase()))) return false;
-      if (_duration(video.duration) < settings.minimumVideoDurationSeconds || _views(video.views) < settings.minimumVideoViews) return false;
+      if (_duration(video.duration) < settings.minimumVideoDurationSeconds || !meetsMinimumVideoViews(video.views, settings.minimumVideoViews)) return false;
     }
     return true;
   }
 
   int _duration(String? text) => (text?.split(':').map(int.tryParse).toList() ?? const <int?>[]).fold<int>(0, (total, unit) => unit == null ? total : total * 60 + unit);
-  int _views(String? text) => int.tryParse(RegExp(r'[\d,.]+').firstMatch(text ?? '')?.group(0)?.replaceAll(',', '') ?? '') ?? 0;
 }
 
 String _localizedSectionTitle(HomeSection section, SearchOptionCatalog? catalog, String locale) {
@@ -168,11 +169,11 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
     final screenWidth = MediaQuery.sizeOf(context).width.clamp(0.0, _maxContentWidth).toDouble();
     final settings = ref.read(settingsProvider).valueOrNull;
     final metrics = videoCardMetrics(
+      context: context,
       viewportWidth: screenWidth,
       horizontal: settings?.useHorizontalSearchCards ?? true,
       cardsPerRow: settings?.searchCardsPerRow ?? 2,
       expanded: widget.forceExpanded || (settings?.expandHomeVideoCards ?? false),
-      textScaler: MediaQuery.textScalerOf(context),
     );
     final cacheWidth = videoCardCacheWidth(metrics.cardWidth, pixelRatio);
     final count = metrics.cardsPerRow > 1 ? metrics.cardsPerRow * 2 : (screenWidth / metrics.cardWidth).ceil() + 2;
@@ -196,11 +197,11 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
     }
     final viewportWidth = MediaQuery.sizeOf(context).width.clamp(0.0, _maxContentWidth).toDouble();
     final metrics = videoCardMetrics(
+      context: context,
       viewportWidth: viewportWidth,
       horizontal: horizontal,
       cardsPerRow: cardsPerRow,
       expanded: expanded,
-      textScaler: MediaQuery.textScalerOf(context),
     );
     return SliverMainAxisGroup(
       slivers: [
@@ -254,7 +255,7 @@ class _HomeSectionState extends ConsumerState<_HomeSection> {
   }
 }
 
-class _VideoRow extends StatelessWidget {
+class _VideoRow extends StatefulWidget {
   const _VideoRow({required this.videos, required this.horizontal, required this.cardWidth, required this.cardHeight});
 
   final List<VideoCard> videos;
@@ -263,15 +264,29 @@ class _VideoRow extends StatelessWidget {
   final double cardHeight;
 
   @override
+  State<_VideoRow> createState() => _VideoRowState();
+}
+
+class _VideoRowState extends State<_VideoRow> {
+  late final ScrollController _controller = ScrollController(keepScrollOffset: false);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => SizedBox(
-        height: cardHeight,
+        height: widget.cardHeight + horizontalScrollbarGutter,
         child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          controller: _controller,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, horizontalScrollbarGutter),
           scrollDirection: Axis.horizontal,
           cacheExtent: 480,
-          itemCount: videos.length,
+          itemCount: widget.videos.length,
           separatorBuilder: (context, index) => const SizedBox(width: 12),
-          itemBuilder: (context, index) => SizedBox(width: cardWidth, child: VideoCardTile(video: videos[index], horizontal: horizontal)),
+          itemBuilder: (context, index) => SizedBox(width: widget.cardWidth, child: VideoCardTile(video: widget.videos[index], horizontal: widget.horizontal)),
         ),
       );
 }

@@ -3,6 +3,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../account/account_controller.dart';
@@ -72,7 +73,7 @@ class _TagEditorPageState extends ConsumerState<TagEditorPage> {
     final l10n = AppLocalizations.of(context)!;
     final title = widget.mode == TagEditorMode.add ? l10n.addTags : l10n.removeTags;
     if (settings == null) return Scaffold(appBar: AppBar(title: Text(title)), body: const Center(child: CircularProgressIndicator()));
-    _url ??= '${settings.resolvedBaseUrl}/watch?v=${Uri.encodeQueryComponent(widget.videoId)}';
+    _url ??= siteEndpointUrl(settings.resolvedBaseUrl, 'watch?v=${Uri.encodeQueryComponent(widget.videoId)}');
     return PopScope(
       canPop: _allowPop,
       onPopInvokedWithResult: (didPop, result) async {

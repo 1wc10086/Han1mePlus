@@ -8,16 +8,59 @@ import '../settings/settings_controller.dart';
 
 int videoCardCacheWidth(double cardWidth, double devicePixelRatio) => (cardWidth * devicePixelRatio).round().clamp(240, 480).toInt();
 
-const _metaGap = 8.0;
-const _titleBoxHeight = 40.0;
-const _metaLineHeight = 17.0;
+const videoCardTitleLines = 2;
 
-double videoCardDetailsHeightFor(TextScaler textScaler) =>
-    textScaler.scale(_titleBoxHeight) + 2 + textScaler.scale(_metaLineHeight) + 2 + textScaler.scale(_metaLineHeight);
+final Map<(TextStyle?, TextScaler), double> _lineHeightCache = {};
 
-double videoCardMetaHeightFor(TextScaler textScaler) => _metaGap + videoCardDetailsHeightFor(textScaler);
+double _measuredLineHeight(TextStyle? style, TextScaler scaler) {
+  final key = (style, scaler);
+  final cached = _lineHeightCache[key];
+  if (cached != null) return cached;
+  final painter = TextPainter(
+    text: TextSpan(text: 'Ag中', style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 1,
+  )..layout();
+  final height = painter.height;
+  painter.dispose();
+  _lineHeightCache[key] = height;
+  return height;
+}
 
-double videoCardMetaHeight(BuildContext context) => videoCardMetaHeightFor(MediaQuery.textScalerOf(context));
+class VideoCardTextMetrics {
+  const VideoCardTextMetrics({
+    required this.titleLineHeight,
+    required this.metaLineHeight,
+    this.gap = 8,
+    this.lineGap = 2,
+  });
+
+  factory VideoCardTextMetrics.of(BuildContext context) {
+    final theme = Theme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    return VideoCardTextMetrics(
+      titleLineHeight: _measuredLineHeight(theme.textTheme.bodyMedium, scaler),
+      metaLineHeight: _measuredLineHeight(theme.textTheme.bodySmall, scaler),
+    );
+  }
+
+  final double titleLineHeight;
+  final double metaLineHeight;
+  final double gap;
+  final double lineGap;
+
+  double get titleBoxHeight => titleLineHeight * videoCardTitleLines + 1;
+  double get detailsHeight => titleBoxHeight + lineGap + metaLineHeight + lineGap + metaLineHeight;
+  double get metaHeight => gap + detailsHeight + 2;
+}
+
+double videoCardMetaHeightFor(BuildContext context) => VideoCardTextMetrics.of(context).metaHeight;
+
+double videoCardMetaHeight(BuildContext context) => videoCardMetaHeightFor(context);
+
+double videoCardCardHeight({required BuildContext context, required double cardWidth, required bool horizontal}) =>
+    horizontal ? cardWidth * 9 / 16 + videoCardMetaHeight(context) : cardWidth / .58;
 
 class VideoCardMetrics {
   const VideoCardMetrics({required this.horizontal, required this.cardsPerRow, required this.cardWidth, required this.cardHeight});
@@ -29,15 +72,15 @@ class VideoCardMetrics {
 }
 
 VideoCardMetrics videoCardMetrics({
+  required BuildContext context,
   required double viewportWidth,
   required bool horizontal,
   required int cardsPerRow,
   required bool expanded,
-  TextScaler textScaler = TextScaler.noScaling,
 }) {
   const spacing = 10.0;
   const padding = 32.0;
-  final metaHeight = videoCardMetaHeightFor(textScaler);
+  final metaHeight = videoCardMetaHeight(context);
   if (expanded) {
     final effective = viewportWidth >= 1200 ? (viewportWidth / 300).floor().clamp(cardsPerRow, 6).toInt() : cardsPerRow;
     final cardWidth = (viewportWidth - padding - spacing * (effective - 1)) / effective;
@@ -65,7 +108,7 @@ class VideoCardTile extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final theme = Theme.of(context);
-        final textScaler = MediaQuery.textScalerOf(context);
+        final metrics = VideoCardTextMetrics.of(context);
         final cacheWidth = videoCardCacheWidth(constraints.maxWidth, MediaQuery.devicePixelRatioOf(context));
         return Material(
           color: selected ? theme.colorScheme.secondaryContainer : Colors.transparent,
@@ -78,29 +121,29 @@ class VideoCardTile extends StatelessWidget {
             onTap: onTap ?? (video.id.isEmpty ? null : () => context.push('/video/${video.id}')),
             onLongPress: onLongPress,
             child: horizontal
-                ? _horizontalContent(theme, textScaler, cacheWidth)
-                : _verticalContent(theme, textScaler, cacheWidth),
+                ? _horizontalContent(theme, metrics, cacheWidth)
+                : _verticalContent(theme, metrics, cacheWidth),
           ),
         );
       },
     );
   }
 
-  Widget _verticalContent(ThemeData theme, TextScaler textScaler, int cacheWidth) => Column(
+  Widget _verticalContent(ThemeData theme, VideoCardTextMetrics metrics, int cacheWidth) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: _cover(theme, cacheWidth)),
-          const SizedBox(height: _metaGap),
-          _details(theme, textScaler, shrinkable: false),
+          SizedBox(height: metrics.gap),
+          _details(theme, metrics, shrinkable: false),
         ],
       );
 
-  Widget _horizontalContent(ThemeData theme, TextScaler textScaler, int cacheWidth) => Column(
+  Widget _horizontalContent(ThemeData theme, VideoCardTextMetrics metrics, int cacheWidth) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AspectRatio(aspectRatio: 16 / 9, child: _cover(theme, cacheWidth)),
-          const SizedBox(height: _metaGap),
-          Flexible(fit: FlexFit.loose, child: _details(theme, textScaler, shrinkable: true)),
+          SizedBox(height: metrics.gap),
+          Flexible(fit: FlexFit.loose, child: _details(theme, metrics, shrinkable: true)),
         ],
       );
 
@@ -139,7 +182,7 @@ class VideoCardTile extends StatelessWidget {
         ),
       );
 
-  Widget _details(ThemeData theme, TextScaler textScaler, {required bool shrinkable}) {
+  Widget _details(ThemeData theme, VideoCardTextMetrics metrics, {required bool shrinkable}) {
     Widget line(Widget child) => shrinkable ? Flexible(fit: FlexFit.loose, child: child) : child;
     final rating = video.rating;
     final uploadTime = video.uploadTime;
@@ -148,23 +191,21 @@ class VideoCardTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        line(
-          SizedBox(
-            height: textScaler.scale(_titleBoxHeight),
-            child: Text(
-              video.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+        SizedBox(
+          height: metrics.titleBoxHeight,
+          child: Text(
+            video.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: metrics.lineGap),
         if (artist != null && artist.isNotEmpty)
           line(Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline))),
-        const SizedBox(height: 2),
+        SizedBox(height: metrics.lineGap),
         Row(
           children: [
             Expanded(child: rating == null || rating.isEmpty ? const SizedBox.shrink() : Row(children: [Icon(Icons.thumb_up_outlined, size: 14, color: theme.colorScheme.outline), const SizedBox(width: 4), Flexible(child: Text(rating, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)))])),
@@ -197,7 +238,7 @@ class VideoCardGrid extends ConsumerWidget {
             ? (constraints.maxWidth / 300).floor().clamp(cardsPerRow, 6).toInt()
             : cardsPerRow;
         final cardWidth = (constraints.maxWidth - horizontalPadding - crossAxisSpacing * (effectiveCardsPerRow - 1)) / effectiveCardsPerRow;
-        final cardHeight = horizontal ? cardWidth * 9 / 16 + videoCardMetaHeight(context) : cardWidth / .58;
+        final cardHeight = videoCardCardHeight(context: context, cardWidth: cardWidth, horizontal: horizontal);
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + MediaQuery.paddingOf(context).bottom),
           cacheExtent: 720,

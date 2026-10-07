@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/site_hosts.dart';
+import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../data/remote/webview_environment.dart';
@@ -177,7 +178,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _controller = controller;
               await ref.read(han1meHttpClientProvider).clearWebViewCookies();
               if (!mounted) return;
-              await controller.loadUrl(urlRequest: URLRequest(url: WebUri('$baseUrl/login')));
+              await controller.loadUrl(urlRequest: URLRequest(url: WebUri(siteEndpointUrl(baseUrl, 'login'))));
               if (!mounted) return;
               _startPolling();
             },

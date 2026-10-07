@@ -1471,6 +1471,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hide videos whose titles contain a keyword';
 
   @override
+  String get viewCountUnit => '×10k';
+
+  @override
   String get minimumVideoDuration => 'Minimum Video Duration';
 
   @override

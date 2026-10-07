@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/settings.dart';
+import '../../core/video_view_count.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/local/json_store.dart';
@@ -88,6 +89,5 @@ bool _visible(VideoCard video, AppSettings settings) {
   if (settings.blockedVideoTitleKeywords.any((keyword) => video.title.toLowerCase().contains(keyword.toLowerCase()))) return false;
   if (settings.blockedAuthors.any((author) => (video.artist ?? '').toLowerCase().contains(author.toLowerCase()))) return false;
   final seconds = (video.duration?.split(':').map(int.tryParse).toList() ?? const <int?>[]).fold<int>(0, (total, part) => part == null ? total : total * 60 + part);
-  final views = int.tryParse(RegExp(r'[\d,.]+').firstMatch(video.views ?? '')?.group(0)?.replaceAll(',', '') ?? '') ?? 0;
-  return seconds >= settings.minimumVideoDurationSeconds && views >= settings.minimumVideoViews;
+  return seconds >= settings.minimumVideoDurationSeconds && meetsMinimumVideoViews(video.views, settings.minimumVideoViews);
 }

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../core/settings.dart';
 import 'settings_controller.dart';
+import 'settings_surface.dart';
 
 class LanguageSettingsPage extends ConsumerWidget {
   const LanguageSettingsPage({super.key});
@@ -17,18 +18,20 @@ class LanguageSettingsPage extends ConsumerWidget {
     final current = ref.watch(settingsProvider).valueOrNull?.language ?? AppLanguage.system;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.languageSettings)),
-      body: SettingsList(
-        sections: [
-          SettingsSection(
-            title: Text(l10n.languageSettings, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-            tiles: [
-              _languageTile(l10n.systemDefault, AppLanguage.system, current, ref),
-              _languageTile(l10n.simplifiedChinese, AppLanguage.simplifiedChinese, current, ref),
-              _languageTile(l10n.traditionalChinese, AppLanguage.traditionalChinese, current, ref),
-              _languageTile(l10n.english, AppLanguage.english, current, ref),
-            ],
-          ),
-        ],
+      body: SettingsSurface(
+        child: SettingsList(
+          sections: [
+            SettingsSection(
+              title: Text(l10n.languageSettings, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+              tiles: [
+                _languageTile(l10n.systemDefault, AppLanguage.system, current, ref),
+                _languageTile(l10n.simplifiedChinese, AppLanguage.simplifiedChinese, current, ref),
+                _languageTile(l10n.traditionalChinese, AppLanguage.traditionalChinese, current, ref),
+                _languageTile(l10n.english, AppLanguage.english, current, ref),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
