@@ -841,5 +841,26 @@
   "upcomingPreviews": "Upcoming",
   "playlistSortRecentlyAdded": "Recently added",
   "playlistSortOldestAdded": "Oldest added",
-  "playlistSortByName": "Title"
+  "playlistSortByName": "Title",
+  "alreadyDownloaded": "Already downloaded",
+  "deleteDownloadTitle": "Delete download",
+  "deleteDownloadConfirmation": "Delete \"{title}\" and its downloaded files?",
+  "@deleteDownloadConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "deleteSelectedCacheConfirmation": "Delete the {count} selected downloads and their files?",
+  "@deleteSelectedCacheConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTabOrder": "Tab order",
+  "libraryTabOrderDescription": "Reorder the tabs shown in My Collection.",
+  "restoreDefaultOrder": "Restore default order",
+  "landscapeFloatingBar": "Show Floating Bar in Landscape",
+  "landscapeFloatingBarDescription": "Show the floating action bar in landscape, following the player controls' visibility."
 }

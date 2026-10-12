@@ -123,14 +123,29 @@ class _CachePageState extends ConsumerState<CachePage> with TickerProviderStateM
       ),
       IconButton(
         tooltip: l10n.deleteSelectedCache,
-        onPressed: () async {
-          await ref.read(downloadProvider.notifier).deleteTasks(selected);
-          ref.read(cacheViewProvider.notifier).clearSelection();
-        },
+        onPressed: () => _confirmDeleteSelected(context, ref, selected),
         icon: const Icon(Icons.delete_outline),
       ),
       IconButton(tooltip: l10n.switchGroup, onPressed: () => _switchGroups(context, ref, state, selected), icon: const Icon(Icons.drive_file_move_outline)),
     ];
+  }
+
+  Future<void> _confirmDeleteSelected(BuildContext context, WidgetRef ref, Set<String> selected) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteSelectedCache),
+        content: Text(l10n.deleteSelectedCacheConfirmation(selected.length)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(downloadProvider.notifier).deleteTasks(selected);
+    ref.read(cacheViewProvider.notifier).clearSelection();
   }
 
   Future<void> _switchGroups(BuildContext context, WidgetRef ref, DownloadState state, Set<String> selectedIds) async {
@@ -262,6 +277,17 @@ class _TaskCard extends ConsumerWidget {
               ),
               if (task.pinned) const Positioned(top: 6, left: 6, child: Icon(Icons.push_pin, color: Colors.white, size: 20)),
               if (selected) const Positioned(top: 6, right: 6, child: Icon(Icons.check_circle, color: Colors.white)),
+              if (task.status == DownloadStatus.completed && !view.selecting)
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: IconButton(
+                    tooltip: l10n.delete,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.delete_outline, color: Colors.white),
+                    onPressed: () => _confirmDeleteTask(context, ref, task),
+                  ),
+                ),
             ],
           ),
         ),
@@ -315,6 +341,23 @@ class _TaskCard extends ConsumerWidget {
     }
     final localVideo = VideoDetail(id: task.videoCode, title: task.title, coverUrl: task.coverUrl, sources: [VideoSource(quality: task.quality, url: task.localVideoPath!)], tags: const [], playlist: const [], related: const []);
     if (context.mounted) await context.push('/video/${task.videoCode}?home=/cache', extra: localVideo);
+  }
+
+  Future<void> _confirmDeleteTask(BuildContext context, WidgetRef ref, DownloadTask task) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteDownloadTitle),
+        content: Text(l10n.deleteDownloadConfirmation(task.title)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(downloadProvider.notifier).deleteTasks({task.id});
   }
 }
 

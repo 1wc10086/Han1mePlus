@@ -841,5 +841,26 @@
   "upcomingPreviews": "新番预告",
   "playlistSortRecentlyAdded": "最近添加",
   "playlistSortOldestAdded": "最早添加",
-  "playlistSortByName": "标题"
+  "playlistSortByName": "标题",
+  "alreadyDownloaded": "已下载",
+  "deleteDownloadTitle": "删除下载",
+  "deleteDownloadConfirmation": "确定删除「{title}」及其已下载的文件吗？",
+  "@deleteDownloadConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "deleteSelectedCacheConfirmation": "确定删除所选的 {count} 项下载及其文件吗？",
+  "@deleteSelectedCacheConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTabOrder": "导航栏顺序",
+  "libraryTabOrderDescription": "调整「我的收藏」中导航栏的显示顺序。",
+  "restoreDefaultOrder": "恢复默认顺序",
+  "landscapeFloatingBar": "横屏显示浮动栏",
+  "landscapeFloatingBarDescription": "横屏时显示浮动操作栏,并跟随播放控制条一起显示或隐藏。"
 }

@@ -21,6 +21,8 @@ enum SuperResolutionMode { off, efficiency, quality }
 
 enum VideoAspectRatio { auto, crop, stretch, ratio4x3 }
 
+const defaultLibraryTabKeys = ['watch-later', 'favorites', 'playlists', 'subscriptions', 'history'];
+
 extension PlayerEngineX on PlayerEngine {
   static List<PlayerEngine> get available {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) return const [PlayerEngine.libMpv];
@@ -29,7 +31,7 @@ extension PlayerEngineX on PlayerEngine {
     return const [PlayerEngine.libMpv];
   }
 
-  static PlayerEngine get defaultEngine => PlayerEngine.libMpv;
+  static PlayerEngine get defaultEngine => Platform.isIOS ? PlayerEngine.avPlayer : PlayerEngine.libMpv;
 }
 
 extension VideoRendererX on VideoRenderer {
@@ -99,6 +101,7 @@ class AppSettings {
     this.showHomeFeatured = true,
     this.homeSectionOrder = const [],
     this.hiddenHomeSections = const [],
+    this.libraryTabOrder = const [],
     this.blockedVideoTitleKeywords = const [],
     this.blockedAuthors = const [],
     this.minimumVideoDurationSeconds = 0,
@@ -111,6 +114,7 @@ class AppSettings {
     this.autoPlayNext = false,
     this.loopPlayback = false,
     this.autoPictureInPicture = false,
+    this.landscapeFloatingBar = false,
     this.videoAspectRatio = VideoAspectRatio.auto,
     this.skipSeconds = 80,
     this.webDavEnabled = false,
@@ -175,6 +179,7 @@ class AppSettings {
   final bool showHomeFeatured;
   final List<String> homeSectionOrder;
   final List<String> hiddenHomeSections;
+  final List<String> libraryTabOrder;
   final List<String> blockedVideoTitleKeywords;
   final List<String> blockedAuthors;
   final int minimumVideoDurationSeconds;
@@ -187,6 +192,7 @@ class AppSettings {
   final bool autoPlayNext;
   final bool loopPlayback;
   final bool autoPictureInPicture;
+  final bool landscapeFloatingBar;
   final VideoAspectRatio videoAspectRatio;
   final int skipSeconds;
   final bool webDavEnabled;
@@ -209,6 +215,20 @@ class AppSettings {
   String get resolvedBaseUrl {
     if (!mirrorActive) return baseUrl;
     return appendCustomMirrorPath ? customMirrorSite : _rootUrl(customMirrorSite);
+  }
+
+  List<String> get resolvedLibraryTabOrder {
+    final known = <String>{};
+    final ordered = <String>[];
+    for (final key in libraryTabOrder) {
+      if (!defaultLibraryTabKeys.contains(key)) continue;
+      if (!known.add(key)) continue;
+      ordered.add(key);
+    }
+    for (final key in defaultLibraryTabKeys) {
+      if (!known.contains(key)) ordered.add(key);
+    }
+    return ordered;
   }
 
   static String _rootUrl(String url) {
@@ -271,6 +291,7 @@ class AppSettings {
         'showHomeFeatured': showHomeFeatured,
         'homeSectionOrder': homeSectionOrder,
         'hiddenHomeSections': hiddenHomeSections,
+        'libraryTabOrder': libraryTabOrder,
         'blockedVideoTitleKeywords': blockedVideoTitleKeywords,
         'blockedAuthors': blockedAuthors,
         'minimumVideoDurationSeconds': minimumVideoDurationSeconds,
@@ -283,6 +304,7 @@ class AppSettings {
         'autoPlayNext': autoPlayNext,
         'loopPlayback': loopPlayback,
         'autoPictureInPicture': autoPictureInPicture,
+        'landscapeFloatingBar': landscapeFloatingBar,
         'videoAspectRatio': videoAspectRatio.name,
         'skipSeconds': skipSeconds,
         'webDavEnabled': webDavEnabled,
@@ -348,6 +370,7 @@ class AppSettings {
         showHomeFeatured: json['showHomeFeatured'] as bool? ?? true,
         homeSectionOrder: (json['homeSectionOrder'] as List? ?? const []).whereType<String>().toList(),
         hiddenHomeSections: (json['hiddenHomeSections'] as List? ?? const []).whereType<String>().toList(),
+        libraryTabOrder: (json['libraryTabOrder'] as List? ?? const []).whereType<String>().toList(),
         blockedVideoTitleKeywords: (json['blockedVideoTitleKeywords'] as List? ?? const []).whereType<String>().toList(),
         blockedAuthors: (json['blockedAuthors'] as List? ?? const []).whereType<String>().toList(),
         minimumVideoDurationSeconds: (json['minimumVideoDurationSeconds'] as int? ?? 0).clamp(0, 86400) as int,
@@ -360,6 +383,7 @@ class AppSettings {
         autoPlayNext: json['autoPlayNext'] as bool? ?? false,
         loopPlayback: json['loopPlayback'] as bool? ?? false,
         autoPictureInPicture: json['autoPictureInPicture'] as bool? ?? false,
+        landscapeFloatingBar: json['landscapeFloatingBar'] as bool? ?? false,
         videoAspectRatio: _enumByName(VideoAspectRatio.values, json['videoAspectRatio'] as String?) ?? VideoAspectRatio.auto,
         skipSeconds: (json['skipSeconds'] as int? ?? 80).clamp(1, 3600) as int,
         webDavEnabled: json['webDavEnabled'] as bool? ?? false,
@@ -470,6 +494,7 @@ class AppSettings {
     bool? showHomeFeatured,
     List<String>? homeSectionOrder,
     List<String>? hiddenHomeSections,
+    List<String>? libraryTabOrder,
     List<String>? blockedVideoTitleKeywords,
     List<String>? blockedAuthors,
     int? minimumVideoDurationSeconds,
@@ -482,6 +507,7 @@ class AppSettings {
     bool? autoPlayNext,
     bool? loopPlayback,
     bool? autoPictureInPicture,
+    bool? landscapeFloatingBar,
     VideoAspectRatio? videoAspectRatio,
     int? skipSeconds,
     bool? webDavEnabled,
@@ -546,6 +572,7 @@ class AppSettings {
         showHomeFeatured: showHomeFeatured ?? this.showHomeFeatured,
         homeSectionOrder: homeSectionOrder ?? this.homeSectionOrder,
         hiddenHomeSections: hiddenHomeSections ?? this.hiddenHomeSections,
+        libraryTabOrder: libraryTabOrder ?? this.libraryTabOrder,
         blockedVideoTitleKeywords: blockedVideoTitleKeywords ?? this.blockedVideoTitleKeywords,
         blockedAuthors: blockedAuthors ?? this.blockedAuthors,
         minimumVideoDurationSeconds: minimumVideoDurationSeconds ?? this.minimumVideoDurationSeconds,
@@ -558,6 +585,7 @@ class AppSettings {
         autoPlayNext: autoPlayNext ?? this.autoPlayNext,
         loopPlayback: loopPlayback ?? this.loopPlayback,
         autoPictureInPicture: autoPictureInPicture ?? this.autoPictureInPicture,
+        landscapeFloatingBar: landscapeFloatingBar ?? this.landscapeFloatingBar,
         videoAspectRatio: videoAspectRatio ?? this.videoAspectRatio,
         skipSeconds: skipSeconds ?? this.skipSeconds,
         webDavEnabled: webDavEnabled ?? this.webDavEnabled,

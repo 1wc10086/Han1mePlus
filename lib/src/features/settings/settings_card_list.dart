@@ -94,6 +94,7 @@ class SettingsSliderItem extends SettingsCardItem {
     required this.divisions,
     required this.label,
     required this.onChanged,
+    this.labelBuilder,
   }) : super(title: title, subtitle: subtitle, leading: leading);
 
   final double value;
@@ -102,20 +103,145 @@ class SettingsSliderItem extends SettingsCardItem {
   final int divisions;
   final String label;
   final ValueChanged<double> onChanged;
+  final String Function(double value)? labelBuilder;
 
   @override
-  SettingsTile get tile => SettingsTile(
+  SettingsTile get tile => _SettingsSliderTile(
+        text: title,
+        subtitle: subtitle,
         leading: leading,
-        title: Text(title),
-        description: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (subtitle != null) Text(subtitle!),
-            Slider(value: value, min: min, max: max, divisions: divisions, label: label, onChanged: onChanged),
-          ],
-        ),
-        trailing: Text(label),
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        label: label,
+        onChanged: onChanged,
+        labelBuilder: labelBuilder,
       );
+}
+
+class _SettingsSliderTile extends SettingsTile<dynamic> {
+  _SettingsSliderTile({
+    required String text,
+    String? subtitle,
+    Widget? leading,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String label,
+    required ValueChanged<double> onChanged,
+    String Function(double value)? labelBuilder,
+  })  : _subtitle = subtitle,
+        _value = value,
+        _min = min,
+        _max = max,
+        _divisions = divisions,
+        _label = label,
+        _onChanged = onChanged,
+        _labelBuilder = labelBuilder,
+        super(title: Text(text), leading: leading);
+
+  final String? _subtitle;
+  final double _value;
+  final double _min;
+  final double _max;
+  final int _divisions;
+  final String _label;
+  final ValueChanged<double> _onChanged;
+  final String Function(double value)? _labelBuilder;
+
+  @override
+  Widget build(BuildContext context) => _SettingsSliderContent(
+        title: title,
+        subtitle: _subtitle,
+        leading: leading,
+        value: _value,
+        min: _min,
+        max: _max,
+        divisions: _divisions,
+        label: _label,
+        onChanged: _onChanged,
+        labelBuilder: _labelBuilder,
+      );
+}
+
+class _SettingsSliderContent extends StatefulWidget {
+  const _SettingsSliderContent({
+    required this.title,
+    this.subtitle,
+    this.leading,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.label,
+    required this.onChanged,
+    this.labelBuilder,
+  });
+
+  final Widget title;
+  final String? subtitle;
+  final Widget? leading;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String label;
+  final ValueChanged<double> onChanged;
+  final String Function(double value)? labelBuilder;
+
+  @override
+  State<_SettingsSliderContent> createState() => _SettingsSliderContentState();
+}
+
+class _SettingsSliderContentState extends State<_SettingsSliderContent> {
+  late double _value = widget.value;
+
+  @override
+  void didUpdateWidget(covariant _SettingsSliderContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value && widget.value != _value) {
+      if (!mounted) return;
+      setState(() => _value = widget.value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labelBuilder = widget.labelBuilder;
+    final labelText = labelBuilder != null ? labelBuilder(_value) : widget.label;
+    final subtitleText = (labelBuilder != null && widget.subtitle != null && widget.subtitle == widget.label)
+        ? labelBuilder(_value)
+        : widget.subtitle;
+    return SettingsTile(
+      leading: widget.leading,
+      title: widget.title,
+      description: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (subtitleText != null) Text(subtitleText!),
+          Slider(
+            value: _value,
+            min: widget.min,
+            max: widget.max,
+            divisions: widget.divisions,
+            label: labelText,
+            onChanged: (value) {
+              if (!mounted) return;
+              setState(() => _value = value);
+            },
+            onChangeEnd: (value) {
+              if (!mounted) return;
+              setState(() => _value = value);
+              widget.onChanged(value);
+            },
+          ),
+        ],
+      ),
+      trailing: Text(labelText),
+    );
+  }
 }
 
 class SettingsMenuItem<T> extends SettingsCardItem {

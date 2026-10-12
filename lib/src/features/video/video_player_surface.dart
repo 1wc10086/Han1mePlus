@@ -16,10 +16,11 @@ import '../../core/settings.dart';
 import '../../core/video_player_shutdown.dart';
 import '../../domain/models/video.dart';
 import '../settings/settings_controller.dart';
+import 'player_controls_visibility.dart';
 import 'video_player_controls.dart';
 
 class VideoPlayerSurface extends ConsumerStatefulWidget {
-  const VideoPlayerSurface({required this.controller, required this.quality, required this.video, required this.fullscreen, required this.onFullscreen, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onBack, this.onHome, this.onNext, this.onEpisodeSelected, this.keyframes = const [], this.onKeyframes, this.onAddKeyframe, super.key});
+  const VideoPlayerSurface({required this.controller, required this.quality, required this.video, required this.fullscreen, required this.onFullscreen, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onBack, this.onHome, this.onNext, this.onEpisodeSelected, this.keyframes = const [], this.onKeyframes, this.onAddKeyframe, this.onReload, super.key});
   final ValueListenable<VideoPlayerController?> controller;
   final ValueListenable<String?> quality;
   final VideoDetail video;
@@ -34,6 +35,7 @@ class VideoPlayerSurface extends ConsumerStatefulWidget {
   final List<int> keyframes;
   final VoidCallback? onKeyframes;
   final VoidCallback? onAddKeyframe;
+  final VoidCallback? onReload;
 
   @override
   ConsumerState<VideoPlayerSurface> createState() => _VideoPlayerSurfaceState();
@@ -62,7 +64,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     super.initState();
     _readLevels();
     unawaited(PlaybackSpeedPolicy.initialize());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _restartTimer());
+    WidgetsBinding.instance.addPostFrameCallback((_) { _restartTimer(); _applyControlsVisibility(); });
   }
 
   @override
@@ -82,10 +84,14 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     _hideTimer?.cancel();
     if (!_showControls || _locked) return;
     final seconds = ref.read(settingsProvider).valueOrNull?.playerControlsTimeoutSeconds ?? 4;
-    _hideTimer = Timer(Duration(seconds: seconds), () { if (mounted) setState(() => _showControls = false); });
+    _hideTimer = Timer(Duration(seconds: seconds), () { if (mounted) setState(() => _showControls = false); _applyControlsVisibility(); });
   }
 
-  void _toggleControls() { if (_locked) return; setState(() => _showControls = !_showControls); _restartTimer(); }
+  void _applyControlsVisibility() {
+    ref.read(playerControlsVisibilityProvider.notifier).set(_showControls && !_locked);
+  }
+
+  void _toggleControls() { if (_locked) return; setState(() => _showControls = !_showControls); _restartTimer(); _applyControlsVisibility(); }
   void _togglePlayback() {
     final controller = widget.controller.value;
     if (controller == null) return;
@@ -97,6 +103,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     if (_locked) return;
     if (!_showControls) setState(() => _showControls = true);
     _restartTimer();
+    _applyControlsVisibility();
   }
 
   void _showAdjustment(_Adjustment adjustment) {
@@ -312,9 +319,9 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
               child: Stack(fit: StackFit.expand, children: [
                 const ColoredBox(color: Colors.black),
                 _VideoViewport(controller: controller),
-                ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => value.isBuffering ? const Center(child: M3ELoadingIndicator(color: Colors.white)) : const SizedBox.shrink()),
+                _BufferingOverlay(controller: controller, onReload: widget.onReload),
                 ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => _showControls && !_locked ? VideoPlayerControls(controller: controller, fullscreen: widget.fullscreen, onFullscreen: widget.onFullscreen, onInteraction: _restartTimer, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected) : const SizedBox.shrink()),
-                if (_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.unlockControls, onPressed: () { setState(() => _locked = false); _restartTimer(); }, icon: const Icon(Icons.lock))),
+                if (_locked) Align(alignment: Alignment.centerLeft, child: IconButton(color: Colors.white, tooltip: l10n.unlockControls, onPressed: () { setState(() => _locked = false); _restartTimer(); _applyControlsVisibility(); }, icon: const Icon(Icons.lock))),
                 if (_showControls && !_locked && widget.onBack != null)
                   Positioned(
                     top: 8,
@@ -324,7 +331,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
                       if (widget.onHome != null) IconButton(color: Colors.white, tooltip: l10n.home, onPressed: widget.onHome, icon: const Icon(Icons.home_outlined)),
                     ]),
                   ),
-                if (_showControls && widget.fullscreen && !_locked) Align(alignment: Alignment.centerRight, child: IconButton(color: Colors.white, tooltip: l10n.lockControls, onPressed: () => setState(() => _locked = true), icon: const Icon(Icons.lock_open_outlined))),
+                if (_showControls && widget.fullscreen && !_locked) Align(alignment: Alignment.centerLeft, child: IconButton(color: Colors.white, tooltip: l10n.lockControls, onPressed: () { setState(() => _locked = true); _applyControlsVisibility(); }, icon: const Icon(Icons.lock_open_outlined))),
                 if (widget.fullscreen && widget.keyframes.isNotEmpty) _KeyframeCountdown(controller: controller, keyframes: widget.keyframes),
                 if (_showControls && widget.fullscreen && !_locked) Positioned(top: 8, left: widget.onHome != null ? 96 : 48, right: 212, child: _MarqueeTitle(title: widget.video.title)),
                 if (_showControls && !_locked)
@@ -387,6 +394,90 @@ class _VideoViewport extends ConsumerWidget {
       VideoAspectRatio.crop => Positioned.fill(child: FittedBox(fit: BoxFit.cover, clipBehavior: Clip.hardEdge, child: SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller)))),
       VideoAspectRatio.stretch => Positioned.fill(child: FittedBox(fit: BoxFit.fill, child: SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller)))),
     };
+  }
+}
+
+class _BufferingOverlay extends StatefulWidget {
+  const _BufferingOverlay({required this.controller, this.onReload});
+
+  final VideoPlayerController controller;
+  final VoidCallback? onReload;
+
+  @override
+  State<_BufferingOverlay> createState() => _BufferingOverlayState();
+}
+
+class _BufferingOverlayState extends State<_BufferingOverlay> {
+  static const _stuckThreshold = Duration(seconds: 10);
+  Timer? _timer;
+  bool _stuck = false;
+  bool _wasBuffering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasBuffering = widget.controller.value.isBuffering;
+    widget.controller.addListener(_handleControllerChanged);
+    if (_wasBuffering) _startStuckTimer();
+  }
+
+  @override
+  void didUpdateWidget(_BufferingOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.controller, widget.controller)) return;
+    oldWidget.controller.removeListener(_handleControllerChanged);
+    _timer?.cancel();
+    _wasBuffering = widget.controller.value.isBuffering;
+    _stuck = false;
+    widget.controller.addListener(_handleControllerChanged);
+    if (_wasBuffering) _startStuckTimer();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _handleControllerChanged() {
+    final isBuffering = widget.controller.value.isBuffering;
+    if (isBuffering == _wasBuffering) return;
+    _wasBuffering = isBuffering;
+    _timer?.cancel();
+    if (mounted) setState(() => _stuck = false);
+    if (isBuffering) _startStuckTimer();
+  }
+
+  void _startStuckTimer() {
+    _timer?.cancel();
+    _timer = Timer(_stuckThreshold, () {
+      if (!mounted) return;
+      setState(() => _stuck = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: widget.controller,
+      builder: (context, value, _) {
+        if (!value.isBuffering) return const SizedBox.shrink();
+        if (_stuck && widget.onReload != null) {
+          return Align(
+            alignment: const Alignment(0, 0.45),
+            child: IconButton(
+              color: Colors.white,
+              tooltip: l10n.retry,
+              onPressed: widget.onReload,
+              icon: const Icon(Icons.refresh),
+            ),
+          );
+        }
+        return const Center(child: M3ELoadingIndicator(color: Colors.white));
+      },
+    );
   }
 }
 

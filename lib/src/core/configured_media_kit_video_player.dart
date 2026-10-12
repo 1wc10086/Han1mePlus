@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,9 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   final _videoControllers = HashMap<int, VideoController>();
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
   final _streamSubscriptions = HashMap<int, List<StreamSubscription>>();
+  final _initializationTimers = HashMap<int, Timer>();
+  final _bufferingTimers = HashMap<int, Timer>();
+  final _bufferingActive = HashMap<int, bool>();
   int _nextTextureId = 0;
 
   static void registerWith() {
@@ -37,10 +41,16 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     _videoControllers.clear();
     _streamControllers.clear();
     _streamSubscriptions.clear();
+    _initializationTimers.clear();
+    _bufferingTimers.clear();
+    _bufferingActive.clear();
   }
 
   @override
   Future<void> dispose(int textureId) async {
+    _initializationTimers.remove(textureId)?.cancel();
+    _bufferingTimers.remove(textureId)?.cancel();
+    _bufferingActive.remove(textureId);
     final player = _players.remove(textureId);
     final streamController = _streamControllers.remove(textureId);
     final subscriptions = _streamSubscriptions.remove(textureId);
@@ -151,10 +161,18 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   VideoControllerConfiguration _videoConfiguration(AppSettings settings) {
     final embed = settings.videoRenderer == VideoRenderer.mediacodecEmbed;
     final acceleration = embed || settings.hardwareAcceleration;
+    final hwdec = embed && Platform.isAndroid
+        ? 'mediacodec'
+        : acceleration && (Platform.isIOS || Platform.isMacOS)
+            ? 'videotoolbox'
+            : acceleration
+                ? 'auto'
+                : 'no';
+    final vo = embed && !Platform.isAndroid ? null : settings.videoRenderer.mpvValue;
     return VideoControllerConfiguration(
-      vo: settings.videoRenderer.mpvValue,
+      vo: vo,
       enableHardwareAcceleration: acceleration,
-      hwdec: embed ? 'mediacodec' : acceleration ? 'auto' : 'no',
+      hwdec: hwdec,
     );
   }
 
@@ -250,26 +268,27 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     bool isActive() => identical(_streamControllers[textureId], streamController) &&
         !streamController.isClosed;
 
-    void notify() {
+    void emitInitialized() {
       if (isActive() && !completer.isCompleted) {
-        if (width != null && height != null && duration != null) {
-          streamController.add(
-            VideoEvent(
-              eventType: VideoEventType.initialized,
-              size: Size((width ?? 0) * 1.0, (height ?? 0) * 1.0),
-              duration: player.state.duration,
-            ),
-          );
-          completer.complete();
-        }
+        streamController.add(
+          VideoEvent(
+            eventType: VideoEventType.initialized,
+            size: Size((width ?? 0) * 1.0, (height ?? 0) * 1.0),
+            duration: duration ?? player.state.duration,
+          ),
+        );
+        completer.complete();
+        _initializationTimers.remove(textureId)?.cancel();
       }
     }
+
+    _initializationTimers[textureId] = Timer(const Duration(seconds: 8), emitInitialized);
 
     streamSubscriptions.add(
       player.stream.duration.listen((event) {
         if (event > Duration.zero) {
           duration = event;
-          notify();
+          if (!completer.isCompleted) emitInitialized();
         }
       }),
     );
@@ -277,16 +296,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
       player.stream.videoParams.listen((event) {
         width = event.dw;
         height = event.dh;
-        if ((width ?? 0) > 0 && (height ?? 0) > 0) notify();
-      }),
-    );
-    streamSubscriptions.add(
-      player.stream.tracks.listen((event) {
-        if (event.video.length == 2 && event.audio.length > 2) {
-          width = 0;
-          height = 0;
-          notify();
-        }
+        if (duration != null && !completer.isCompleted) emitInitialized();
       }),
     );
     streamSubscriptions.add(
@@ -307,11 +317,26 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     );
     streamSubscriptions.add(
       player.stream.buffering.listen((event) async {
-        await completer.future;
-        if (isActive()) {
-          streamController.add(
-            VideoEvent(eventType: event ? VideoEventType.bufferingStart : VideoEventType.bufferingEnd),
-          );
+        if (event) {
+          await completer.future;
+          if (!isActive()) return;
+          _bufferingTimers.remove(textureId)?.cancel();
+          _bufferingActive[textureId] = true;
+          streamController.add(VideoEvent(eventType: VideoEventType.bufferingStart));
+          final watchdog = Timer(const Duration(seconds: 8), () {
+            _bufferingTimers.remove(textureId);
+            if (!isActive()) return;
+            if (!(_bufferingActive[textureId] ?? false)) return;
+            _bufferingActive.remove(textureId);
+            streamController.add(VideoEvent(eventType: VideoEventType.bufferingEnd));
+          });
+          _bufferingTimers[textureId] = watchdog;
+        } else {
+          _bufferingTimers.remove(textureId)?.cancel();
+          await completer.future;
+          if (!isActive()) return;
+          _bufferingActive.remove(textureId);
+          streamController.add(VideoEvent(eventType: VideoEventType.bufferingEnd));
         }
       }),
     );

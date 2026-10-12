@@ -192,18 +192,13 @@ class Han1meApi {
   }
 
   Future<VideoDetail> video(String baseUrl, String id) async {
-    final document = await _document(siteEndpointUrl(baseUrl, 'watch?v=$id'), referer: siteHomeUrl(baseUrl));
+    final fetched = await _documentWithBody(siteEndpointUrl(baseUrl, 'watch?v=$id'), referer: siteHomeUrl(baseUrl));
+    final document = fetched.document;
+    final body = fetched.body;
     final player = document.querySelector('video#player');
-    final sources = (player == null ? const <dom.Element>[] : player.querySelectorAll('source'))
-        .map((source) => VideoSource(
-               quality: source.attributes['size'] ?? 'Default',
-              url: _absolute(baseUrl, source.attributes['src']),
-              type: source.attributes['type'],
-            ))
-        .where((source) => source.url.isNotEmpty)
-        .toList();
+    final sources = _extractSources(document, baseUrl, body);
     final title = (document.querySelector('meta[property="og:title"]')?.attributes['content'] ?? document.querySelector('title')?.text ?? '').trim();
-    final finalTitle = title.contains('- Hanime1.me') || title.contains('- H\u52d5\u6f2b/\u88cf\u756a') ? title.split(' - ').first.trim() : title;
+    final finalTitle = title.contains('- Hanime1.me') || title.contains('- H\u52d5\u6f2b/\u88cf\u756a') || title.contains('- Javchu.com') ? title.split(' - ').first.trim() : title;
     final cover = _absolute(baseUrl, player?.attributes['poster'] ?? document.querySelector('meta[property="og:image"]')?.attributes['content']);
     final duration = _formatDuration(int.tryParse(document.querySelector('meta[property="og:video:duration"]')?.attributes['content'] ?? ''));
     final downloadUrl = _absolute(baseUrl, document.querySelector('#downloadBtn')?.attributes['href']);
@@ -463,7 +458,7 @@ class Han1meApi {
   Future<void> voteComment(String baseUrl, String token, Comment comment, bool positive) => _form(siteEndpointUrl(baseUrl, 'commentLike'), {'_token': token, 'foreign_type': comment.id.isEmpty ? 'reply' : 'comment', 'foreign_id': comment.foreignId ?? '', 'is_positive': positive ? '1' : '0', 'comment-like-user-id': comment.likeUserId ?? '', 'comment-likes-count': '${comment.likesCount ?? 0}', 'comment-likes-sum': '${comment.likesSum ?? 0}', 'like-comment-status': comment.liked ? '1' : '0', 'unlike-comment-status': comment.disliked ? '1' : '0'}, token);
   Future<void> reportComment(String baseUrl, String token, String userId, Comment comment, String reason) => _form(siteEndpointUrl(baseUrl, 'user/$userId/report'), {'redirect-url': '', 'reportable-id': comment.reportableId ?? comment.foreignId ?? '', 'reportable-type': comment.reportableType ?? (comment.id.isEmpty ? 'reply' : 'comment'), 'reason': reason}, token);
 
-  Future<dom.Document> _document(String url, {String? referer, bool skipCache = false}) async {
+  Future<({dom.Document document, String body})> _documentWithBody(String url, {String? referer, bool skipCache = false}) async {
     final response = await _http.get(url, headers: referer == null ? null : {'Referer': referer});
     if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(url);
     if (response.statusCode >= 400) {
@@ -472,7 +467,58 @@ class Han1meApi {
     final requestedOrigin = Uri.parse(url).origin;
     final resolvedOrigin = Uri.tryParse(response.url)?.origin;
     if (resolvedOrigin != null && resolvedOrigin != requestedOrigin) _resolvedOrigins[requestedOrigin] = resolvedOrigin;
-    return html_parser.parse(response.body);
+    return (document: html_parser.parse(response.body), body: response.body);
+  }
+
+  Future<dom.Document> _document(String url, {String? referer, bool skipCache = false}) async {
+    final fetched = await _documentWithBody(url, referer: referer, skipCache: skipCache);
+    return fetched.document;
+  }
+
+  List<VideoSource> _extractSources(dom.Document document, String baseUrl, String body) {
+    final player = document.querySelector('video#player');
+    final fromElements = (player == null ? const <dom.Element>[] : player.querySelectorAll('source'))
+        .map((source) => VideoSource(
+               quality: source.attributes['size'] ?? 'Default',
+              url: _absolute(baseUrl, source.attributes['src']),
+              type: source.attributes['type'],
+            ))
+        .where((source) => source.url.isNotEmpty)
+        .toList();
+    if (fromElements.isNotEmpty) return fromElements;
+    final preloadHref = document.querySelector('link[rel="preload"][as="video"]')?.attributes['href'];
+    final preloadUrl = preloadHref == null ? '' : _absolute(baseUrl, preloadHref);
+    if (preloadUrl.isNotEmpty) return [VideoSource(quality: 'Default', url: preloadUrl)];
+    return _scanBodyForSources(baseUrl, body);
+  }
+
+  List<VideoSource> _scanBodyForSources(String baseUrl, String body) {
+    final patterns = <RegExp>[
+      RegExp(r'''const\s+source\s*=\s*['"]([^'"]+)['"]'''),
+      RegExp(r'''["']?(?:file|src)["']?\s*:\s*['"]([^'"]+)['"]'''),
+      RegExp(r'''sources\s*:\s*\[\s*['"]([^'"]+)['"]'''),
+      RegExp(r'''https?://[^"'<>\s\\]*?\.(?:m3u8|mp4)(?:\?[^"'<>\s\\]*?)?(?=["'<>\s\\]|$)'''),
+    ];
+    final byUrl = <String>[];
+    final seen = <String>{};
+    for (final pattern in patterns) {
+      for (final match in pattern.allMatches(body)) {
+        final raw = match.group(1) ?? match.group(0);
+        if (raw == null) continue;
+        final url = _absolute(baseUrl, raw);
+        if (url.isEmpty) continue;
+        if (!seen.add(url)) continue;
+        byUrl.add(url);
+      }
+    }
+    if (byUrl.isEmpty) return const [];
+    final m3u8 = RegExp(r'\.m3u8(?:\?|$)', caseSensitive: false);
+    final ordered = <String>[
+      ...byUrl.where((url) => m3u8.hasMatch(url)),
+      ...byUrl.where((url) => !m3u8.hasMatch(url)),
+    ];
+    final limited = ordered.length > 8 ? ordered.take(8).toList() : ordered;
+    return limited.map((url) => VideoSource(quality: 'Default', url: url)).toList();
   }
 
   Future<void> _form(String url, Map<String, String> data, String token) async {

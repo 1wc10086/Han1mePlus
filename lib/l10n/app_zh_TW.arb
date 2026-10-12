@@ -841,5 +841,26 @@
   "upcomingPreviews": "新番預告",
   "playlistSortRecentlyAdded": "最近加入",
   "playlistSortOldestAdded": "最早加入",
-  "playlistSortByName": "標題"
+  "playlistSortByName": "標題",
+  "alreadyDownloaded": "已下載",
+  "deleteDownloadTitle": "刪除下載",
+  "deleteDownloadConfirmation": "確定刪除「{title}」及其已下載的檔案嗎？",
+  "@deleteDownloadConfirmation": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "deleteSelectedCacheConfirmation": "確定刪除所選的 {count} 項下載及其檔案嗎？",
+  "@deleteSelectedCacheConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTabOrder": "導覽列順序",
+  "libraryTabOrderDescription": "調整「我的收藏」中導覽列的顯示順序。",
+  "restoreDefaultOrder": "恢復預設順序",
+  "landscapeFloatingBar": "橫屏顯示浮動欄",
+  "landscapeFloatingBarDescription": "橫屏時顯示浮動操作列,並跟隨播放控制列一起顯示或隱藏。"
 }

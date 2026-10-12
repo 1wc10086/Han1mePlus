@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../data/local/library_repository.dart';
 import '../../data/local/watch_repository.dart';
 import '../../core/app_shell.dart';
+import '../../core/settings.dart';
 import '../../data/han1me_repository.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/search_query.dart';
@@ -21,9 +22,9 @@ import '../settings/settings_controller.dart';
 import 'remote_library_controller.dart';
 
 class LibraryPage extends ConsumerStatefulWidget {
-  const LibraryPage({super.key, this.initialTab = 0});
+  const LibraryPage({super.key, this.initialTab = 'watch-later'});
 
-  final int initialTab;
+  final String initialTab;
 
   @override
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
@@ -34,52 +35,57 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final order = settings?.resolvedLibraryTabOrder ?? defaultLibraryTabKeys;
+    final initialTab = _normaliseLibraryTabKey(order, widget.initialTab);
+    final initialIndex = _libraryTabIndex(order, initialTab);
     final account = ref.watch(accountProvider).valueOrNull;
-    final drawerMode = ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false;
-    if (account?.id != null) return _RemoteLibrary(initialTab: widget.initialTab, drawerMode: drawerMode);
+    final drawerMode = settings?.useNavigationDrawer ?? false;
+    if (account?.id != null) return _RemoteLibrary(initialTab: initialTab, drawerMode: drawerMode);
     final value = ref.watch(libraryProvider);
     final l10n = AppLocalizations.of(context)!;
     if (drawerMode) {
       return Scaffold(
-        appBar: AppBar(leading: Navigator.of(context).canPop() || permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, widget.initialTab)), actions: widget.initialTab == 4 ? [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))] : null),
-        body: value.when(loading: () => const Center(child: M3EContainedLoadingIndicator()), error: (error, stackTrace) => Center(child: Text('$error')), data: (library) => _tabContent(library, widget.initialTab)),
-      );
-    }
-    return DefaultTabController(
-      length: 5,
-      initialIndex: widget.initialTab,
-      child: Scaffold(
         appBar: AppBar(
-          leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null,
-          title: Text(l10n.myLibrary),
-          actions: [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))],
-          bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n)),
+          leading: Navigator.of(context).canPop() || permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)),
+          title: Text(_tabTitle(l10n, initialTab)),
+          actions: initialTab == 'history' ? [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))] : null,
         ),
         body: value.when(
           loading: () => const Center(child: M3EContainedLoadingIndicator()),
           error: (error, stackTrace) => Center(child: Text('$error')),
-          data: _content,
+          data: (library) => _tabContent(library, initialTab),
+        ),
+      );
+    }
+    return DefaultTabController(
+      length: order.length,
+      initialIndex: initialIndex,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: drawerMode ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null,
+          title: Text(l10n.myLibrary),
+          actions: [IconButton(onPressed: () => context.push('/stats'), icon: const Icon(Icons.bar_chart_outlined))],
+          bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n, order)),
+        ),
+        body: value.when(
+          loading: () => const Center(child: M3EContainedLoadingIndicator()),
+          error: (error, stackTrace) => Center(child: Text('$error')),
+          data: (library) => TabBarView(children: [for (final key in order) _tabContent(library, key)]),
         ),
       ),
     );
   }
 
-  Widget _content(LibraryState library) {
-    return TabBarView(
-      children: [
-        for (var index = 0; index < 5; index++) _tabContent(library, index),
-      ],
-    );
-  }
-
-  Widget _tabContent(LibraryState library, int index) {
+  Widget _tabContent(LibraryState library, String key) {
     final l10n = AppLocalizations.of(context)!;
-    return switch (index) {
-      0 => _SelectableVideos(videos: library.watchLater, emptyMessage: l10n.noWatchLater, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeWatchLater(ids)),
-      1 => _SelectableVideos(videos: library.favorites, emptyMessage: l10n.noFavoriteVideos, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeFavorites(ids)),
-      2 => _LocalPlaylists(playlists: library.playlists),
-      3 => _LocalSubscriptions(artists: library.artists, videos: library.subscriptionVideos, selectedArtist: _artistId, onSelected: (artist) => setState(() => _artistId = artist)),
-      _ => const _LocalHistory(),
+    return switch (key) {
+      'watch-later' => _SelectableVideos(videos: library.watchLater, emptyMessage: l10n.noWatchLater, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeWatchLater(ids)),
+      'favorites' => _SelectableVideos(videos: library.favorites, emptyMessage: l10n.noFavoriteVideos, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeFavorites(ids)),
+      'playlists' => _LocalPlaylists(playlists: library.playlists),
+      'subscriptions' => _LocalSubscriptions(artists: library.artists, videos: library.subscriptionVideos, selectedArtist: _artistId, onSelected: (artist) => setState(() => _artistId = artist)),
+      'history' => const _LocalHistory(),
+      _ => _SelectableVideos(videos: library.watchLater, emptyMessage: l10n.noWatchLater, remover: (ref, ids) => ref.read(libraryProvider.notifier).removeWatchLater(ids)),
     };
   }
 }
@@ -87,33 +93,37 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 class _RemoteLibrary extends ConsumerWidget {
   const _RemoteLibrary({required this.initialTab, required this.drawerMode});
 
-  final int initialTab;
+  final String initialTab;
   final bool drawerMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final order = settings?.resolvedLibraryTabOrder ?? defaultLibraryTabKeys;
+    final initialKey = _normaliseLibraryTabKey(order, initialTab);
+    final initialIndex = _libraryTabIndex(order, initialKey);
     final account = ref.watch(accountProvider).valueOrNull;
     if (drawerMode) {
       return Scaffold(
-        appBar: AppBar(leading: permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, initialTab))),
+        appBar: AppBar(leading: permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu)), title: Text(_tabTitle(l10n, initialKey))),
         body: ref.watch(remoteLibraryProvider).when(
           loading: () => const Center(child: M3EContainedLoadingIndicator()),
           error: (error, stackTrace) => Center(child: FilledButton(onPressed: () => ref.invalidate(remoteLibraryProvider), child: Text(l10n.reload))),
-          data: (library) => _remoteTabContent(context, library, initialTab, account?.csrfToken),
+          data: (library) => _remoteTabContent(context, library, initialKey, account?.csrfToken),
         ),
       );
     }
     return DefaultTabController(
-      length: 5,
-      initialIndex: initialTab,
+      length: order.length,
+      initialIndex: initialIndex,
       child: Builder(
         builder: (context) => Scaffold(
-          appBar: AppBar(leading: ref.watch(settingsProvider).valueOrNull?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null, title: Text(l10n.myLibrary), bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n))),
+          appBar: AppBar(leading: settings?.useNavigationDrawer ?? false ? (permanentNavigationDrawer(context) ? null : IconButton(onPressed: openAppDrawer, icon: const Icon(Icons.menu))) : null, title: Text(l10n.myLibrary), bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs(l10n, order))),
           body: ref.watch(remoteLibraryProvider).when(
                 loading: () => const Center(child: M3EContainedLoadingIndicator()),
                 error: (error, stackTrace) => Center(child: FilledButton(onPressed: () => ref.invalidate(remoteLibraryProvider), child: Text(l10n.reload))),
-                data: (library) => TabBarView(children: [for (var index = 0; index < 5; index++) _remoteTabContent(context, library, index, account?.csrfToken)]),
+                data: (library) => TabBarView(children: [for (final key in order) _remoteTabContent(context, library, key, account?.csrfToken)]),
               ),
         ),
       ),
@@ -121,10 +131,10 @@ class _RemoteLibrary extends ConsumerWidget {
   }
 }
 
-Widget _remoteTabContent(BuildContext context, RemoteLibrary library, int index, String? accountToken) {
+Widget _remoteTabContent(BuildContext context, RemoteLibrary library, String key, String? accountToken) {
   final l10n = AppLocalizations.of(context)!;
-  return switch (index) {
-    0 => _SelectableVideos(
+  return switch (key) {
+    'watch-later' => _SelectableVideos(
         videos: library.watchLater,
         emptyMessage: l10n.noWatchLater,
         remover: (ref, ids) async {
@@ -140,7 +150,7 @@ Widget _remoteTabContent(BuildContext context, RemoteLibrary library, int index,
           ref.invalidate(remoteLibraryProvider);
         },
       ),
-    1 => _SelectableVideos(
+    'favorites' => _SelectableVideos(
         videos: library.favorites,
         emptyMessage: l10n.noFavoriteVideos,
         remover: (ref, ids) async {
@@ -156,18 +166,35 @@ Widget _remoteTabContent(BuildContext context, RemoteLibrary library, int index,
           ref.invalidate(remoteLibraryProvider);
         },
       ),
-    2 => _Playlists(playlists: library.playlists, token: library.csrfToken ?? accountToken),
-    3 => _RemoteSubscriptions(artists: library.subscriptionArtists, videos: library.subscriptions),
-    _ => _RemoteHistory(videos: library.history, token: accountToken ?? library.csrfToken),
+    'playlists' => _Playlists(playlists: library.playlists, token: library.csrfToken ?? accountToken),
+    'subscriptions' => _RemoteSubscriptions(artists: library.subscriptionArtists, videos: library.subscriptions),
+    'history' => _RemoteHistory(videos: library.history, token: accountToken ?? library.csrfToken),
+    _ => _SelectableVideos(
+        videos: library.watchLater,
+        emptyMessage: l10n.noWatchLater,
+        remover: (ref, ids) async {
+          final account = ref.read(accountProvider).valueOrNull;
+          final userId = account?.id;
+          final token = library.csrfToken ?? accountToken;
+          if (userId == null || token == null) return;
+          final settings = await ref.read(settingsProvider.future);
+          final repository = ref.read(han1meRepositoryProvider);
+          for (final id in ids) {
+            await repository.saveToPlaylist(settings.resolvedBaseUrl, token, 'save', id, false);
+          }
+          ref.invalidate(remoteLibraryProvider);
+        },
+      ),
   };
 }
 
-String _tabTitle(AppLocalizations l10n, int index) => switch (index) {
-  0 => l10n.watchLater,
-  1 => l10n.favoriteVideos,
-  2 => l10n.playlists,
-  3 => l10n.subscriptions,
-  _ => l10n.watchHistory,
+String _tabTitle(AppLocalizations l10n, String key) => switch (key) {
+  'watch-later' => l10n.watchLater,
+  'favorites' => l10n.favoriteVideos,
+  'playlists' => l10n.playlists,
+  'subscriptions' => l10n.subscriptions,
+  'history' => l10n.watchHistory,
+  _ => l10n.watchLater,
 };
 
 class _LocalHistory extends ConsumerStatefulWidget {
@@ -623,10 +650,16 @@ class _SelectableVideosState extends ConsumerState<_SelectableVideos> {
 
 VideoCard _videoCard(FollowingVideo video) => VideoCard(id: video.videoCode, title: video.title, coverUrl: video.coverUrl ?? '', artist: video.artistName, duration: video.duration, views: video.views, rating: video.rating, uploadTime: video.uploadTime);
 
-List<Tab> _tabs(AppLocalizations l10n) => [
-      Tab(text: l10n.watchLater),
-      Tab(text: l10n.favoriteVideos),
-      Tab(text: l10n.playlists),
-      Tab(text: l10n.subscriptions),
-      Tab(text: l10n.watchHistory),
+List<Tab> _tabs(AppLocalizations l10n, List<String> order) => [
+      for (final key in order) Tab(text: _tabTitle(l10n, key)),
     ];
+
+int _libraryTabIndex(List<String> order, String key) {
+  final index = order.indexOf(key);
+  if (index < 0) return 0;
+  return index.clamp(0, order.length - 1).toInt();
+}
+
+String _normaliseLibraryTabKey(List<String> order, String key) {
+  return order.contains(key) ? key : 'watch-later';
+}

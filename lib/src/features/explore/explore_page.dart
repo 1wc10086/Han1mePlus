@@ -8,7 +8,6 @@ import 'package:m3e_core/m3e_core.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/app_shell.dart';
-import '../../core/app_scroll_behavior.dart';
 import '../../core/video_view_count.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart';
@@ -278,10 +277,10 @@ class _VideoRowState extends State<_VideoRow> {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: widget.cardHeight + horizontalScrollbarGutter,
+        height: widget.cardHeight,
         child: ListView.separated(
           controller: _controller,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, horizontalScrollbarGutter),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
           cacheExtent: 480,
           itemCount: widget.videos.length,

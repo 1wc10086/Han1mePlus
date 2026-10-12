@@ -9,6 +9,7 @@ import '../../data/local/library_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/video.dart';
 import '../account/account_controller.dart';
+import 'player_controls_visibility.dart';
 import 'video_actions.dart';
 import 'video_comments.dart';
 import 'video_controller.dart';
@@ -176,6 +177,8 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
   Widget build(BuildContext context) {
     final video = widget.video;
     final isTablet = MediaQuery.sizeOf(context).shortestSide >= 600;
+    final landscape = MediaQuery.orientationOf(context) == Orientation.landscape;
+    final vertical = isTablet || landscape;
     return SafeArea(
       bottom: false,
       child: Stack(
@@ -185,10 +188,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
           else
             _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget),
           Positioned(
-            left: isTablet ? null : 0,
-            right: isTablet ? 16 : 0,
+            left: vertical ? null : 0,
+            right: vertical ? 16 : 0,
             bottom: 16,
-            child: _FloatingControls(video: video, scrollBehavior: _scrollBehavior, vertical: isTablet),
+            child: _FloatingControls(video: video, scrollBehavior: _scrollBehavior, vertical: vertical, landscape: landscape),
           ),
         ],
       ),
@@ -228,14 +231,16 @@ class _TabletVideoLayout extends StatelessWidget {
 }
 
 class _FloatingControls extends ConsumerWidget {
-  const _FloatingControls({required this.video, required this.scrollBehavior, this.vertical = false});
+  const _FloatingControls({required this.video, required this.scrollBehavior, this.vertical = false, this.landscape = false});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
   final bool vertical;
+  final bool landscape;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!landscapeFloatingBarVisible(ref, landscape: landscape)) return const SizedBox.shrink();
     final showComment = ref.watch(videoTabProvider(video.id)) == 1 && ref.watch(accountProvider).valueOrNull != null;
     final actionColumn = Column(
       mainAxisSize: MainAxisSize.min,

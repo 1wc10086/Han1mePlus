@@ -18,8 +18,10 @@ import '../../data/local/watch_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/video.dart';
 import '../settings/settings_controller.dart';
+import 'player_controls_visibility.dart';
 import 'video_player_controls.dart';
 import 'video_player_surface.dart';
+import 'video_actions.dart';
 
 class VideoPlayerPanel extends ConsumerStatefulWidget {
   const VideoPlayerPanel({super.key, required this.video, required this.onBack, this.onHome, this.onNext, this.onEpisodeSelected, this.onPlayingChanged});
@@ -194,6 +196,18 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     final wasPlaying = current?.value.isInitialized == true && current!.value.isPlaying;
     _selectedQuality = source.quality;
     await _load(source, startAt: position, resumePlaying: wasPlaying);
+  }
+
+  void _reload() {
+    final current = _controllerNotifier.value;
+    final position = current?.value.isInitialized == true ? current!.value.position : null;
+    final wasPlaying = current?.value.isInitialized == true && current!.value.isPlaying;
+    final source = widget.video.sources.where((source) => source.quality == _loadedQuality).firstOrNull;
+    if (source != null) {
+      unawaited(_load(source, startAt: position, resumePlaying: wasPlaying));
+      return;
+    }
+    _syncSource();
   }
 
   Future<void> _changeSuperResolution(SuperResolutionMode mode) async {
@@ -371,7 +385,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
+      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onReload: _reload, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
     } finally {
       _fullscreenOpen = false;
       try {
@@ -509,9 +523,27 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
         ),
       );
     }
-    return _PlayerFrame(
-      aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
-       child: VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onHome: widget.onHome, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected),
+    final ratio = controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio;
+    final viewport = MediaQuery.sizeOf(context).height;
+    final surface = VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onHome: widget.onHome, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected, onReload: _reload);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+        final cap = viewport * 0.6;
+        final floor = 160.0;
+        final available = viewport - 220;
+        final maxHeight = available > floor ? (cap < available ? cap : available) : cap;
+        final natural = width / ratio;
+        final height = natural < maxHeight ? natural : maxHeight;
+        return ColoredBox(
+          color: Colors.black,
+          child: SizedBox(
+            width: double.infinity,
+            height: height,
+            child: Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
+          ),
+        );
+      },
     );
   }
 }
@@ -533,7 +565,7 @@ class _NoVideoSource {
 }
 
 class _FullscreenPlayer extends ConsumerWidget {
-  const _FullscreenPlayer({required this.controller, required this.quality, required this.video, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onEpisodeSelected, this.onNext, this.onHome});
+  const _FullscreenPlayer({required this.controller, required this.quality, required this.video, required this.onQualitySelected, required this.onSuperResolutionSelected, this.onEpisodeSelected, this.onNext, this.onHome, this.onReload});
   final ValueListenable<VideoPlayerController?> controller;
   final ValueListenable<String?> quality;
   final VideoDetail video;
@@ -542,15 +574,20 @@ class _FullscreenPlayer extends ConsumerWidget {
   final ValueChanged<VideoCard>? onEpisodeSelected;
   final VoidCallback? onNext;
   final VoidCallback? onHome;
+  final VoidCallback? onReload;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final keyframes = ref.watch(keyframesProvider(video.id)).valueOrNull ?? const <int>[];
     final enabled = ref.watch(settingsProvider).valueOrNull?.keyframesEnabled ?? true;
+    final showFloatingBar = landscapeFloatingBarVisible(ref, landscape: true);
     return Scaffold(
       backgroundColor: Colors.black,
       endDrawer: VideoKeyframeDrawer(video: video, controller: controller),
-       body: SafeArea(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome == null ? null : () { Navigator.of(context).pop(); onHome?.call(); }, onEpisodeSelected: onEpisodeSelected, onNext: onNext, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
+      body: SafeArea(child: Stack(children: [
+        Positioned.fill(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome == null ? null : () { Navigator.of(context).pop(); onHome?.call(); }, onEpisodeSelected: onEpisodeSelected, onNext: onNext, onReload: onReload, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
+        if (showFloatingBar) Positioned(right: 8, bottom: 104, child: VideoActionBar(video: video, vertical: true)),
+      ])),
     );
   }
 

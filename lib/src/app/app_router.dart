@@ -174,11 +174,11 @@ String? _deepLinkRedirect(GoRouterState state) {
   return null;
 }
 
-int _libraryTab(String? tab) => switch (tab) {
-      'watch-later' => 0,
-      'favorites' => 1,
-      'playlists' => 2,
-      'subscriptions' => 3,
-      'history' => 4,
-      _ => 0,
+String _libraryTab(String? tab) => switch (tab) {
+      'watch-later' => 'watch-later',
+      'favorites' => 'favorites',
+      'playlists' => 'playlists',
+      'subscriptions' => 'subscriptions',
+      'history' => 'history',
+      _ => 'watch-later',
     };

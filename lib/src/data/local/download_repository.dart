@@ -15,6 +15,8 @@ import '../../domain/models/download.dart';
 import '../../domain/models/video.dart';
 import '../../features/settings/settings_controller.dart';
 
+enum DownloadCreateResult { queued, alreadyDownloaded, alreadyQueued }
+
 class DownloadState {
   const DownloadState({this.groups = const [DownloadGroup(id: 'default', name: 'Cached', createdAt: 0)], this.tasks = const []});
 
@@ -251,13 +253,31 @@ class DownloadController extends AsyncNotifier<DownloadState> {
 
   Future<void> replace(DownloadState value) => _save(value);
 
-  Future<void> create(VideoDetail detail, VideoSource source, String groupId) async {
+  DownloadTask? taskFor(String videoCode) {
+    final tasks = state.value?.tasks ?? const <DownloadTask>[];
+    return tasks.where((task) => task.videoCode == videoCode).firstOrNull;
+  }
+
+  Future<DownloadCreateResult> create(VideoDetail detail, VideoSource source, String groupId) async {
+    final current = state.value ?? const DownloadState();
+    final existing = current.tasks.where((item) => item.videoCode == detail.id).firstOrNull;
+    if (existing != null) {
+      switch (existing.status) {
+        case DownloadStatus.completed:
+          return DownloadCreateResult.alreadyDownloaded;
+        case DownloadStatus.queued:
+        case DownloadStatus.downloading:
+          return DownloadCreateResult.alreadyQueued;
+        case DownloadStatus.failed:
+          break;
+      }
+    }
     final now = DateTime.now().millisecondsSinceEpoch;
     final task = DownloadTask(id: detail.id, videoCode: detail.id, title: detail.title, coverUrl: detail.coverUrl, duration: detail.duration, views: detail.views, rating: detail.rating, uploadTime: detail.uploadDate, sourceUrl: source.url, groupIds: groupId == 'default' ? const {} : {groupId}, quality: source.quality, status: DownloadStatus.queued, progress: 0, downloadedBytes: 0, totalBytes: 0, createdAt: now, updatedAt: now);
-    final current = state.value ?? const DownloadState();
     _jobs[task.id] = (detail: detail, source: source);
     await _save(DownloadState(groups: current.groups, tasks: [...current.tasks.where((item) => item.videoCode != detail.id), task]));
     _schedule();
+    return DownloadCreateResult.queued;
   }
 
   Future<void> _replace(String id, DownloadTask Function(DownloadTask) update) async {

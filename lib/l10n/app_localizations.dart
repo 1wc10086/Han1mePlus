@@ -3261,23 +3261,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{quality}p'**
   String downloadQualityValue(Object quality);
-}
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
-  const _AppLocalizationsDelegate();
+  String get alreadyDownloaded;
 
-  @override
-  Future<AppLocalizations> load(Locale locale) {
-    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
-  }
+  String get deleteDownloadTitle;
 
-  @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+  String deleteDownloadConfirmation(Object title);
 
-  @override
-  bool shouldReload(_AppLocalizationsDelegate old) => false;
+  String deleteSelectedCacheConfirmation(int count);
+
+  String get libraryTabOrder;
+
+  String get libraryTabOrderDescription;
+
+  String get restoreDefaultOrder;
+
+  String get landscapeFloatingBar;
+
+  String get landscapeFloatingBarDescription;
 
   /// No description provided for @homeSectionLayout.
   ///
@@ -3338,6 +3339,23 @@ class _AppLocalizationsDelegate
   /// In en, this message translates to:
   /// **'Title'**
   String get playlistSortByName;
+}
+
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  const _AppLocalizationsDelegate();
+
+  @override
+  Future<AppLocalizations> load(Locale locale) {
+    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
+  }
+
+  @override
+  bool isSupported(Locale locale) =>
+      <String>['en', 'zh'].contains(locale.languageCode);
+
+  @override
+  bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {

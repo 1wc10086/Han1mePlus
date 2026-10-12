@@ -1788,4 +1788,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistSortByName => 'Title';
+
+  @override
+  String get alreadyDownloaded => 'Already downloaded';
+
+  @override
+  String get deleteDownloadTitle => 'Delete download';
+
+  @override
+  String deleteDownloadConfirmation(Object title) {
+    return 'Delete \"$title\" and its downloaded files?';
+  }
+
+  @override
+  String deleteSelectedCacheConfirmation(int count) {
+    return 'Delete the $count selected downloads and their files?';
+  }
+
+  @override
+  String get libraryTabOrder => 'Tab order';
+
+  @override
+  String get libraryTabOrderDescription =>
+      'Reorder the tabs shown in My Collection.';
+
+  @override
+  String get restoreDefaultOrder => 'Restore default order';
+
+  @override
+  String get landscapeFloatingBar => 'Show Floating Bar in Landscape';
+
+  @override
+  String get landscapeFloatingBarDescription =>
+      'Show the floating action bar in landscape, following the player controls\' visibility.';
 }

@@ -100,6 +100,7 @@ class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
                divisions: 6,
                label: '${(settings.textScale * 100).round()}%',
                onChanged: (value) => controller.saveChanges((current) => current.copyWith(textScale: value)),
+               labelBuilder: (value) => '${(value * 100).round()}%',
              ),
            ]),
           ],

@@ -73,6 +73,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         MoveWindow(child, 0, 0, LOWORD(lparam), HIWORD(lparam), TRUE);
       }
       return 0;
+    case WM_DPICHANGED: {
+      const auto rect = reinterpret_cast<RECT*>(lparam);
+      SetWindowPos(window, nullptr, rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+      return 0;
+    }
     case WM_DESTROY:
       PostQuitMessage(0);
       return 0;
@@ -81,6 +86,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
 }
 
 int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int show_command) {
+  (void)show_command;
   ApplyPerMonitorDpiAwareness();
   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   ConfigureWebViewUserDataFolder();
@@ -89,6 +95,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int show_command)
   window_class.hInstance = instance;
   window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
   window_class.hIcon = LoadIcon(instance, MAKEINTRESOURCE(IDI_APP_ICON));
+  window_class.hbrBackground = static_cast<HBRUSH>(GetStockObject(WHITE_BRUSH));
   window_class.lpszClassName = class_name;
   window_class.lpfnWndProc = WindowProc;
   RegisterClass(&window_class);
@@ -111,7 +118,6 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int show_command)
   SetFocus(flutter_view);
   app.controller->engine()->SetNextFrameCallback([window]() { ShowWindow(window, SW_SHOWNORMAL); });
   app.controller->ForceRedraw();
-  ShowWindow(window, show_command);
 
   MSG message;
   while (GetMessage(&message, nullptr, 0, 0)) {

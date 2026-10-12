@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/local/download_repository.dart';
 import '../../data/local/library_repository.dart';
+import '../../domain/models/download.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/video.dart';
 import '../account/account_controller.dart';
@@ -31,11 +32,23 @@ class VideoActionBar extends ConsumerWidget {
     final inWatchLater = (remote?.watchLater ?? library.watchLater).any((item) => item.videoCode == video.id);
     final persistedFavorite = (remote?.favorites ?? library.favorites).any((item) => item.videoCode == video.id);
     final inFavorites = ref.watch(favoriteOverrideProvider(video.id)) ?? persistedFavorite;
+    final downloadState = ref.watch(downloadProvider).valueOrNull;
+    final downloadTask = downloadState?.tasks.where((item) => item.videoCode == video.id).firstOrNull;
+    final alreadyDownloaded = downloadTask?.status == DownloadStatus.completed;
     final l10n = AppLocalizations.of(context)!;
     final actions = <Widget>[
       IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),
       IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
-      IconButton(tooltip: l10n.download, icon: const Icon(Icons.download_outlined), onPressed: video.sources.isEmpty ? null : () => _autoDownload(context, ref), onLongPress: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref)),
+      IconButton(
+        tooltip: alreadyDownloaded ? l10n.alreadyDownloaded : l10n.download,
+        icon: Icon(alreadyDownloaded ? Icons.download_done : Icons.download_outlined),
+        onPressed: video.sources.isEmpty
+            ? null
+            : alreadyDownloaded
+                ? () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.alreadyDownloaded)))
+                : () => _autoDownload(context, ref),
+        onLongPress: video.sources.isEmpty ? null : () => _showDownloadPicker(context, ref),
+      ),
       IconButton(tooltip: l10n.share, icon: const Icon(Icons.share_outlined), onPressed: () => Share.share('${video.title} (${video.id})', subject: video.title)),
     ];
     return vertical
@@ -156,8 +169,16 @@ class VideoActionBar extends ConsumerWidget {
 
   Future<void> _enqueueDownload(BuildContext context, WidgetRef ref, VideoSource source) async {
     try {
-      await ref.read(downloadProvider.notifier).create(video, source, 'default');
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.addedToDownloadQueue)));
+      final result = await ref.read(downloadProvider.notifier).create(video, source, 'default');
+      if (!context.mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      switch (result) {
+        case DownloadCreateResult.queued:
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.addedToDownloadQueue)));
+        case DownloadCreateResult.alreadyDownloaded:
+        case DownloadCreateResult.alreadyQueued:
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.alreadyDownloaded)));
+      }
     } catch (error) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }

@@ -1731,6 +1731,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get playlistSortByName => '标题';
+
+  @override
+  String get alreadyDownloaded => '已下载';
+
+  @override
+  String get deleteDownloadTitle => '删除下载';
+
+  @override
+  String deleteDownloadConfirmation(Object title) {
+    return '确定删除「$title」及其已下载的文件吗？';
+  }
+
+  @override
+  String deleteSelectedCacheConfirmation(int count) {
+    return '确定删除所选的 $count 项下载及其文件吗？';
+  }
+
+  @override
+  String get libraryTabOrder => '导航栏顺序';
+
+  @override
+  String get libraryTabOrderDescription => '调整「我的收藏」中导航栏的显示顺序。';
+
+  @override
+  String get restoreDefaultOrder => '恢复默认顺序';
+
+  @override
+  String get landscapeFloatingBar => '横屏显示浮动栏';
+
+  @override
+  String get landscapeFloatingBarDescription => '横屏时显示浮动操作栏,并跟随播放控制条一起显示或隐藏。';
 }
 
 class AppLocalizationsZhTw extends AppLocalizationsZh {
@@ -3459,4 +3490,35 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get playlistSortByName => '標題';
+
+  @override
+  String get alreadyDownloaded => '已下載';
+
+  @override
+  String get deleteDownloadTitle => '刪除下載';
+
+  @override
+  String deleteDownloadConfirmation(Object title) {
+    return '確定刪除「$title」及其已下載的檔案嗎？';
+  }
+
+  @override
+  String deleteSelectedCacheConfirmation(int count) {
+    return '確定刪除所選的 $count 項下載及其檔案嗎？';
+  }
+
+  @override
+  String get libraryTabOrder => '導覽列順序';
+
+  @override
+  String get libraryTabOrderDescription => '調整「我的收藏」中導覽列的顯示順序。';
+
+  @override
+  String get restoreDefaultOrder => '恢復預設順序';
+
+  @override
+  String get landscapeFloatingBar => '橫屏顯示浮動欄';
+
+  @override
+  String get landscapeFloatingBarDescription => '橫屏時顯示浮動操作列,並跟隨播放控制列一起顯示或隱藏。';
 }
