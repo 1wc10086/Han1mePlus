@@ -36,6 +36,25 @@ Han1mePlus 是一个基于 Flutter 开发的 Hanime1 第三方客户端，采用
 
 前往 [Releases](https://github.com/1wc10086/Han1mePlus/releases/latest) 页面下载最新版。
 
+### iOS：SideStore / LiveContainer 安装源
+
+本项目提供 AltStore 格式的安装源（JSON），添加一次之后即可直接在 SideStore 或 LiveContainer 中安装与更新 iOS 版，不必每次手动下载 ipa。
+
+源地址：
+
+```
+https://raw.githubusercontent.com/1wc10086/Han1mePlus/main/altstore/source.json
+```
+
+- **SideStore**：`源` → 右上角 `+` → 粘贴上面的地址。
+- **LiveContainer**：`Sources` → `+` → 粘贴上面的地址。
+
+> [!NOTE]
+> Releases 中的 ipa 为未经签名的构建，SideStore / LiveContainer 会使用你自己的证书重新签名。因此需要特殊权限的能力（例如依赖 `associated-domains` 的 Universal Link）在自签环境下不可用。
+
+> [!TIP]
+> `altstore/source.json` 由 `altstore/generate.py` 生成，并在每次发布 Release 时由 GitHub Actions 自动刷新；如需手动重建，执行 `python3 altstore/generate.py` 即可。
+
 ## 如何贡献
 
 > [!Important]
