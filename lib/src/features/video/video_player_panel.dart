@@ -141,7 +141,6 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       _loadedQuality = null;
       if (oldWidget.video.id != widget.video.id) {
         _restored = false;
-        _autoNextTriggered = false;
         _watched = Duration.zero;
         _lastWatchedAt = null;
       }
@@ -253,6 +252,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     _loadedQuality = source.quality;
     _qualityNotifier.value = source.quality;
     _wasPlaying = null;
+    _autoNextTriggered = false;
     VideoPlayerShutdown.track(controller);
     setState(() {
       _controllerNotifier.value = controller;
@@ -360,6 +360,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
       }
       if (!_autoNextTriggered && ref.read(settingsProvider).valueOrNull?.autoPlayNext == true && widget.onNext != null) {
         _autoNextTriggered = true;
+        if (_fullscreenOpen && mounted) Navigator.of(context).pop();
         widget.onNext!();
         return;
       }
@@ -385,7 +386,7 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
       await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onReload: _reload, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
+      if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onReload: _reload, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext == null ? null : () { Navigator.of(context).pop(); widget.onNext!(); }, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
     } finally {
       _fullscreenOpen = false;
       try {
@@ -585,7 +586,7 @@ class _FullscreenPlayer extends ConsumerWidget {
       backgroundColor: Colors.black,
       endDrawer: VideoKeyframeDrawer(video: video, controller: controller),
       body: SafeArea(child: Stack(children: [
-        Positioned.fill(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome == null ? null : () { Navigator.of(context).pop(); onHome?.call(); }, onEpisodeSelected: onEpisodeSelected, onNext: onNext, onReload: onReload, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
+        Positioned.fill(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome, onEpisodeSelected: onEpisodeSelected, onNext: onNext, onReload: onReload, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
         if (showFloatingBar) Positioned(right: 8, bottom: 104, child: VideoActionBar(video: video, vertical: true)),
       ])),
     );

@@ -18,9 +18,10 @@ import '../shared/video_card.dart';
 import 'video_controller.dart';
 
 class VideoDescriptionView extends ConsumerStatefulWidget {
-  const VideoDescriptionView({super.key, required this.video});
+  const VideoDescriptionView({super.key, required this.video, this.onEpisodeSelected});
 
   final VideoDetail video;
+  final ValueChanged<VideoCard>? onEpisodeSelected;
 
   @override
   ConsumerState<VideoDescriptionView> createState() => _VideoDescriptionViewState();
@@ -45,7 +46,7 @@ class _VideoDescriptionViewState extends ConsumerState<VideoDescriptionView> wit
               _ArtistRow(video: video),
               _Description(video: video, captionTitle: translation?.captionTitle, description: translation?.description),
               _TagList(video: video),
-              if (video.playlist.isNotEmpty) _SeriesVideos(videos: video.playlist, currentVideoId: video.id),
+              if (video.playlist.isNotEmpty) _SeriesVideos(videos: video.playlist, currentVideoId: video.id, onEpisodeSelected: widget.onEpisodeSelected),
               _TranslateButton(video: video),
             ],
           ),
@@ -307,20 +308,21 @@ class _TagListState extends ConsumerState<_TagList> {
 const _seriesCardWidth = 180.0;
 
 class _SeriesVideos extends StatelessWidget {
-  const _SeriesVideos({required this.videos, required this.currentVideoId});
+  const _SeriesVideos({required this.videos, required this.currentVideoId, this.onEpisodeSelected});
 
   final List<VideoCard> videos;
   final String currentVideoId;
+  final ValueChanged<VideoCard>? onEpisodeSelected;
 
   @override
   Widget build(BuildContext context) => Column(
         children: [
           Padding(padding: const EdgeInsets.fromLTRB(16, 16, 8, 8), child: Row(children: [Expanded(child: Text(AppLocalizations.of(context)!.seriesVideos, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => _showAll(context), child: Text(AppLocalizations.of(context)!.more))])),
-          SizedBox(height: _seriesCardWidth * 9 / 16 + videoCardMetaHeight(context), child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: videos.length, separatorBuilder: (context, index) => const SizedBox(width: 12), itemBuilder: (context, index) => SizedBox(width: _seriesCardWidth, child: VideoCardTile(video: videos[index], horizontal: true, selected: videos[index].id == currentVideoId)))),
+          SizedBox(height: _seriesCardWidth * 9 / 16 + videoCardMetaHeight(context), child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: videos.length, separatorBuilder: (context, index) => const SizedBox(width: 12), itemBuilder: (context, index) => SizedBox(width: _seriesCardWidth, child: VideoCardTile(video: videos[index], horizontal: true, selected: videos[index].id == currentVideoId, onTap: onEpisodeSelected == null ? null : () => onEpisodeSelected!(videos[index]))))),
         ],
       );
 
-  Future<void> _showAll(BuildContext context) => showModalBottomSheet<void>(context: context, showDragHandle: true, isScrollControlled: true, builder: (context) => SafeArea(child: SizedBox(height: MediaQuery.sizeOf(context).height * .78, child: Column(children: [Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 12), child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)!.seriesVideos, style: Theme.of(context).textTheme.titleLarge))), Expanded(child: VideoCardGrid(videos: videos, itemBuilder: (context, index, video, horizontal) => VideoCardTile(video: video, horizontal: horizontal, selected: video.id == currentVideoId)))]))));
+  Future<void> _showAll(BuildContext context) => showModalBottomSheet<void>(context: context, showDragHandle: true, isScrollControlled: true, builder: (context) => SafeArea(child: SizedBox(height: MediaQuery.sizeOf(context).height * .78, child: Column(children: [Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 12), child: Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.of(context)!.seriesVideos, style: Theme.of(context).textTheme.titleLarge))), Expanded(child: VideoCardGrid(videos: videos, itemBuilder: (context, index, video, horizontal) => VideoCardTile(video: video, horizontal: horizontal, selected: video.id == currentVideoId, onTap: onEpisodeSelected == null ? null : () { Navigator.of(context).pop(); onEpisodeSelected!(video); })))]))));
 }
 
 class _TranslateButton extends ConsumerWidget {

@@ -38,7 +38,7 @@ class VideoActionBar extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final actions = <Widget>[
       IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),
-      IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
+      IconButton(tooltip: l10n.favorite, icon: Icon(inFavorites ? Icons.favorite : Icons.favorite_border), onPressed: () => _toggleFavorite(context, ref, account == null ? null : video.csrfToken ?? account.csrfToken, account == null ? null : video.currentUserId ?? account.id, !inFavorites)),
       IconButton(
         tooltip: alreadyDownloaded ? l10n.alreadyDownloaded : l10n.download,
         icon: Icon(alreadyDownloaded ? Icons.download_done : Icons.download_outlined),
@@ -56,7 +56,7 @@ class VideoActionBar extends ConsumerWidget {
         : M3EHorizontalFloatingToolbar(expanded: true, content: Row(mainAxisSize: MainAxisSize.min, children: actions));
   }
 
-  Future<void> _toggleFavorite(WidgetRef ref, String? token, String? userId, bool enabled) async {
+  Future<void> _toggleFavorite(BuildContext context, WidgetRef ref, String? token, String? userId, bool enabled) async {
     ref.read(favoriteOverrideProvider(video.id).notifier).state = enabled;
     try {
       if (token == null || userId == null) {
@@ -66,8 +66,9 @@ class VideoActionBar extends ConsumerWidget {
       final settings = await ref.read(settingsProvider.future);
       await ref.read(han1meRepositoryProvider).setFavorite(settings.resolvedBaseUrl, token, userId, video.id, enabled);
       ref.invalidate(remoteLibraryProvider);
-    } catch (_) {
+    } catch (error) {
       ref.read(favoriteOverrideProvider(video.id).notifier).state = !enabled;
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -97,13 +98,17 @@ class VideoActionBar extends ConsumerWidget {
       await controller.saveToPlaylist(video, selected);
       return;
     }
+    if (!context.mounted) return;
     final result = await showDialog<PlaylistEditorResult>(context: context, builder: (_) => const PlaylistEditorDialog());
     if (result == null || result.title.isEmpty) return;
     await controller.createPlaylistWithVideo(video, result.title, description: result.description);
   }
 
   Future<void> _pickPlaylist(BuildContext context, WidgetRef ref, String? token, RemoteLibrary? library) async {
-    if (token == null) return;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.tapToLogin)));
+      return;
+    }
     final selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -120,15 +125,20 @@ class VideoActionBar extends ConsumerWidget {
       ),
     );
     if (selected == null) return;
-    final settings = await ref.read(settingsProvider.future);
-    if (selected == '__create__') {
-      final result = await showDialog<(String, String)>(context: context, builder: (_) => const _PlaylistEditorDialog());
-      if (result == null || result.$1.isEmpty) return;
-      await ref.read(han1meRepositoryProvider).createPlaylist(settings.resolvedBaseUrl, token, video.id, result.$1, result.$2);
-    } else {
-      await ref.read(han1meRepositoryProvider).saveToPlaylist(settings.resolvedBaseUrl, token, selected, video.id, true);
+    try {
+      final settings = await ref.read(settingsProvider.future);
+      if (selected == '__create__') {
+        if (!context.mounted) return;
+        final result = await showDialog<(String, String)>(context: context, builder: (_) => const _PlaylistEditorDialog());
+        if (result == null || result.$1.isEmpty) return;
+        await ref.read(han1meRepositoryProvider).createPlaylist(settings.resolvedBaseUrl, token, video.id, result.$1, result.$2);
+      } else {
+        await ref.read(han1meRepositoryProvider).saveToPlaylist(settings.resolvedBaseUrl, token, selected, video.id, true);
+      }
+      ref.invalidate(remoteLibraryProvider);
+    } catch (error) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }
-    ref.invalidate(remoteLibraryProvider);
   }
 
   Future<void> _showDownloadPicker(BuildContext context, WidgetRef ref) async {

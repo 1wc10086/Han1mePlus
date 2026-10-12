@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -33,6 +34,7 @@ class Han1meApi {
   final _resolvedOrigins = <String, String>{};
 
   static const _upcomingGenre = '新番預告';
+  static const _maxPages = 20;
 
   static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
 
@@ -318,6 +320,12 @@ class Han1meApi {
       _document(siteEndpointUrl(baseUrl, 'user/$userId/playlists'), skipCache: true),
       _document(siteEndpointUrl(baseUrl, 'user/$userId/histories?sort=latest&page=1'), skipCache: true),
     ]);
+    final (watchLater, favorites, playlists, history) = await (
+      _paged((number) => siteEndpointUrl(baseUrl, 'user/$userId/saves?page=$number'), pages[0], (document) => _libraryVideos(baseUrl, document), (video) => video.videoCode),
+      _paged((number) => siteEndpointUrl(baseUrl, 'user/$userId/likes?page=$number'), pages[1], (document) => _libraryVideos(baseUrl, document), (video) => video.videoCode),
+      _paged((number) => siteEndpointUrl(baseUrl, 'user/$userId/playlists?page=$number'), pages[2], (document) => _playlists(baseUrl, document), (playlist) => playlist.id),
+      _paged((number) => siteEndpointUrl(baseUrl, 'user/$userId/histories?sort=latest&page=$number'), pages[3], (document) => _libraryVideos(baseUrl, document), (video) => video.videoCode),
+    ).wait;
     final subscriptionPage = await _document(siteEndpointUrl(baseUrl, 'subscriptions?page=1'), skipCache: true);
     final subscriptionArtists = _subscriptionArtists(baseUrl, subscriptionPage);
     final subscriptionPages = _pageCount(subscriptionPage);
@@ -328,12 +336,7 @@ class Han1meApi {
       ]))
         ..._subscriptionVideos(baseUrl, page),
     ];
-    final playlistPage = pages[2];
-    final playlists = playlistPage.querySelectorAll('.user-tab-item-wrapper, .playlist-item-wrapper, .playlist-card').map((element) {
-      final href = element.querySelector('a.video-link, a[href*="playlist?list="]')?.attributes['href'] ?? '';
-      return Playlist(id: Uri.tryParse(href)?.queryParameters['list'] ?? RegExp(r'[?&]list=([^&]+)').firstMatch(href)?.group(1) ?? '', title: element.querySelector('.title, .playlist-title')?.text.trim() ?? '', count: int.tryParse(RegExp(r'\d+').firstMatch(element.querySelector('.stat-item, .playlist-count')?.text ?? '')?.group(0) ?? '') ?? 0, coverUrl: _absolute(baseUrl, element.querySelector('img.main-thumb, img')?.attributes['src']));
-    }).where((item) => item.id.isNotEmpty && item.title.isNotEmpty).toList(growable: false);
-    return RemoteLibrary(watchLater: _libraryVideos(baseUrl, pages[0]), favorites: _libraryVideos(baseUrl, pages[1]), playlists: playlists, subscriptionArtists: subscriptionArtists, subscriptions: subscriptionVideos, history: _libraryVideos(baseUrl, pages[3]), csrfToken: [playlistPage, pages[0], pages[1], pages[3]].map((page) => page.querySelector('meta[name="csrf-token"]')?.attributes['content'] ?? page.querySelector('input[name="_token"]')?.attributes['value']).whereType<String>().firstOrNull);
+    return RemoteLibrary(watchLater: watchLater, favorites: favorites, playlists: playlists, subscriptionArtists: subscriptionArtists, subscriptions: subscriptionVideos, history: history, csrfToken: [pages[2], pages[0], pages[1], pages[3]].map((page) => page.querySelector('meta[name="csrf-token"]')?.attributes['content'] ?? page.querySelector('input[name="_token"]')?.attributes['value']).whereType<String>().firstOrNull);
   }
 
   Future<void> saveToPlaylist(String baseUrl, String token, String listId, String videoId, bool checked) => _form(siteEndpointUrl(baseUrl, 'save'), {'_token': token, 'input_id': listId, 'video_id': videoId, 'is_checked': '$checked', 'user_id': ''}, token);
@@ -345,7 +348,8 @@ class Han1meApi {
     final count = int.tryParse(document.querySelector('#sidebar-video-count')?.text.trim() ?? '');
     final views = int.tryParse(RegExp(r'(?:觀看次數|观看次数)\s*[:：]\s*(\d+)').firstMatch(document.querySelector('.playlist-stats')?.text ?? '')?.group(1) ?? '');
     final playlist = Playlist(id: playlistId, title: document.querySelector('.playlist-title')?.text.trim() ?? '', count: count ?? 0, coverUrl: _absolute(baseUrl, document.querySelector('.playlist-main-thumbnail')?.attributes['src']));
-    return PlaylistDetail(playlist: playlist, author: document.querySelector('.playlist-author-info a')?.text.trim(), description: document.querySelector('.playlist-description')?.text.trim(), viewCount: views, videos: _playlistVideos(baseUrl, document));
+    final videos = await _paged((number) => siteEndpointUrl(baseUrl, 'playlist?list=$playlistId&sort=$sort&page=$number'), document, (page) => _playlistVideos(baseUrl, page), (video) => video.playlistItemId ?? video.videoCode);
+    return PlaylistDetail(playlist: playlist, author: document.querySelector('.playlist-author-info a')?.text.trim(), description: document.querySelector('.playlist-description')?.text.trim(), viewCount: views, videos: videos);
   }
   Future<void> deletePlaylist(String baseUrl, String token, String playlistId) => _form(siteEndpointUrl(baseUrl, 'playlist/$playlistId'), {'_token': token, '_method': 'PUT', 'playlist-title': '', 'playlist-description': '', 'playlist-delete': 'on'}, token);
   Future<void> updatePlaylist(String baseUrl, String token, String playlistId, String title, String description, bool delete) => _form(siteEndpointUrl(baseUrl, 'playlist/$playlistId'), {'_token': token, '_method': 'PUT', 'playlist-title': title, 'playlist-description': description, if (delete) 'playlist-delete': 'on'}, token);
@@ -566,6 +570,11 @@ class Han1meApi {
         return FollowingVideo(videoCode: Uri.tryParse(link)?.queryParameters['v'] ?? '', title: card.querySelector('.video-title')?.text.trim() ?? '', coverUrl: _absolute(baseUrl, image?.attributes['src']), artistName: card.querySelector('.meta-author a')?.text.trim(), duration: card.querySelector('.duration')?.text.trim(), views: _statText(card.querySelectorAll('.stats-container .stat-item').skip(1).firstOrNull), rating: _statText(card.querySelector('.stats-container .stat-item')), uploadTime: _uploadTime(card), addedAt: 0, playlistItemId: RegExp(r'playlist-item-(\d+)').firstMatch(card.id)?.group(1));
       }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
 
+  List<Playlist> _playlists(String baseUrl, dom.Document document) => document.querySelectorAll('.user-tab-item-wrapper, .playlist-item-wrapper, .playlist-card').map((element) {
+        final href = element.querySelector('a.video-link, a[href*="playlist?list="]')?.attributes['href'] ?? '';
+        return Playlist(id: Uri.tryParse(href)?.queryParameters['list'] ?? RegExp(r'[?&]list=([^&]+)').firstMatch(href)?.group(1) ?? '', title: element.querySelector('.title, .playlist-title')?.text.trim() ?? '', count: int.tryParse(RegExp(r'\d+').firstMatch(element.querySelector('.stat-item, .playlist-count')?.text ?? '')?.group(0) ?? '') ?? 0, coverUrl: _absolute(baseUrl, element.querySelector('img.main-thumb, img')?.attributes['src']));
+      }).where((item) => item.id.isNotEmpty && item.title.isNotEmpty).toList(growable: false);
+
   List<SubscribedArtist> _subscriptionArtists(String baseUrl, dom.Document document) => document.querySelectorAll('.subscriptions-nav .subscriptions-artist-card').map((card) {
         final images = card.querySelectorAll('img');
         final name = card.querySelector('.card-mobile-title')?.text.trim() ?? '';
@@ -579,6 +588,24 @@ class Han1meApi {
       }).where((video) => video.videoCode.isNotEmpty && video.title.isNotEmpty).toList(growable: false);
 
   int _pageCount(dom.Document document) => document.querySelectorAll('ul.pagination a.page-link[href]').map((link) => int.tryParse(Uri.tryParse(link.attributes['href'] ?? '')?.queryParameters['page'] ?? '') ?? 1).fold(1, (count, page) => page > count ? page : count);
+
+  Future<List<T>> _paged<T>(String Function(int number) url, dom.Document firstPage, List<T> Function(dom.Document document) parse, String Function(T item) id) async {
+    final items = parse(firstPage).toList();
+    final seen = items.map(id).toSet();
+    final total = _pageCount(firstPage);
+    for (var number = 2; number <= total && number <= _maxPages; number++) {
+      try {
+        final fresh = parse(await _document(url(number), skipCache: true)).where((item) => seen.add(id(item))).toList();
+        if (fresh.isEmpty) break;
+        items.addAll(fresh);
+      } on CloudflareChallengeException {
+        rethrow;
+      } catch (_) {
+        break;
+      }
+    }
+    return items;
+  }
 
   static bool isCloudflareResponse(int? statusCode, Map<String, List<String>> headers, String body) => statusCode == 403 &&
       ((headers['cf-mitigated'] ?? headers['CF-Mitigated'] ?? const <String>[]).any((value) => value.toLowerCase() == 'challenge') ||

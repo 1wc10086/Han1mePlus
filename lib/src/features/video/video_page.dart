@@ -23,15 +23,10 @@ VideoCard? nextEpisode(VideoDetail video) {
   return episodes.firstWhere((episode) => episode.id != video.id, orElse: () => const VideoCard(id: '', title: '', coverUrl: ''));
 }
 
-void _playNext(BuildContext context, VideoDetail video, {String homeTarget = '/'}) {
+void _playNext(ValueChanged<VideoCard> onEpisodeSelected, VideoDetail video) {
   final next = nextEpisode(video);
   if (next == null || next.id.isEmpty) return;
-  context.pushReplacement('/video/${next.id}${_homeQuery(homeTarget)}');
-}
-
-void _playEpisode(BuildContext context, VideoCard episode, {String homeTarget = '/'}) {
-  if (episode.id.isEmpty) return;
-  context.pushReplacement('/video/${episode.id}${_homeQuery(homeTarget)}');
+  onEpisodeSelected(next);
 }
 
 String _homeQuery(String homeTarget) => homeTarget == '/' ? '' : '?home=$homeTarget';
@@ -48,7 +43,28 @@ class VideoPage extends ConsumerStatefulWidget {
 }
 
 class _VideoPageState extends ConsumerState<VideoPage> {
+  late String _id = widget.id;
   var _offlinePromptShown = false;
+
+  @override
+  void didUpdateWidget(VideoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id == widget.id || widget.localVideo != null) return;
+    _id = widget.id;
+    _offlinePromptShown = false;
+  }
+
+  void _switchEpisode(VideoCard episode) {
+    if (episode.id.isEmpty || episode.id == _id) return;
+    if (widget.localVideo != null) {
+      context.pushReplacement('/video/${episode.id}${_homeQuery(widget.homeTarget)}');
+      return;
+    }
+    setState(() {
+      _id = episode.id;
+      _offlinePromptShown = false;
+    });
+  }
 
   VideoDetail _withLocalSources(VideoDetail online, VideoDetail local) => VideoDetail(
         id: online.id,
@@ -96,23 +112,23 @@ class _VideoPageState extends ConsumerState<VideoPage> {
         );
     Widget content;
     if (localVideo == null) {
-      content = ref.watch(videoDetailProvider(widget.id)).when(
+      content = ref.watch(videoDetailProvider(_id)).when(
             loading: () => withBackButton(const Center(child: M3EContainedLoadingIndicator())),
-            error: (error, stackTrace) => withBackButton(_VideoError(id: widget.id, error: error)),
+            error: (error, stackTrace) => withBackButton(_VideoError(id: _id, error: error)),
             data: (video) {
               ref.read(libraryProvider.notifier).addSubscriptionVideo(video);
-              return _DetailBody(video: video, homeTarget: widget.homeTarget);
+              return _DetailBody(video: video, homeTarget: widget.homeTarget, onEpisodeSelected: _switchEpisode);
             },
           );
     } else {
-      final online = ref.watch(videoDetailProvider(widget.id)).valueOrNull;
-      ref.listen(videoDetailProvider(widget.id), (previous, next) {
+      final online = ref.watch(videoDetailProvider(_id)).valueOrNull;
+      ref.listen(videoDetailProvider(_id), (previous, next) {
         if (_offlinePromptShown || !next.hasError) return;
         _offlinePromptShown = true;
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.videoInfoOffline)));
       });
-      content = _DetailBody(video: online == null ? localVideo : _withLocalSources(online, localVideo), homeTarget: widget.homeTarget);
+      content = _DetailBody(video: online == null ? localVideo : _withLocalSources(online, localVideo), homeTarget: widget.homeTarget, onEpisodeSelected: _switchEpisode);
     }
     return Scaffold(backgroundColor: Theme.of(context).colorScheme.surface, body: content);
   }
@@ -149,10 +165,11 @@ class _VideoError extends ConsumerWidget {
 }
 
 class _DetailBody extends ConsumerStatefulWidget {
-  const _DetailBody({required this.video, this.homeTarget = '/'});
+  const _DetailBody({required this.video, this.homeTarget = '/', required this.onEpisodeSelected});
 
   final VideoDetail video;
   final String homeTarget;
+  final ValueChanged<VideoCard> onEpisodeSelected;
 
   @override
   ConsumerState<_DetailBody> createState() => _DetailBodyState();
@@ -184,9 +201,9 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
       child: Stack(
         children: [
           if (isTablet)
-            _TabletVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget)
+            _TabletVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget, onEpisodeSelected: widget.onEpisodeSelected)
           else
-            _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget),
+            _CompactVideoLayout(video: video, scrollBehavior: _scrollBehavior, homeTarget: widget.homeTarget, onEpisodeSelected: widget.onEpisodeSelected),
           Positioned(
             left: vertical ? null : 0,
             right: vertical ? 16 : 0,
@@ -200,32 +217,34 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
 }
 
 class _CompactVideoLayout extends StatelessWidget {
-  const _CompactVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget});
+  const _CompactVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget, required this.onEpisodeSelected});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
   final String homeTarget;
+  final ValueChanged<VideoCard> onEpisodeSelected;
 
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1280), child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: true, homeTarget: homeTarget)),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1280), child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: true, homeTarget: homeTarget, onEpisodeSelected: onEpisodeSelected)),
       );
 }
 
 class _TabletVideoLayout extends StatelessWidget {
-  const _TabletVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget});
+  const _TabletVideoLayout({required this.video, required this.scrollBehavior, required this.homeTarget, required this.onEpisodeSelected});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
   final String homeTarget;
+  final ValueChanged<VideoCard> onEpisodeSelected;
 
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Expanded(flex: 7, child: ColoredBox(color: Colors.black, child: Center(child: VideoPlayerPanel(video: video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(homeTarget), onNext: () => _playNext(context, video, homeTarget: homeTarget), onEpisodeSelected: (episode) => _playEpisode(context, episode, homeTarget: homeTarget))))),
+          Expanded(flex: 7, child: ColoredBox(color: Colors.black, child: Center(child: VideoPlayerPanel(video: video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(homeTarget), onNext: () => _playNext(onEpisodeSelected, video), onEpisodeSelected: onEpisodeSelected)))),
           const VerticalDivider(width: 1),
-          Expanded(flex: 3, child: ExcludeFocus(excluding: isDesktopPlatformService, child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: false, homeTarget: homeTarget))),
+          Expanded(flex: 3, child: ExcludeFocus(excluding: isDesktopPlatformService, child: _VideoTabsView(video: video, scrollBehavior: scrollBehavior, showPlayer: false, homeTarget: homeTarget, onEpisodeSelected: onEpisodeSelected))),
         ],
       );
 }
@@ -275,12 +294,13 @@ class _FloatingControls extends ConsumerWidget {
 }
 
 class _VideoTabsView extends ConsumerStatefulWidget {
-  const _VideoTabsView({required this.video, required this.scrollBehavior, required this.showPlayer, required this.homeTarget});
+  const _VideoTabsView({required this.video, required this.scrollBehavior, required this.showPlayer, required this.homeTarget, required this.onEpisodeSelected});
 
   final VideoDetail video;
   final M3EFloatingToolbarScrollBehavior scrollBehavior;
   final bool showPlayer;
   final String homeTarget;
+  final ValueChanged<VideoCard> onEpisodeSelected;
 
   @override
   ConsumerState<_VideoTabsView> createState() => _VideoTabsViewState();
@@ -345,7 +365,7 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
         if (widget.showPlayer)
           ValueListenableBuilder<double>(
             valueListenable: _playerCollapse,
-            child: RepaintBoundary(child: VideoPlayerPanel(key: ValueKey(widget.video.id), video: widget.video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(widget.homeTarget), onNext: () => _playNext(context, widget.video, homeTarget: widget.homeTarget), onEpisodeSelected: (episode) => _playEpisode(context, episode, homeTarget: widget.homeTarget), onPlayingChanged: _setPlaying)),
+            child: RepaintBoundary(child: VideoPlayerPanel(key: ValueKey(widget.video.id), video: widget.video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(widget.homeTarget), onNext: () => _playNext(widget.onEpisodeSelected, widget.video), onEpisodeSelected: widget.onEpisodeSelected, onPlayingChanged: _setPlaying)),
             builder: (context, collapse, player) => Column(children: [ClipRect(child: Align(heightFactor: 1 - collapse, alignment: Alignment.topCenter, child: player)), if (collapse >= .99) SizedBox(height: 40, width: double.infinity, child: TextButton.icon(onPressed: () => _playerCollapse.value = 0, icon: const Icon(Icons.play_arrow), label: Text(l10n.play)))]),
           ),
         ExcludeFocus(
@@ -372,7 +392,7 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
               child: TabBarView(
                 controller: _controller,
                 children: [
-                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video)),
+                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video, onEpisodeSelected: widget.onEpisodeSelected)),
                   M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoCommentsView(video: widget.video)),
                   M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: RelatedVideosView(videos: widget.video.related)),
                 ],
