@@ -47,6 +47,8 @@ class DownloadController extends AsyncNotifier<DownloadState> {
   Future<void> _writeQueue = Future<void>.value();
   DateTime _lastProgressWrite = DateTime.fromMillisecondsSinceEpoch(0);
   static const _progressWriteInterval = Duration(milliseconds: 700);
+  DateTime _lastProgressEmit = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _progressEmitInterval = Duration(milliseconds: 100);
 
   @override
   Future<DownloadState> build() async {
@@ -197,11 +199,15 @@ class DownloadController extends AsyncNotifier<DownloadState> {
 
   Future<void> _progress(String id, DownloadTask Function(DownloadTask) update) async {
     final current = state.value ?? const DownloadState();
-    state = AsyncData(DownloadState(groups: current.groups, tasks: current.tasks.map((task) => task.id == id ? update(task) : task).toList()));
+    final next = DownloadState(groups: current.groups, tasks: current.tasks.map((task) => task.id == id ? update(task) : task).toList());
     final now = DateTime.now();
+    if (now.difference(_lastProgressEmit) >= _progressEmitInterval) {
+      _lastProgressEmit = now;
+      state = AsyncData(next);
+    }
     if (now.difference(_lastProgressWrite) < _progressWriteInterval) return;
     _lastProgressWrite = now;
-    await _persist(state.value ?? const DownloadState());
+    await _persist(next);
   }
 
   Future<String?> addGroup(String name, DownloadGroupSort sort) async {

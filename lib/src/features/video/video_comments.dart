@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:m3e_core/m3e_core.dart';
@@ -107,26 +108,48 @@ String _sortLabel(BuildContext context, CommentSort value) {
   };
 }
 
-class _CommentsSliver extends ConsumerWidget {
+class _CommentsSliver extends ConsumerStatefulWidget {
   const _CommentsSliver({required this.id});
 
   final String id;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sort = ref.watch(videoCommentSortProvider(id));
+  ConsumerState<_CommentsSliver> createState() => _CommentsSliverState();
+}
+
+class _CommentsSliverState extends ConsumerState<_CommentsSliver> {
+  CommentPage? _cachedPage;
+  CommentSort? _cachedSort;
+  List<String>? _cachedKeywords;
+  List<String>? _cachedUsers;
+  List<Comment> _cachedResult = const [];
+
+  @override
+  Widget build(BuildContext context) {
+    final sort = ref.watch(videoCommentSortProvider(widget.id));
     final settings = ref.watch(settingsProvider).valueOrNull;
     if (settings?.commentsEnabled != true) return SliverFillRemaining(child: Center(child: Text(AppLocalizations.of(context)!.commentsDisabled)));
-    return ref.watch(commentsProvider(id)).when(
+    return ref.watch(commentsProvider(widget.id)).when(
       loading: () => const SliverFillRemaining(child: Center(child: M3EContainedLoadingIndicator())),
-      error: (error, stackTrace) => SliverFillRemaining(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(AppLocalizations.of(context)!.commentsLoadFailed), Text('$error', style: Theme.of(context).textTheme.bodySmall), FilledButton(onPressed: () => ref.invalidate(commentsProvider(id)), child: Text(AppLocalizations.of(context)!.retry))]))),
-      data: (page) => page.comments.isEmpty ? SliverFillRemaining(child: Center(child: Text(AppLocalizations.of(context)!.noComments))) : _commentList(page, settings!.blockedCommentKeywords, settings.blockedCommentUsers, sort, ref),
+      error: (error, stackTrace) => SliverFillRemaining(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(AppLocalizations.of(context)!.commentsLoadFailed), Text('$error', style: Theme.of(context).textTheme.bodySmall), FilledButton(onPressed: () => ref.invalidate(commentsProvider(widget.id)), child: Text(AppLocalizations.of(context)!.retry))]))),
+      data: (page) => page.comments.isEmpty ? SliverFillRemaining(child: Center(child: Text(AppLocalizations.of(context)!.noComments))) : _commentList(page, settings!.blockedCommentKeywords, settings.blockedCommentUsers, sort),
     );
   }
 
-  Widget _commentList(CommentPage page, List<String> keywords, List<String> users, CommentSort sort, WidgetRef ref) {
-    final comments = _sort(_visibleComments(page.comments, keywords, users), sort);
-    return SliverList.builder(itemCount: comments.length, itemBuilder: (context, index) => CommentCard(comment: comments[index], token: page.csrfToken, onChanged: () => ref.invalidate(commentsProvider(id))));
+  Widget _commentList(CommentPage page, List<String> keywords, List<String> users, CommentSort sort) {
+    final comments = _visible(page, keywords, users, sort);
+    return SliverList.builder(itemCount: comments.length, itemBuilder: (context, index) => CommentCard(comment: comments[index], token: page.csrfToken, onChanged: () => ref.invalidate(commentsProvider(widget.id))));
+  }
+
+  List<Comment> _visible(CommentPage page, List<String> keywords, List<String> users, CommentSort sort) {
+    if (identical(_cachedPage, page) && _cachedSort == sort && listEquals(_cachedKeywords, keywords) && listEquals(_cachedUsers, users)) return _cachedResult;
+    final result = _sort(_visibleComments(page.comments, keywords, users), sort);
+    _cachedPage = page;
+    _cachedSort = sort;
+    _cachedKeywords = keywords;
+    _cachedUsers = users;
+    _cachedResult = result;
+    return result;
   }
 
   List<Comment> _sort(List<Comment> comments, CommentSort sort) {

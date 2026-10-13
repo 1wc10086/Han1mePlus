@@ -526,22 +526,24 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     }
     final ratio = controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio;
     final viewport = MediaQuery.sizeOf(context).height;
+    final aspect = ref.watch(settingsProvider.select((value) => value.valueOrNull?.videoAspectRatio ?? VideoAspectRatio.auto));
+    final fill = aspect == VideoAspectRatio.crop || aspect == VideoAspectRatio.stretch;
     final surface = VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onHome: widget.onHome, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected, onReload: _reload);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
-        final cap = viewport * 0.6;
-        final floor = 160.0;
-        final available = viewport - 220;
-        final maxHeight = available > floor ? (cap < available ? cap : available) : cap;
+        final reserved = fill ? 220.0 : 120.0;
+        final cap = viewport - reserved;
+        final available = constraints.maxHeight.isFinite && constraints.maxHeight < cap ? constraints.maxHeight : cap;
+        final maxHeight = available < 160 ? 160.0 : available;
         final natural = width / ratio;
-        final height = natural < maxHeight ? natural : maxHeight;
+        final height = fill ? maxHeight : (natural < maxHeight ? natural : maxHeight);
         return ColoredBox(
           color: Colors.black,
           child: SizedBox(
             width: double.infinity,
             height: height,
-            child: Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
+            child: fill ? surface : Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
           ),
         );
       },

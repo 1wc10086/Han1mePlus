@@ -32,9 +32,7 @@ class VideoActionBar extends ConsumerWidget {
     final inWatchLater = (remote?.watchLater ?? library.watchLater).any((item) => item.videoCode == video.id);
     final persistedFavorite = (remote?.favorites ?? library.favorites).any((item) => item.videoCode == video.id);
     final inFavorites = ref.watch(favoriteOverrideProvider(video.id)) ?? persistedFavorite;
-    final downloadState = ref.watch(downloadProvider).valueOrNull;
-    final downloadTask = downloadState?.tasks.where((item) => item.videoCode == video.id).firstOrNull;
-    final alreadyDownloaded = downloadTask?.status == DownloadStatus.completed;
+    final alreadyDownloaded = ref.watch(downloadProvider.select((state) => state.valueOrNull?.tasks.where((item) => item.videoCode == video.id).firstOrNull?.status)) == DownloadStatus.completed;
     final l10n = AppLocalizations.of(context)!;
     final actions = <Widget>[
       IconButton(tooltip: l10n.addToPlaylist, icon: Icon(inWatchLater ? Icons.playlist_add_check : Icons.playlist_add), onPressed: () => account == null ? _pickLocalPlaylist(context, ref, library) : _pickPlaylist(context, ref, video.csrfToken ?? remote?.csrfToken ?? account.csrfToken, remote)),

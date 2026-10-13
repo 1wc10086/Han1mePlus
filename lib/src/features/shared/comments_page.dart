@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:m3e_core/m3e_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,12 +116,12 @@ class CommentCard extends ConsumerWidget {
   final VoidCallback onChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Card(
+  Widget build(BuildContext context, WidgetRef ref) => RepaintBoundary(child: Card(
         margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [CircleAvatar(backgroundImage: comment.avatarUrl?.isNotEmpty == true ? NetworkImage(comment.avatarUrl!) : null, child: comment.avatarUrl?.isNotEmpty == true ? null : Text(comment.username.characters.first)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(comment.username, style: Theme.of(context).textTheme.titleSmall), if (comment.timeAgo != null) Text(comment.timeAgo!, style: Theme.of(context).textTheme.bodySmall)])), MenuAnchor(builder: (context, controller, child) => IconButton(tooltip: AppLocalizations.of(context)!.more, onPressed: controller.open, icon: const Icon(Icons.more_vert)), menuChildren: [MenuItemButton(onPressed: token == null ? null : () => _report(context, ref), leadingIcon: const Icon(Icons.flag_outlined), child: Text(AppLocalizations.of(context)!.report)), MenuItemButton(onPressed: () => _filterUser(ref), leadingIcon: const Icon(Icons.person_off_outlined), child: Text(AppLocalizations.of(context)!.filter))])]),
+            Row(children: [CircleAvatar(backgroundImage: comment.avatarUrl?.isNotEmpty == true ? CachedNetworkImageProvider(comment.avatarUrl!) : null, child: comment.avatarUrl?.isNotEmpty == true ? null : Text(comment.username.isEmpty ? '?' : comment.username.characters.first)), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(comment.username, style: Theme.of(context).textTheme.titleSmall), if (comment.timeAgo != null) Text(comment.timeAgo!, style: Theme.of(context).textTheme.bodySmall)])), MenuAnchor(builder: (context, controller, child) => IconButton(tooltip: AppLocalizations.of(context)!.more, onPressed: controller.open, icon: const Icon(Icons.more_vert)), menuChildren: [MenuItemButton(onPressed: token == null ? null : () => _report(context, ref), leadingIcon: const Icon(Icons.flag_outlined), child: Text(AppLocalizations.of(context)!.report)), MenuItemButton(onPressed: () => _filterUser(ref), leadingIcon: const Icon(Icons.person_off_outlined), child: Text(AppLocalizations.of(context)!.filter))])]),
             const SizedBox(height: 10),
             Text(comment.content),
             const SizedBox(height: 6),
@@ -133,7 +134,7 @@ class CommentCard extends ConsumerWidget {
             ]),
           ]),
         ),
-      );
+      ));
 
   Future<void> _vote(WidgetRef ref, bool positive) async {
     if (token == null) return;

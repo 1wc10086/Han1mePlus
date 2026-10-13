@@ -172,15 +172,15 @@ class _CacheBody extends ConsumerWidget {
     final view = ref.watch(cacheViewProvider);
     final pinned = tasks.where((task) => task.pinned).toList();
     if (tasks.isEmpty) return Center(child: Text(l10n.noCache));
-    return ListView(
-      padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
-      children: [
+    return CustomScrollView(
+      slivers: [
         if (pinned.isNotEmpty) ...[
-          _SectionHeader(title: l10n.pinned, count: pinned.length, expanded: view.pinnedExpanded, onTap: ref.read(cacheViewProvider.notifier).togglePinnedExpanded),
+          SliverToBoxAdapter(child: _SectionHeader(title: l10n.pinned, count: pinned.length, expanded: view.pinnedExpanded, onTap: ref.read(cacheViewProvider.notifier).togglePinnedExpanded)),
           if (view.pinnedExpanded) _TaskGrid(tasks: pinned),
         ],
-        _SectionHeader(title: l10n.all, count: tasks.length, expanded: view.allExpanded, onTap: ref.read(cacheViewProvider.notifier).toggleAllExpanded),
+        SliverToBoxAdapter(child: _SectionHeader(title: l10n.all, count: tasks.length, expanded: view.allExpanded, onTap: ref.read(cacheViewProvider.notifier).toggleAllExpanded)),
         if (view.allExpanded) _TaskGrid(tasks: tasks),
+        SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom)),
       ],
     );
   }
@@ -213,17 +213,17 @@ class _TaskGrid extends ConsumerWidget {
     final settings = ref.watch(settingsProvider).valueOrNull;
     final horizontal = settings?.useHorizontalSearchCards ?? true;
     final preferredCards = settings?.searchCardsPerRow ?? 2;
-    return LayoutBuilder(
+    return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final metrics = videoCardMetrics(context: context, viewportWidth: constraints.maxWidth, horizontal: horizontal, cardsPerRow: preferredCards, expanded: true);
+        final metrics = videoCardMetrics(context: context, viewportWidth: constraints.crossAxisExtent, horizontal: horizontal, cardsPerRow: preferredCards, expanded: true);
         final textMetrics = VideoCardTextMetrics.of(context);
-        return GridView.builder(
+        return SliverPadding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + textMetrics.metaLineHeight * 2 + 12),
-          itemCount: tasks.length,
-          itemBuilder: (context, index) => _TaskCard(task: tasks[index], horizontal: horizontal, cardHeight: metrics.cardHeight),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: metrics.cardsPerRow, mainAxisSpacing: 12, crossAxisSpacing: 10, mainAxisExtent: metrics.cardHeight + textMetrics.metaLineHeight * 2 + 12),
+            itemCount: tasks.length,
+            itemBuilder: (context, index) => _TaskCard(task: tasks[index], horizontal: horizontal, cardHeight: metrics.cardHeight),
+          ),
         );
       },
     );
@@ -241,6 +241,8 @@ class _TaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final view = ref.watch(cacheViewProvider);
+    final current = ref.watch(downloadProvider.select((state) => state.valueOrNull?.tasks.where((item) => item.id == this.task.id).firstOrNull));
+    final task = current ?? this.task;
     final selected = view.selected.contains(task.id);
     final downloading = task.status == DownloadStatus.downloading;
     final queued = task.status == DownloadStatus.queued;
