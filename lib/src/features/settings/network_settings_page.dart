@@ -11,6 +11,7 @@ import '../../core/settings.dart';
 import '../../core/platform_paths.dart';
 import '../../core/site_url.dart';
 import '../../data/local/download_repository.dart';
+import '../../data/remote/ech_static_client.dart';
 import '../../data/remote/han1me_http_client.dart';
 import '../account/account_controller.dart';
 import '../explore/explore_controller.dart';
@@ -32,6 +33,7 @@ class NetworkSettingsPage extends ConsumerWidget {
        SettingsCardItem(title: l10n.customMirrorSite, subtitle: settings.mirrorActive ? settings.customMirrorSite : l10n.customMirrorSiteHint, leading: const Icon(Icons.link_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showMirrorSettings(context, ref, settings, controller)),
        SettingsCardItem(title: l10n.useBuiltInHosts, subtitle: l10n.useBuiltInHostsDescription, leading: const Icon(Icons.dns_outlined), trailing: Switch(value: settings.useBuiltInHosts, onChanged: (value) => controller.saveChanges((current) => current.copyWith(useBuiltInHosts: value, useDoh: value ? false : current.useDoh)))),
        SettingsCardItem(title: l10n.doh, subtitle: _dohSummary(l10n, settings), leading: const Icon(Icons.security_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showDohSettings(context, settings, controller)),
+       SettingsCardItem(title: 'ECH 直连', subtitle: _echStatusSummary(), leading: const Icon(Icons.enhanced_encryption_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showEchStatus(context)),
       ]),
        SettingsCardList(title: l10n.downloadSettings, children: [
        SettingsCardItem(title: l10n.downloadPath, subtitle: settings.downloadPath, leading: const Icon(Icons.folder_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _editDownloadPath(context, settings, controller)),
@@ -79,6 +81,59 @@ class NetworkSettingsPage extends ConsumerWidget {
   Future<void> _showDohSettings(BuildContext context, AppSettings settings, SettingsController controller) async {
     final result = await showDialog<_DohSettings>(context: context, builder: (_) => _DohSettingsDialog(settings: settings));
     if (result != null) await controller.saveChanges((current) => current.copyWith(useDoh: result.enabled, useBuiltInHosts: result.enabled ? false : current.useBuiltInHosts, dohPreset: result.preset, dohCustomUrl: result.customUrl, dohBootstrapIps: result.bootstrapIps, dohTimeoutSeconds: result.timeoutSeconds));
+  }
+
+  String _echStatusSummary() {
+    final ech = EchStaticClient.instance;
+    if (ech == null) return '原生引擎不可用，hanime 请求回退普通通道';
+    final recent = ech.logs.take(3).toList();
+    if (recent.isEmpty) return '静态 ECH 已启用（CF 共享配置 + IP 直连，零 DoH）';
+    return recent.first;
+  }
+
+  Future<void> _showEchStatus(BuildContext context) async {
+    final ech = EchStaticClient.instance;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ECH 直连状态'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                ech == null
+                    ? '原生引擎未加载（缺少 libech_http.so）：hanime 请求走普通通道。'
+                    : '静态 ECH 引擎已加载：CF 共享配置 + CF 边缘 IP 直连，零 DNS / 零 DoH。',
+              ),
+              const SizedBox(height: 12),
+              if (ech != null && ech.logs.isEmpty)
+                const Text('暂无 ECH 请求日志，打开任意 hanime 页面后回来看。')
+              else if (ech != null)
+                ...ech.logs.take(30).map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          line,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
 }
