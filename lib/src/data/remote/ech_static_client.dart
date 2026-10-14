@@ -1,25 +1,20 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../core/ech_domain_config.dart';
 import '../../core/site_hosts.dart';
 import 'ech_ffi_bindings.dart';
 
-/// CF 共享 ECH 配置（由 crypto.cloudflare.com 发布，对全体走 CF 的站点生效）。
-/// 静态内置，不依赖 DoH / DNS 查询。
-const String kCfSharedEchConfigList =
-    'AEX+DQBBJgAgACBLqW6dHS0WNGRPgllF7G7nzY8QUnW4XzMNwtXaA+YFBQAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA=';
+/// 跨域重定向到 ECH 域之外：ECH 通道必须停手，交回原生通道重发
+/// （重定向目标多为媒体 CDN / 短链 / 图床，非 CF 域名，不能拿 CF 共享 ECH 去打）。
+class EchRedirectOutsideException implements Exception {
+  EchRedirectOutsideException(this.target);
 
-/// CF 边缘 IP（物理直连，不做 DNS 解析；TLS 身份 / HTTP Host 保持原域名）。
-/// 第一组取自上游 Han1mePlus 内置地址，后两个为用户实测可用的 CF 段 IP。
-const List<String> kCfEdgeAddresses = [
-  '172.64.229.154',
-  '162.159.0.1',
-  '108.162.192.1',
-  '172.64.33.1',
-  '104.19.0.1',
-  '172.67.152.100',
-  '104.21.32.144',
-];
+  final Uri target;
+
+  @override
+  String toString() => 'ECH redirect outside ech domain: ${target.host}';
+}
 
 /// 静态 ECH 请求结果。
 class EchStaticResponse {
@@ -103,8 +98,7 @@ class EchStaticClient {
     cookiePool[host] = merged.entries.map((e) => '${e.key}=${e.value}').join('; ');
   }
 
-  /// 执行一次请求。ECH 失败（Fail-Closed）时返回带 errorMessage 的结果，
-  /// 由调用方决定回退。
+  /// 执行一次请求。ECH 失败（Fail-Closed）时抛异常，由调用方决定回退。
   Future<EchStaticResponse> request(
     String url, {
     required String method,
@@ -112,7 +106,7 @@ class EchStaticClient {
     Map<String, String>? headers,
     bool json = false,
   }) async {
-    var uri = Uri.parse(url);
+    var uri = Uri.parse(rewriteMediaUrl(url));
     var currentMethod = method;
     var currentData = data;
     var currentJson = json;
@@ -150,8 +144,10 @@ class EchStaticClient {
         currentMethod,
         requestHeaders,
         body: bodyBytes,
-        echConfig: kCfSharedEchConfigList,
-        connectIp: _pickAddress(),
+        // 域名适配：CF 主域 → 共享 ECH 强制；其他域名 → 普通 TLS（空配置）。
+        echConfig: isEchDomain(uri.host) ? kCfSharedEchConfigList : '',
+        // 物理直连：CF 主域 → 静态真实 IP（探针实测）；其他 → 系统解析。
+        connectIp: isEchDomain(uri.host) ? _pickAddress(uri.host) : '',
       );
 
       // ECH 握手失败（Fail-Closed）：抛回调用方做回退
@@ -174,7 +170,13 @@ class EchStaticClient {
 
       final location = native.headers['location'];
       if (native.isRedirect && location != null) {
-        final nextUri = uri.resolve(location);
+        var nextUri = uri.resolve(location);
+        nextUri = Uri.parse(rewriteMediaUrl(nextUri.toString()));
+        // 跨域重定向到非站点域（媒体 CDN / 短链 / 图床）：
+        // ECH 通道停手，交回原生通道（它们不是 CF，不能拿 CF 共享 ECH 去打）。
+        if (!isSiteDomain(nextUri.host)) {
+          throw EchRedirectOutsideException(nextUri);
+        }
         // 跨域重定向剥离 Cookie（沿用 ech_http 的安全策略）
         if (nextUri.host != uri.host) {
           requestHeaders.remove('Cookie');
@@ -199,13 +201,16 @@ class EchStaticClient {
     throw StateError('ECH 重定向次数过多: $url');
   }
 
-  /// 物理直连地址：循环使用 CF 边缘 IP（不做 DNS 解析）。
-  static int _addressCursor = 0;
+  /// 物理直连地址：按域名取静态真实 IP（轮询），非 ECH 域返回空（系统解析）。
+  static final Map<String, int> _addressCursors = {};
 
-  String _pickAddress() {
-    final address = kCfEdgeAddresses[_addressCursor % kCfEdgeAddresses.length];
-    _addressCursor++;
-    return address;
+  String _pickAddress(String host) {
+    var key = host.toLowerCase();
+    if (key.startsWith('www.')) key = key.substring(4);
+    final addresses = kEchDomainAddresses[key];
+    if (addresses == null || addresses.isEmpty) return '';
+    final cursor = _addressCursors[key] = (_addressCursors[key] ?? 0) + 1;
+    return addresses[cursor % addresses.length];
   }
 
   void close() => _client.close();

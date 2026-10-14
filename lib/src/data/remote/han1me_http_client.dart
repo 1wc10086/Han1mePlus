@@ -178,7 +178,13 @@ class Han1meHttpClient {
     if ((_echFailures[host] ?? 0) >= _echFailureThreshold) return null;
     try {
       final response = await ech.request(url, method: method, data: data, headers: headers, json: json);
-      _echFailures.remove(host);
+      // 4xx/5xx 计入熔断（403 CF 挑战等）：ECH 通道不再对该域名无限重试；
+      // 2xx/3xx 才清零。
+      if (response.statusCode >= 400) {
+        _echFailures[host] = (_echFailures[host] ?? 0) + 1;
+      } else {
+        _echFailures.remove(host);
+      }
       // 回写 Set-Cookie 到原通道（Android 持久化 / 桌面池），保持会话同步
       final setCookie = response.headers['set-cookie'];
       if (response.statusCode >= 200 && response.statusCode < 400 && setCookie != null && setCookie.isNotEmpty) {
@@ -190,6 +196,11 @@ class Han1meHttpClient {
         url: response.url,
         headers: response.headers.map((key, value) => MapEntry(key, [value])),
       );
+    } on EchRedirectOutsideException {
+      // 跨域重定向到非站点域（媒体 CDN / 短链 / 图床）：ECH 通道停手，
+      // 交回原生通道重发原 URL（原生跟随重定向，走系统解析直连）。
+      // 不计数熔断 —— ECH 域本身是好的，只是目标不在 CF。
+      return null;
     } catch (e) {
       _echFailures[host] = (_echFailures[host] ?? 0) + 1;
       return null;
