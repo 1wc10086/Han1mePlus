@@ -64,15 +64,15 @@ jobs:
             -DANDROID_STL=c++_static
           cmake --build build
           ls -la build/out/libech_http.so
-          mkdir -p "$GITHUB_WORKSPACE/Han1mePlus/android/app/src/main/jniLibs/arm64-v8a"
-          cp build/out/libech_http.so "$GITHUB_WORKSPACE/Han1mePlus/android/app/src/main/jniLibs/arm64-v8a/"
+          # 直接放入仓库根 android jniLibs（本 runner 的步骤 cwd 即仓库根）
+          mkdir -p "$GITHUB_WORKSPACE/android/app/src/main/jniLibs/arm64-v8a"
+          cp build/out/libech_http.so "$GITHUB_WORKSPACE/android/app/src/main/jniLibs/arm64-v8a/"
+          ls -la "$GITHUB_WORKSPACE/android/app/src/main/jniLibs/arm64-v8a/"
 
       - name: Flutter pub get
-        working-directory: Han1mePlus
         run: flutter pub get
 
       - name: Build release APK (arm64)
-        working-directory: Han1mePlus
         run: flutter build apk --release --target-platform android-arm64
 
       - name: Collect APK
@@ -82,6 +82,8 @@ jobs:
           APK="$(find "$GITHUB_WORKSPACE" -name 'app-release.apk' -print -quit)"
           if [ -z "$APK" ]; then echo "::error::APK not found"; exit 1; fi
           cp "$APK" "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
+          # 确认 ECH 原生库已打入 APK
+          unzip -l "$APK" | grep -c "libech_http" || echo "::warning::libech_http.so 未打入 APK"
           ls -la "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
 
       - name: Upload APK
