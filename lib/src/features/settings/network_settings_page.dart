@@ -194,13 +194,14 @@ class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
   Future<int?> _measureLatency(String ip) async {
     final sw = Stopwatch()..start();
     try {
-      await SecureSocket.connect(
-        kMediaBackupHost,
-        443,
-        address: InternetAddress(ip),
-        timeout: const Duration(seconds: 4),
+      final socket = await Socket.connect(ip, 443, timeout: const Duration(seconds: 4));
+      final secure = await SecureSocket.secure(
+        socket,
+        host: kMediaBackupHost,
         onBadCertificate: (_) => true,
+        timeout: const Duration(seconds: 4),
       );
+      secure.destroy();
       return sw.elapsedMilliseconds;
     } catch (_) {
       return null;
@@ -216,7 +217,7 @@ class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
     );
     if (!mounted) return;
     setState(() {
-      _latencies.addAll(results);
+      _latencies.addEntries(results);
       _measuring = false;
     });
   }
