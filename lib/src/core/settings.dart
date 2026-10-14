@@ -48,7 +48,7 @@ const defaultDownloadPath = '';
 class AppSettings {
   const AppSettings({
     this.themeMode = AppThemeMode.system,
-    this.baseUrl = 'https://hanime1.com',
+    this.baseUrl = 'https://hanime1.me',
     this.preferredQuality = 720,
     this.resumePlayback = true,
     this.autoPlayOnOpen = true,
@@ -81,7 +81,7 @@ class AppSettings {
     this.commentsEnabled = true,
     this.blockedCommentKeywords = const [],
     this.comicMode = false,
-    this.videoBaseUrl = 'https://hanime1.com',
+    this.videoBaseUrl = 'https://hanime1.me',
     this.useBuiltInHosts = false,
     this.useCustomMirrorSite = false,
     this.customMirrorSite = '',
@@ -323,7 +323,7 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
         themeMode: _themeMode(json['themeMode'] as String?),
-        baseUrl: json['baseUrl'] as String? ?? 'https://hanime1.com',
+        baseUrl: json['baseUrl'] as String? ?? 'https://hanime1.me',
         preferredQuality: json['preferredQuality'] as int? ?? 720,
         resumePlayback: json['resumePlayback'] as bool? ?? true,
         autoPlayOnOpen: json['autoPlayOnOpen'] as bool? ?? true,
@@ -356,7 +356,7 @@ class AppSettings {
         commentsEnabled: json['commentsEnabled'] as bool? ?? true,
         blockedCommentKeywords: (json['blockedCommentKeywords'] as List? ?? const []).whereType<String>().toList(),
         comicMode: json['comicMode'] as bool? ?? false,
-        videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.com' : json['baseUrl'] as String? ?? 'https://hanime1.com'),
+        videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.me' : json['baseUrl'] as String? ?? 'https://hanime1.me'),
         useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows || Platform.isLinux || Platform.isMacOS,
         useCustomMirrorSite: json['useCustomMirrorSite'] as bool? ?? false,
         customMirrorSite: _mirrorUrl(json['customMirrorSite'] as String?),

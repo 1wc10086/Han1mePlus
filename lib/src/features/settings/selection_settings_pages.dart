@@ -15,7 +15,7 @@ import 'settings_surface.dart';
 class SiteSettingsPage extends ConsumerWidget {
   const SiteSettingsPage({super.key});
 
-  static const _hosts = ['https://hanime1.com', 'https://hanimeone.me', 'https://hanime1.me', 'https://javchu.com', 'https://www.hanime169.net'];
+  static const _hosts = ['https://hanime1.me', 'https://hanime1.com', 'https://hanimeone.me', 'https://javchu.com', 'https://www.hanime169.net'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
