@@ -76,10 +76,13 @@ jobs:
         run: flutter build apk --release --target-platform android-arm64
 
       - name: Collect APK
-        working-directory: Han1mePlus
         run: |
-          ls -la build/app/outputs/flutter-apk/
-          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
+          pwd
+          find "$GITHUB_WORKSPACE" -name "app-release.apk" 2>/dev/null | head -5
+          APK="$(find "$GITHUB_WORKSPACE" -name 'app-release.apk' -print -quit)"
+          if [ -z "$APK" ]; then echo "::error::APK not found"; exit 1; fi
+          cp "$APK" "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
+          ls -la "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
