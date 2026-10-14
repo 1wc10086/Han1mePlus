@@ -37,7 +37,7 @@ class _DebugLogPageState extends ConsumerState<DebugLogPage> {
 
   Future<void> _share() async {
     final text = _buildText();
-    await SharePlus.instance.share(ShareParams(text: text, subject: 'Han1me+ 诊断日志'));
+    await Share.share(text, subject: 'Han1me+ 诊断日志');
   }
 
   Future<void> _copy() async {

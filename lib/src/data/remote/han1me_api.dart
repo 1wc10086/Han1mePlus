@@ -14,7 +14,7 @@ import '../../domain/models/video.dart';
 import 'han1me_http_client.dart';
 
 class CloudflareChallengeException implements Exception {
-  const CloudflareChallengeException(this.url) {
+  CloudflareChallengeException(this.url) {
     // 挑战出现时留痕，供调试日志页定位（哪个请求被 CF 拦下）
     AppLog.log('CF 挑战: $url');
   }
