@@ -193,18 +193,22 @@ class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
   /// 对备用域指定 IP 发起 TLS 握手测延迟（不校验证书，只测速）。
   Future<int?> _measureLatency(String ip) async {
     final sw = Stopwatch()..start();
+    Socket? socket;
     try {
-      final socket = await Socket.connect(ip, 443, timeout: const Duration(seconds: 4));
+      socket = await Socket.connect(ip, 443, timeout: const Duration(seconds: 4));
       final secure = await SecureSocket.secure(
         socket,
         host: kMediaBackupHost,
         onBadCertificate: (_) => true,
-        timeout: const Duration(seconds: 4),
-      );
+      ).timeout(const Duration(seconds: 4));
       secure.destroy();
       return sw.elapsedMilliseconds;
     } catch (_) {
       return null;
+    } finally {
+      try {
+        socket?.destroy();
+      } catch (_) {}
     }
   }
 
