@@ -6,13 +6,19 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 
 import '../../core/site_url.dart';
+import '../../core/app_log.dart';
+import '../../core/ech_domain_config.dart';
 import '../../domain/models/account.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/video.dart';
 import 'han1me_http_client.dart';
 
 class CloudflareChallengeException implements Exception {
-  const CloudflareChallengeException(this.url);
+  const CloudflareChallengeException(this.url) {
+    // 挑战出现时留痕，供调试日志页定位（哪个请求被 CF 拦下）
+    AppLog.log('CF 挑战: $url');
+  }
+
   final String url;
 
   @override
@@ -672,7 +678,9 @@ class Han1meApi {
 
   String _absolute(String baseUrl, String? path) {
     if (path == null || path.isEmpty) return '';
-    return Uri.parse(baseUrl).resolve(path).toString();
+    final resolved = Uri.parse(baseUrl).resolve(path).toString();
+    // 媒体 URL 统一改写：AV 站 CDN 节点 tXX→t33、图片 CDN 备用域（移动按 SNI 封锁）
+    return rewriteMediaUrl(resolved);
   }
 
   String _mergeCookies(String? current, String next) {

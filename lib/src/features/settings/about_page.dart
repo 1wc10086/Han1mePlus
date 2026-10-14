@@ -8,14 +8,31 @@ import '../../../l10n/app_localizations.dart';
 import '../../core/app_info.dart';
 import '../../data/remote/update_checker.dart';
 import '../../data/local/update_installer.dart';
+import 'debug_log_page.dart';
 import 'settings_controller.dart';
 import 'settings_card_list.dart';
 
-class AboutPage extends ConsumerWidget {
+class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends ConsumerState<AboutPage> {
+  static const _logTapThreshold = 5;
+  int _versionTaps = 0;
+
+  void _onVersionTap() {
+    _versionTaps++;
+    if (_versionTaps >= _logTapThreshold) {
+      _versionTaps = 0;
+      context.push('/settings/debug-log');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final version = ref.watch(packageInfoProvider).valueOrNull?.version ?? '';
     return Scaffold(
         appBar: AppBar(title: Text(AppLocalizations.of(context)!.about)),
@@ -28,7 +45,7 @@ class AboutPage extends ConsumerWidget {
             Center(child: Text(AppLocalizations.of(context)!.thirdPartyClient, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.outline))),
             const SizedBox(height: 28),
              SettingsCardList(children: [
-               SettingsCardItem(title: AppLocalizations.of(context)!.version, subtitle: version, leading: const Icon(Icons.code_outlined)),
+               SettingsCardItem(title: AppLocalizations.of(context)!.version, subtitle: version, leading: const Icon(Icons.code_outlined), onTap: _onVersionTap),
                SettingsCardItem(title: AppLocalizations.of(context)!.dataSource, subtitle: AppLocalizations.of(context)!.dataSourceDescription, leading: const Icon(Icons.language_outlined)),
                SettingsCardItem(title: AppLocalizations.of(context)!.githubRepository, subtitle: 'github.com/1wc10086/Han1mePlus', leading: const Icon(Icons.code_outlined), trailing: const Icon(Icons.open_in_new), onTap: () => launchUrl(Uri.parse('https://github.com/1wc10086/Han1mePlus'), mode: LaunchMode.externalApplication)),
                SettingsCardItem(title: AppLocalizations.of(context)!.reportIssue, subtitle: AppLocalizations.of(context)!.submitGitHubIssue, leading: const Icon(Icons.bug_report_outlined), trailing: const Icon(Icons.open_in_new), onTap: () => launchUrl(Uri.parse('https://github.com/1wc10086/Han1mePlus/issues/new/choose'), mode: LaunchMode.externalApplication)),

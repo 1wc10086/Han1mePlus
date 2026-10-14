@@ -7,6 +7,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 
 import '../../core/desktop_platform.dart';
 import '../../core/site_hosts.dart';
+import '../../core/app_log.dart';
 import 'ech_static_client.dart';
 import 'windows_http_overrides.dart';
 
@@ -137,29 +138,71 @@ class Han1meHttpClient {
       _request(url, method: 'DELETE', data: data, headers: headers, json: json);
 
   Future<Han1meHttpResponse> _request(String url, {String methodName = 'request', String method = 'GET', Map<String, String>? data, Map<String, String>? headers, String? responseCharset, bool json = false}) async {
+    final start = DateTime.now();
     // 静态 ECH 直连优先（仅 hanime 站点，零 DNS / 零 DoH；失败自动回退原通道）
     final echResponse = await _tryEchRequest(url, method: method, data: data, headers: headers, responseCharset: responseCharset, json: json);
-    if (echResponse != null) return echResponse;
-    if (_isDesktop) return _desktopRequest(url, method: method, data: data, headers: headers, responseCharset: responseCharset, json: json);
-    final response = await _channel.invokeMethod<dynamic>(methodName, {
-      'url': url,
-      'method': method,
-      if (data != null) 'data': data,
-        if (headers != null) 'headers': headers,
-        if (responseCharset != null) 'responseCharset': responseCharset,
-      if (json) 'json': true,
-    });
-    final result = Map<Object?, Object?>.from(response as Map);
-    return Han1meHttpResponse(
-      statusCode: result['statusCode']! as int,
-      body: result['body']! as String,
-      url: result['url']! as String,
-      headers: Map<String, List<String>>.fromEntries(
-        Map<Object?, Object?>.from(result['headers']! as Map).entries.map(
-          (entry) => MapEntry(entry.key! as String, List<String>.from(entry.value! as List)),
+    if (echResponse != null) {
+      _logRequest(method, url, echResponse.statusCode, DateTime.now().difference(start).inMilliseconds, 'ECH');
+      return echResponse;
+    }
+    if (_isDesktop) {
+      try {
+        final response = await _desktopRequest(url, method: method, data: data, headers: headers, responseCharset: responseCharset, json: json);
+        _logRequest(method, url, response.statusCode, DateTime.now().difference(start).inMilliseconds, '原生');
+        return response;
+      } catch (error) {
+        _logRequest(method, url, null, DateTime.now().difference(start).inMilliseconds, '原生异常 $error');
+        rethrow;
+      }
+    }
+    try {
+      final response = await _channel.invokeMethod<dynamic>(methodName, {
+        'url': url,
+        'method': method,
+        if (data != null) 'data': data,
+          if (headers != null) 'headers': headers,
+          if (responseCharset != null) 'responseCharset': responseCharset,
+        if (json) 'json': true,
+      });
+      final result = Map<Object?, Object?>.from(response as Map);
+      final statusCode = result['statusCode']! as int;
+      _logRequest(method, url, statusCode, DateTime.now().difference(start).inMilliseconds, '原生');
+      return Han1meHttpResponse(
+        statusCode: statusCode,
+        body: result['body']! as String,
+        url: result['url']! as String,
+        headers: Map<String, List<String>>.fromEntries(
+          Map<Object?, Object?>.from(result['headers']! as Map).entries.map(
+            (entry) => MapEntry(entry.key! as String, List<String>.from(entry.value! as List)),
+          ),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      _logRequest(method, url, null, DateTime.now().difference(start).inMilliseconds, '原生异常 $error');
+      rethrow;
+    }
+  }
+
+  void _logRequest(String method, String url, int? statusCode, int durationMs, String channel) {
+    final uri = Uri.tryParse(url);
+    var cookie = '';
+    if (uri != null) {
+      cookie = _cookiesFor(uri);
+      final echCookie = EchStaticClient.instance?.cookiesFor(uri) ?? '';
+      if (echCookie.isNotEmpty) cookie = cookie.isEmpty ? echCookie : '$cookie; $echCookie';
+    }
+    final hasAuth = cookie.split(';').where((part) => part.trim().toLowerCase().startsWith('remember_web=')).isNotEmpty;
+    final hasCf = cookie.split(';').where((part) => part.trim().toLowerCase().startsWith('cf_clearance=')).isNotEmpty;
+    final cookieInfo = [if (hasAuth) 'remember_web', if (hasCf) 'cf_clearance', if (!hasAuth && !hasCf && cookie.trim().isNotEmpty) 'other'].join('+');
+    AppLog.log('$channel $method ${_short(url)} -> ${statusCode ?? '失败'} (${durationMs}ms)${cookieInfo.isEmpty ? '' : ' cookie=$cookieInfo'}');
+  }
+
+  String _short(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    var path = uri.path;
+    if (path.length > 60) path = '${path.substring(0, 60)}…';
+    return '${uri.scheme}://${uri.host}$path';
   }
 
   /// 用 ech_http 原生引擎 + 静态 CF 共享 ECH 配置直连 hanime 站点。
@@ -175,13 +218,17 @@ class Han1meHttpClient {
     }
     final ech = EchStaticClient.instance;
     if (ech == null) return null;
-    if ((_echFailures[host] ?? 0) >= _echFailureThreshold) return null;
+    if ((_echFailures[host] ?? 0) >= _echFailureThreshold) {
+      AppLog.log('ECH 熔断跳过 $method ${_short(url)} 连续失败=${_echFailures[host]}');
+      return null;
+    }
     try {
       final response = await ech.request(url, method: method, data: data, headers: headers, json: json);
       // 4xx/5xx 计入熔断（403 CF 挑战等）：ECH 通道不再对该域名无限重试；
       // 2xx/3xx 才清零。
       if (response.statusCode >= 400) {
         _echFailures[host] = (_echFailures[host] ?? 0) + 1;
+        AppLog.log('ECH ${response.statusCode} ${_short(url)} ech=${response.echAccepted} retries=${response.echRetries} 熔断=${_echFailures[host]}');
       } else {
         _echFailures.remove(host);
       }
@@ -196,13 +243,15 @@ class Han1meHttpClient {
         url: response.url,
         headers: response.headers.map((key, value) => MapEntry(key, [value])),
       );
-    } on EchRedirectOutsideException {
+    } on EchRedirectOutsideException catch (e) {
       // 跨域重定向到非站点域（媒体 CDN / 短链 / 图床）：ECH 通道停手，
       // 交回原生通道重发原 URL（原生跟随重定向，走系统解析直连）。
       // 不计数熔断 —— ECH 域本身是好的，只是目标不在 CF。
+      AppLog.log('ECH 跨域重定向停手 $method ${_short(url)} -> ${e.target.host}');
       return null;
     } catch (e) {
       _echFailures[host] = (_echFailures[host] ?? 0) + 1;
+      AppLog.log('ECH 异常 $method ${_short(url)} $e 熔断=${_echFailures[host]}');
       return null;
     }
   }

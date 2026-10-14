@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/app_log.dart';
 import '../../core/site_hosts.dart';
 import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
@@ -56,6 +57,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final cookie = await ref.read(han1meHttpClientProvider).webViewCookiesFor(_candidates(current, settings.resolvedBaseUrl));
       if (!mounted) return;
       if (_withoutClearance(cookie).isEmpty) {
+        // 抓到的 cookie 里没有登录态（remember_web 等），记录 cookie 名供排查
+        final names = cookie.split(';').map((part) => part.trim().split('=').first).where((name) => name.isNotEmpty).toList();
+        AppLog.log('登录抓取失败: 无登录 cookie（抓到: ${names.isEmpty ? '空' : names.join(',')}）');
         if (manual) setState(() => _error = l10n.failed);
         return;
       }
@@ -69,6 +73,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
       _startPolling();
     } catch (error) {
+      AppLog.log('登录保存失败: $error');
       if (mounted && manual) setState(() => _error = error);
     } finally {
       if (mounted && !popped) setState(() => _saving = false);

@@ -56,9 +56,28 @@ bool isSiteDomain(String host) {
 final RegExp kAvCdnNodeRewrite =
     RegExp(r'^((?:https?:)?//)t\d+\.(cdn2020\.com)(?=/|:)', caseSensitive: false);
 
-/// 应用媒体 URL 改写规则。
+/// 按域名封锁的媒体 CDN → 同一 CDN 的备用域名（实测同后端、同证书、签名不绑 Host）。
+/// 仅加经过三件事实测的条目（同后端 / 证书 SAN 覆盖 / 鉴权参数不绑 Host），
+/// 其余 host（如视频自建 VPS 域，证书只覆盖自己）绝不进这张表。
+/// 与 Han1meViewer CdnHostRewriter 同源：
+///   图片 CDN（移动按 SNI 单独封锁）→ CDN77 备用域。
+const Map<String, String> kMediaAltHosts = {
+  'vdownload.hembed.com': '1497203185.rsc.cdn77.org',
+};
+
+/// 应用媒体 URL 改写规则（视频节点 + 图片备用域）。
 String rewriteMediaUrl(String url) {
-  if (!kAvCdnNodeRewrite.hasMatch(url)) return url;
-  return url.replaceAllMapped(kAvCdnNodeRewrite,
-      (m) => '${m.group(1)}t33.${m.group(2)}');
+  var result = url;
+  if (kAvCdnNodeRewrite.hasMatch(result)) {
+    result = result.replaceAllMapped(
+        kAvCdnNodeRewrite, (m) => '${m.group(1)}t33.${m.group(2)}');
+  }
+  final uri = Uri.tryParse(result);
+  if (uri != null) {
+    final alt = kMediaAltHosts[uri.host.toLowerCase()];
+    if (alt != null) {
+      result = uri.replace(host: alt).toString();
+    }
+  }
+  return result;
 }
