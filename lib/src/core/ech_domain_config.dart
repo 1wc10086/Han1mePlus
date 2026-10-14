@@ -1,5 +1,6 @@
 library;
 
+import 'app_log.dart';
 import 'site_hosts.dart';
 
 /// ECH 域名策略静态配置。
@@ -56,28 +57,32 @@ bool isSiteDomain(String host) {
 final RegExp kAvCdnNodeRewrite =
     RegExp(r'^((?:https?:)?//)t\d+\.(cdn2020\.com)(?=/|:)', caseSensitive: false);
 
-/// 按域名封锁的媒体 CDN → 同一 CDN 的备用域名（实测同后端、同证书、签名不绑 Host）。
-/// 仅加经过三件事实测的条目（同后端 / 证书 SAN 覆盖 / 鉴权参数不绑 Host），
-/// 其余 host（如视频自建 VPS 域，证书只覆盖自己）绝不进这张表。
-/// 与 Han1meViewer CdnHostRewriter 同源：
-///   图片 CDN（移动按 SNI 单独封锁）→ CDN77 备用域。
-const Map<String, String> kMediaAltHosts = {
-  'vdownload.hembed.com': '1497203185.rsc.cdn77.org',
-};
+/// 媒体 CDN 替换规则。
+///
+/// **背景（已查证）**：媒体域名统一为 `vdownload.hembed` 系列
+/// （图片、javchu 图片、视频均在此域下），移动按 SNI 封锁该域，IPv4 阻断。
+/// 解决办法：URL 整体替换 host 为备用 CDN77 域。
+/// TLS 校验的是替换后 URL 的 host（备用域），而备用域证书 SAN 覆盖自身，
+/// 因此 **vdownload.hembed 全部子域（含视频用的 -8 变体）替换均合法**。
+/// 已实测：备用域证书 SAN = 1497203185.rsc.cdn77.org + vdownload.hembed.com。
+const String kMediaCdnHostPrefix = 'vdownload.hembed';
+const String kMediaBackupHost = '1497203185.rsc.cdn77.org';
 
-/// 应用媒体 URL 改写规则（视频节点 + 图片备用域）。
+/// 媒体 URL 改写规则（视频节点 t33 + 媒体 CDN 备用域）。
 String rewriteMediaUrl(String url) {
   var result = url;
+  // 1. 媒体 CDN 备用域替换：host 以 vdownload.hembed 开头 → 备用域
+  //    （替换后路径、参数原样保留；TLS 校验目标变为备用域，证书覆盖）
+  final uri = Uri.tryParse(result);
+  if (uri != null && uri.host.toLowerCase().startsWith(kMediaCdnHostPrefix)) {
+    final original = uri.host;
+    result = uri.replace(host: kMediaBackupHost).toString();
+    AppLog.log('媒体域替换 $original -> $kMediaBackupHost');
+  }
+  // 2. AV 站 CDN 节点前缀统一切到可用的 t33
   if (kAvCdnNodeRewrite.hasMatch(result)) {
     result = result.replaceAllMapped(
         kAvCdnNodeRewrite, (m) => '${m.group(1)}t33.${m.group(2)}');
-  }
-  final uri = Uri.tryParse(result);
-  if (uri != null) {
-    final alt = kMediaAltHosts[uri.host.toLowerCase()];
-    if (alt != null) {
-      result = uri.replace(host: alt).toString();
-    }
   }
   return result;
 }

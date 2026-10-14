@@ -33,6 +33,7 @@ class NetworkSettingsPage extends ConsumerWidget {
        SettingsCardItem(title: l10n.customMirrorSite, subtitle: settings.mirrorActive ? settings.customMirrorSite : l10n.customMirrorSiteHint, leading: const Icon(Icons.link_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showMirrorSettings(context, ref, settings, controller)),
        SettingsCardItem(title: l10n.useBuiltInHosts, subtitle: l10n.useBuiltInHostsDescription, leading: const Icon(Icons.dns_outlined), trailing: Switch(value: settings.useBuiltInHosts, onChanged: (value) => controller.saveChanges((current) => current.copyWith(useBuiltInHosts: value, useDoh: value ? false : current.useDoh)))),
        SettingsCardItem(title: l10n.doh, subtitle: _dohSummary(l10n, settings), leading: const Icon(Icons.security_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showDohSettings(context, settings, controller)),
+       SettingsCardItem(title: '媒体 CDN 区域节点', subtitle: _mediaCdnSummary(settings), leading: const Icon(Icons.storage_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showMediaCdnSettings(context, settings, controller)),
        SettingsCardItem(title: 'ECH 直连', subtitle: _echStatusSummary(), leading: const Icon(Icons.enhanced_encryption_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _showEchStatus(context)),
       ]),
        SettingsCardList(title: l10n.downloadSettings, children: [
@@ -69,6 +70,20 @@ class NetworkSettingsPage extends ConsumerWidget {
   }
 
   String _dohSummary(AppLocalizations l10n, AppSettings settings) => !settings.useDoh ? l10n.dohDisabled : settings.dohPreset == 'custom' ? settings.dohCustomUrl.ifEmpty(l10n.custom) : _dohPresets[settings.dohPreset]!;
+
+  static const _mediaCdnRegions = ['日本', '香港', '台湾', '俄罗斯', '美国', '欧洲', '新加坡'];
+
+  String _mediaCdnSummary(AppSettings settings) {
+    if (settings.mediaCdnCustomIp.trim().isNotEmpty) return '自定义: ${settings.mediaCdnCustomIp.trim()}';
+    if (settings.mediaCdnRegion.isNotEmpty) return settings.mediaCdnRegion;
+    return '自动（系统解析）';
+  }
+
+  Future<void> _showMediaCdnSettings(BuildContext context, AppSettings settings, SettingsController controller) async {
+    final result = await showDialog<_MediaCdnSettings>(context: context, builder: (_) => _MediaCdnSettingsDialog(settings: settings));
+    if (result == null) return;
+    await controller.saveChanges((current) => current.copyWith(mediaCdnRegion: result.region, mediaCdnCustomIp: result.customIp));
+  }
 
   Future<void> _showMirrorSettings(BuildContext context, WidgetRef ref, AppSettings settings, SettingsController controller) async {
     final result = await showDialog<_MirrorSettings>(context: context, builder: (_) => _MirrorSettingsDialog(settings: settings));
@@ -152,6 +167,41 @@ class _DohSettingsDialogState extends State<_DohSettingsDialog> {
   late final _timeout = TextEditingController(text: widget.settings.dohTimeoutSeconds.toString());
   @override void dispose() { _customUrl.dispose(); _bootstrapIps.dispose(); _timeout.dispose(); super.dispose(); }
   @override Widget build(BuildContext context) { final l10n = AppLocalizations.of(context)!; return AlertDialog(title: Text(l10n.dohSettings), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [SwitchListTile.adaptive(contentPadding: EdgeInsets.zero, title: Text(l10n.useDoh), value: _enabled, onChanged: (value) => setState(() => _enabled = value)), DropdownButtonFormField(value: _preset, decoration: InputDecoration(labelText: l10n.dohPreset), items: [..._dohPresets.entries.map((item) => DropdownMenuItem(value: item.key, child: Text(item.value))), DropdownMenuItem(value: 'custom', child: Text(l10n.custom))], onChanged: (value) => setState(() => _preset = value!)), const SizedBox(height: 12), TextField(controller: _customUrl, enabled: _preset == 'custom', keyboardType: TextInputType.url, decoration: InputDecoration(labelText: l10n.dohCustomUrl)), const SizedBox(height: 12), TextField(controller: _bootstrapIps, decoration: InputDecoration(labelText: l10n.dohBootstrapIps, helperText: l10n.dohBootstrapIpsDescription)), const SizedBox(height: 12), TextField(controller: _timeout, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.dohTimeoutSeconds, helperText: l10n.dohTimeoutSecondsDescription))])), actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)), FilledButton(onPressed: () => Navigator.pop(context, _DohSettings(enabled: _enabled, preset: _preset, customUrl: _customUrl.text.trim(), bootstrapIps: _bootstrapIps.text.trim(), timeoutSeconds: (int.tryParse(_timeout.text) ?? 10).clamp(1, 60) as int)), child: Text(l10n.save))]); }
+}
+
+class _MediaCdnSettings { const _MediaCdnSettings({required this.region, required this.customIp}); final String region; final String customIp; }
+
+class _MediaCdnSettingsDialog extends StatefulWidget { const _MediaCdnSettingsDialog({required this.settings}); final AppSettings settings; @override State<_MediaCdnSettingsDialog> createState() => _MediaCdnSettingsDialogState(); }
+
+class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
+  late var _region = widget.settings.mediaCdnRegion;
+  late final _customIp = TextEditingController(text: widget.settings.mediaCdnCustomIp);
+
+  @override
+  void dispose() { _customIp.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('媒体 CDN 区域节点'),
+      content: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, value: '', groupValue: _region, title: const Text('自动（系统解析）'), subtitle: const Text('不指定节点，按备用域名正常解析'), onChanged: (value) => setState(() => _region = value!)),
+          const Divider(height: 1),
+          for (final region in NetworkSettingsPage._mediaCdnRegions)
+            RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, value: region, groupValue: _region, title: Text(region), onChanged: (value) => setState(() => _region = value!)),
+          const SizedBox(height: 12),
+          TextField(controller: _customIp, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: '自定义 IP（优先于区域，逗号分隔多个）', hintText: '例如 156.146.44.89,156.146.44.90')),
+          const SizedBox(height: 4),
+          const Text('选择区域后媒体域名解析到该区域 CDN77 节点，可自选速度快的节点。', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        FilledButton(onPressed: () => Navigator.pop(context, _MediaCdnSettings(region: _region, customIp: _customIp.text.trim())), child: const Text('保存')),
+      ],
+    );
+  }
 }
 
 class _MirrorSettings { const _MirrorSettings({required this.enabled, required this.url, required this.appendPath}); final bool enabled; final String url; final bool appendPath; }

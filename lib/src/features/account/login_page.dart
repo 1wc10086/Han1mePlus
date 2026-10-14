@@ -101,6 +101,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (last != null && DateTime.now().difference(last) < _captureCooldown) return;
     final controller = _controller;
     if (controller == null || !mounted) return;
+    // 方式一：直接检测登录 cookie（最可靠，不依赖页面元素结构）
+    try {
+      final settings = await ref.read(settingsProvider.future);
+      final current = await controller.getUrl();
+      if (mounted) {
+        final cookie = await ref.read(han1meHttpClientProvider).webViewCookiesFor(_candidates(current, settings.resolvedBaseUrl));
+        if (_withoutClearance(cookie).isNotEmpty) {
+          if (!mounted) return;
+          _lastAttempt = DateTime.now();
+          AppLog.log('登录自动识别: 检测到登录 cookie，自动同步');
+          await _capture();
+          return;
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    // 方式二：页面元素判定（WebView 已登录跳转）
     final loggedIn = await _loggedIn(controller);
     if (!mounted) return;
     if (!loggedIn && !await _leftLoginPage(controller)) return;
