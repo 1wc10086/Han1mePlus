@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/ech_domain_config.dart';
 import '../../core/settings.dart';
 import '../../core/platform_paths.dart';
 import '../../core/site_url.dart';
@@ -71,7 +72,7 @@ class NetworkSettingsPage extends ConsumerWidget {
 
   String _dohSummary(AppLocalizations l10n, AppSettings settings) => !settings.useDoh ? l10n.dohDisabled : settings.dohPreset == 'custom' ? settings.dohCustomUrl.ifEmpty(l10n.custom) : _dohPresets[settings.dohPreset]!;
 
-  static const _mediaCdnRegions = ['日本', '香港', '台湾', '俄罗斯', '美国', '欧洲', '新加坡'];
+  static const _mediaCdnRegions = ['日本', '香港', '中国台湾', '俄罗斯', '美国', '欧洲', '新加坡'];
 
   String _mediaCdnSummary(AppSettings settings) {
     if (settings.mediaCdnCustomIp.trim().isNotEmpty) return '自定义: ${settings.mediaCdnCustomIp.trim()}';
@@ -176,9 +177,64 @@ class _MediaCdnSettingsDialog extends StatefulWidget { const _MediaCdnSettingsDi
 class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
   late var _region = widget.settings.mediaCdnRegion;
   late final _customIp = TextEditingController(text: widget.settings.mediaCdnCustomIp);
+  final _latencies = <String, int?>{};
+  var _measuring = true;
+  var _customIpLatency = -1; // -1 未测 / -2 测速中 / >=0 ms / -3 不可达
+
+  @override
+  void initState() {
+    super.initState();
+    _measureAll();
+  }
 
   @override
   void dispose() { _customIp.dispose(); super.dispose(); }
+
+  /// 对备用域指定 IP 发起 TLS 握手测延迟（不校验证书，只测速）。
+  Future<int?> _measureLatency(String ip) async {
+    final sw = Stopwatch()..start();
+    try {
+      await SecureSocket.connect(
+        kMediaBackupHost,
+        443,
+        address: InternetAddress(ip),
+        timeout: const Duration(seconds: 4),
+        onBadCertificate: (_) => true,
+      );
+      return sw.elapsedMilliseconds;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _measureAll() async {
+    final results = await Future.wait(
+      kCdnRegionNodes.entries.map((entry) async {
+        final ms = await _measureLatency(entry.value.first);
+        return MapEntry(entry.key, ms);
+      }),
+    );
+    if (!mounted) return;
+    setState(() {
+      _latencies.addAll(results);
+      _measuring = false;
+    });
+  }
+
+  Future<void> _measureCustomIp() async {
+    final ips = _customIp.text
+        .split(RegExp(r'[,，;;\s]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (ips.isEmpty) return;
+    setState(() => _customIpLatency = -2);
+    final ms = await _measureLatency(ips.first);
+    if (!mounted) return;
+    setState(() => _customIpLatency = ms ?? -3);
+  }
+
+  String _latencyLabel(int? ms) => ms == null ? '不可达' : '${ms}ms';
 
   @override
   Widget build(BuildContext context) {
@@ -189,11 +245,36 @@ class _MediaCdnSettingsDialogState extends State<_MediaCdnSettingsDialog> {
           RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, value: '', groupValue: _region, title: const Text('自动（系统解析）'), subtitle: const Text('不指定节点，按备用域名正常解析'), onChanged: (value) => setState(() => _region = value!)),
           const Divider(height: 1),
           for (final region in NetworkSettingsPage._mediaCdnRegions)
-            RadioListTile<String>(contentPadding: EdgeInsets.zero, dense: true, value: region, groupValue: _region, title: Text(region), onChanged: (value) => setState(() => _region = value!)),
+            RadioListTile<String>(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: region,
+              groupValue: _region,
+              title: Text(region),
+              subtitle: Text(_measuring ? '测速中…' : _latencyLabel(_latencies[region])),
+              onChanged: (value) => setState(() => _region = value!)),
           const SizedBox(height: 12),
-          TextField(controller: _customIp, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: '自定义 IP（优先于区域，逗号分隔多个）', hintText: '例如 156.146.44.89,156.146.44.90')),
+          TextField(
+            controller: _customIp,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              labelText: '自定义 IP（优先于区域，逗号分隔多个）',
+              hintText: '例如 156.146.44.89,156.146.44.90',
+              suffixIcon: IconButton(
+                tooltip: '测速',
+                onPressed: _customIpLatency == -2 ? null : _measureCustomIp,
+                icon: const Icon(Icons.speed_outlined),
+              ),
+            ),
+          ),
+          if (_customIpLatency == -2)
+            const Padding(padding: EdgeInsets.only(top: 4), child: Text('测速中…', style: TextStyle(fontSize: 12, color: Colors.grey)))
+          else if (_customIpLatency >= 0)
+            Padding(padding: const EdgeInsets.only(top: 4), child: Text('${_customIpLatency}ms', style: const TextStyle(fontSize: 12, color: Colors.grey)))
+          else if (_customIpLatency == -3)
+            const Padding(padding: EdgeInsets.only(top: 4), child: Text('不可达', style: TextStyle(fontSize: 12, color: Colors.red))),
           const SizedBox(height: 4),
-          const Text('选择区域后媒体域名解析到该区域 CDN77 节点，可自选速度快的节点。', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const Text('区域节点为 CDN77 边缘，延迟为真实 TLS 握手耗时；选择后媒体域名解析到该节点，可自选快的。', style: TextStyle(fontSize: 12, color: Colors.grey)),
         ]),
       ),
       actions: [
