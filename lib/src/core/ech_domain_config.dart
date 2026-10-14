@@ -1,3 +1,5 @@
+library;
+
 import 'site_hosts.dart';
 
 /// ECH 域名策略静态配置。
@@ -10,7 +12,6 @@ import 'site_hosts.dart';
 ///   系统解析真实 IP 即可（它们没被墙）。
 ///
 /// 主站静态 IP 为 2026-10-14 GitHub Actions 探针实测解析值（IPv4）。
-library;
 
 /// CF 共享 ECH 配置（由 crypto.cloudflare.com 发布，对全体走 CF 的站点生效）。
 /// 静态内置，不依赖 DoH / DNS 查询。
@@ -57,10 +58,7 @@ final RegExp kAvCdnNodeRewrite =
 
 /// 应用媒体 URL 改写规则。
 String rewriteMediaUrl(String url) {
-  var result = url;
-  if (kAvCdnNodeRewrite.hasMatch(result)) {
-    result = kAvCdnNodeRewrite
-        .replaceAll(result, (m) => '${m.group(1)}t33.${m.group(2)}');
-  }
-  return result;
+  if (!kAvCdnNodeRewrite.hasMatch(url)) return url;
+  return url.replaceAllMapped(kAvCdnNodeRewrite,
+      (m) => '${m.group(1)}t33.${m.group(2)}');
 }
