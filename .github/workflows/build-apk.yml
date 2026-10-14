@@ -75,9 +75,15 @@ jobs:
         working-directory: Han1mePlus
         run: flutter build apk --release --target-platform android-arm64
 
+      - name: Collect APK
+        working-directory: Han1mePlus
+        run: |
+          ls -la build/app/outputs/flutter-apk/
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/han1meplus-ech-static.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: han1meplus-ech-static-apk
-          path: Han1mePlus/build/app/outputs/flutter-apk/app-release.apk
+          path: han1meplus-ech-static.apk
           if-no-files-found: error
