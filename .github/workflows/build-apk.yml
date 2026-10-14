@@ -25,11 +25,26 @@ jobs:
         with:
           channel: stable
 
-      - name: Install Android NDK
+      - name: Prepare Android NDK
         run: |
-          echo "y" | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "ndk;26.3.11579264" >/dev/null
-          echo "NDK installed: $ANDROID_HOME/ndk/26.3.11579264"
+          set -e
+          # 优先复用 runner 自带的 NDK；没有则用 sdkmanager 安装
+          NDK_DIR="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -z "$NDK_DIR" ]; then
+            SDKMANAGER=""
+            for d in "$ANDROID_HOME"/cmdline-tools/*/bin; do
+              if [ -x "$d/sdkmanager" ]; then SDKMANAGER="$d/sdkmanager"; break; fi
+            done
+            if [ -z "$SDKMANAGER" ]; then
+              echo "::error::sdkmanager not found under $ANDROID_HOME"
+              exit 1
+            fi
+            echo "y" | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" "ndk;26.3.11579264" >/dev/null
+            NDK_DIR="$ANDROID_HOME/ndk/26.3.11579264"
+          fi
+          echo "NDK_ROOT=$NDK_DIR" >> "$GITHUB_ENV"
+          echo "Using NDK: $NDK_DIR"
 
       - name: Build ech_http native .so (static ECH engine)
         run: |
@@ -41,10 +56,9 @@ jobs:
           curl -fsSL -o deps.zip "https://github.com/ech-research/libechhttp-android-build/releases/download/v0.1.0/libechhttp-deps-v0.1.0-android-arm64.zip"
           echo "$SHA  deps.zip" | sha256sum -c -
           unzip -q deps.zip -d deps
-          NDK="$ANDROID_HOME/ndk/26.3.11579264"
           cmake -S src -B build -G Ninja \
             -DEH_DEPS_ROOT="$PWD/deps" \
-            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-21 \
             -DANDROID_STL=c++_static
