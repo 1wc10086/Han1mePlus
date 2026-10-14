@@ -69,6 +69,13 @@ final class EchNativeResponse {
   final int echRetries;
   final String? errorMessage;
   final int? nativeCode;
+
+  bool get isRedirect =>
+      statusCode == 301 ||
+      statusCode == 302 ||
+      statusCode == 303 ||
+      statusCode == 307 ||
+      statusCode == 308;
 }
 
 /// 原生引擎句柄（EchClient 等价物）。
@@ -153,11 +160,11 @@ class EchFfiClient {
     >('eh_request_poll');
     final destroyFn = _lib.lookupFunction<
       Void Function(Pointer<_NativeRequest>),
-      Void Function(Pointer<_NativeRequest>)
+      void Function(Pointer<_NativeRequest>)
     >('eh_request_destroy');
     final eventDestroyFn = _lib.lookupFunction<
       Void Function(Pointer<_NativeEvent>),
-      Void Function(Pointer<_NativeEvent>)
+      void Function(Pointer<_NativeEvent>)
     >('eh_event_destroy');
 
     final options = calloc<_NativeOptions>();
@@ -181,18 +188,18 @@ class EchFfiClient {
           ? calloc<Uint8>(body.length)
           : nullptr;
       if (bodyPtr != nullptr && body != null) {
-        bodyPtr.asTypedList(body.length).setAll(0, body);
+        bodyPtr!.asTypedList(body.length).setAll(0, body);
       }
 
       options.ref
-        ..url = urlPtr
-        ..method = methodPtr
-        ..headers = headersPtr
+        ..url = urlPtr!
+        ..method = methodPtr!
+        ..headers = headersPtr!
         ..proxy = nullptr
-        ..echConfig = echPtr
-        ..connectIp = ipPtr
+        ..echConfig = echPtr!
+        ..connectIp = ipPtr!
         ..caPem = nullptr
-        ..body = bodyPtr
+        ..body = bodyPtr!
         ..bodyLength = body?.length ?? 0
         ..timeoutMs = timeout.inMilliseconds
         ..connectTimeoutMs = connectTimeout.inMilliseconds
@@ -216,7 +223,7 @@ class EchFfiClient {
         if (DateTime.now().isAfter(deadline)) {
           throw StateError('ech_http request timed out');
         }
-        final event = pollFn(request);
+        final event = pollFn(request!);
         if (event == nullptr) {
           // 原生 worker 线程仍在工作，让出事件循环（不阻塞 UI isolate）
           await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -263,13 +270,13 @@ class EchFfiClient {
         }
       }
     } finally {
-      if (request != nullptr) destroyFn(request);
-      if (bodyPtr != nullptr) calloc.free(bodyPtr);
-      if (ipPtr != nullptr) malloc.free(ipPtr);
-      if (echPtr != nullptr) malloc.free(echPtr);
-      if (headersPtr != nullptr) malloc.free(headersPtr);
-      if (methodPtr != nullptr) malloc.free(methodPtr);
-      if (urlPtr != nullptr) malloc.free(urlPtr);
+      if (request != nullptr) destroyFn(request!);
+      if (bodyPtr != nullptr) calloc.free(bodyPtr!);
+      if (ipPtr != nullptr) malloc.free(ipPtr!);
+      if (echPtr != nullptr) malloc.free(echPtr!);
+      if (headersPtr != nullptr) malloc.free(headersPtr!);
+      if (methodPtr != nullptr) malloc.free(methodPtr!);
+      if (urlPtr != nullptr) malloc.free(urlPtr!);
       calloc.free(options);
     }
   }
@@ -279,7 +286,7 @@ class EchFfiClient {
     _closed = true;
     final destroy = _lib.lookupFunction<
       Void Function(Pointer<_NativeClient>),
-      Void Function(Pointer<_NativeClient>)
+      void Function(Pointer<_NativeClient>)
     >('eh_client_destroy');
     destroy(_client);
   }
