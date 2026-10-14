@@ -59,25 +59,24 @@ final RegExp kAvCdnNodeRewrite =
 
 /// 媒体 CDN 替换规则。
 ///
-/// **背景（已查证）**：媒体域名统一为 `vdownload.hembed` 系列
-/// （图片、javchu 图片、视频均在此域下），移动按 SNI 封锁该域，IPv4 阻断。
-/// 解决办法：URL 整体替换 host 为备用 CDN77 域。
-/// TLS 校验的是替换后 URL 的 host（备用域），而备用域证书 SAN 覆盖自身，
-/// 因此 **vdownload.hembed 全部子域（含视频用的 -8 变体）替换均合法**。
-/// 已实测：备用域证书 SAN = 1497203185.rsc.cdn77.org + vdownload.hembed.com。
-const String kMediaCdnHostPrefix = 'vdownload.hembed';
+/// **背景（已查证）**：媒体域名存在两套后端，必须区分：
+/// - 图片域 `vdownload.hembed.com`（含 javchu 图片）：DNS 规范名即备用 CDN77 域，
+///   同后端、同证书（SAN 覆盖两域）→ 整体替换 host 合法，内容也在。
+/// - 视频域 `-8`：站方自建 VPS（216.227.173.26，单 IP），证书只覆盖自身，
+///   **不是 CDN77 后端**——替换后 TLS 能过（校验目标是备用域）但 CDN77 上
+///   没有它的内容，等于白换 → **绝不进替换表**。
+const String kMediaCdnHost = 'vdownload.hembed.com';
 const String kMediaBackupHost = '1497203185.rsc.cdn77.org';
 
-/// 媒体 URL 改写规则（视频节点 t33 + 媒体 CDN 备用域）。
+/// 媒体 URL 改写规则（视频节点 t33 + 图片域备用域）。
 String rewriteMediaUrl(String url) {
   var result = url;
-  // 1. 媒体 CDN 备用域替换：host 以 vdownload.hembed 开头 → 备用域
-  //    （替换后路径、参数原样保留；TLS 校验目标变为备用域，证书覆盖）
+  // 1. 图片 CDN 备用域替换：仅精确匹配图片域（-8 视频域是独立 VPS 后端，不进表）
+  //    （替换后路径、参数原样保留；TLS 校验目标变为备用域，证书 SAN 已查证覆盖）
   final uri = Uri.tryParse(result);
-  if (uri != null && uri.host.toLowerCase().startsWith(kMediaCdnHostPrefix)) {
-    final original = uri.host;
+  if (uri != null && uri.host.toLowerCase() == kMediaCdnHost) {
     result = uri.replace(host: kMediaBackupHost).toString();
-    AppLog.log('媒体域替换 $original -> $kMediaBackupHost');
+    AppLog.log('图片域替换 ${uri.host} -> $kMediaBackupHost');
   }
   // 2. AV 站 CDN 节点前缀统一切到可用的 t33
   if (kAvCdnNodeRewrite.hasMatch(result)) {
