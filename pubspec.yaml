@@ -41,6 +41,7 @@ dependencies:
   card_settings_ui: ^2.0.1
   liquid_glass_widgets: ^0.27.0
   dlna_dart: ^0.0.8
+  ffi: ^2.1.4
   flutter_localizations:
     sdk: flutter
 

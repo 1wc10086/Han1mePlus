@@ -22,6 +22,7 @@ import '../features/previews/getchu_preview_page.dart';
 import '../features/previews/previews_page.dart';
 import '../features/search/search_page.dart';
 import '../features/settings/about_page.dart';
+import '../features/settings/debug_log_page.dart';
 import '../features/settings/application_settings_page.dart';
 import '../features/settings/backup_settings_page.dart';
 import '../features/settings/cloudflare_page.dart';
@@ -104,6 +105,7 @@ class AppRouter {
           },
         ),
         GoRoute(path: '/settings/about', builder: (context, state) => const AboutPage()),
+        GoRoute(path: '/settings/debug-log', builder: (context, state) => const DebugLogPage()),
         GoRoute(path: '/settings/license', builder: (context, state) => const AppLicensePage()),
         GoRoute(path: '/settings/keyframes', builder: (context, state) => const KeyframesPage()),
         GoRoute(path: '/settings/playback', builder: (context, state) => const PlaybackSettingsPage()),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/app_log.dart';
 import '../../core/site_hosts.dart';
 import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
@@ -56,6 +57,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final cookie = await ref.read(han1meHttpClientProvider).webViewCookiesFor(_candidates(current, settings.resolvedBaseUrl));
       if (!mounted) return;
       if (_withoutClearance(cookie).isEmpty) {
+        // 抓到的 cookie 里没有登录态（remember_web 等），记录 cookie 名供排查
+        final names = cookie.split(';').map((part) => part.trim().split('=').first).where((name) => name.isNotEmpty).toList();
+        AppLog.log('登录抓取失败: 无登录 cookie（抓到: ${names.isEmpty ? '空' : names.join(',')}）');
         if (manual) setState(() => _error = l10n.failed);
         return;
       }
@@ -69,6 +73,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
       _startPolling();
     } catch (error) {
+      AppLog.log('登录保存失败: $error');
       if (mounted && manual) setState(() => _error = error);
     } finally {
       if (mounted && !popped) setState(() => _saving = false);
@@ -96,6 +101,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (last != null && DateTime.now().difference(last) < _captureCooldown) return;
     final controller = _controller;
     if (controller == null || !mounted) return;
+    // 方式一：直接检测登录 cookie（最可靠，不依赖页面元素结构）
+    try {
+      final settings = await ref.read(settingsProvider.future);
+      final current = await controller.getUrl();
+      if (mounted) {
+        final cookie = await ref.read(han1meHttpClientProvider).webViewCookiesFor(_candidates(current, settings.resolvedBaseUrl));
+        if (_withoutClearance(cookie).isNotEmpty) {
+          if (!mounted) return;
+          _lastAttempt = DateTime.now();
+          AppLog.log('登录自动识别: 检测到登录 cookie，自动同步');
+          await _capture();
+          return;
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    // 方式二：页面元素判定（WebView 已登录跳转）
     final loggedIn = await _loggedIn(controller);
     if (!mounted) return;
     if (!loggedIn && !await _leftLoginPage(controller)) return;
@@ -145,7 +167,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
+    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.me';
     final webViewEnvironment = ref.watch(webViewEnvironmentProvider).valueOrNull;
     return Scaffold(
       resizeToAvoidBottomInset: true,

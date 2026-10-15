@@ -65,7 +65,7 @@ class _CloudflarePageState extends ConsumerState<CloudflarePage> {
 
   @override
   Widget build(BuildContext context) {
-    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.com';
+    final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.me';
     final initialUrl = widget.initialUrl ?? baseUrl;
     final webViewEnvironment = ref.watch(webViewEnvironmentProvider).valueOrNull;
     return Scaffold(

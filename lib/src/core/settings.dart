@@ -48,7 +48,7 @@ const defaultDownloadPath = '';
 class AppSettings {
   const AppSettings({
     this.themeMode = AppThemeMode.system,
-    this.baseUrl = 'https://hanime1.com',
+    this.baseUrl = 'https://hanime1.me',
     this.preferredQuality = 720,
     this.resumePlayback = true,
     this.autoPlayOnOpen = true,
@@ -81,7 +81,7 @@ class AppSettings {
     this.commentsEnabled = true,
     this.blockedCommentKeywords = const [],
     this.comicMode = false,
-    this.videoBaseUrl = 'https://hanime1.com',
+    this.videoBaseUrl = 'https://hanime1.me',
     this.useBuiltInHosts = false,
     this.useCustomMirrorSite = false,
     this.customMirrorSite = '',
@@ -91,6 +91,8 @@ class AppSettings {
     this.dohCustomUrl = '',
     this.dohBootstrapIps = '',
     this.dohTimeoutSeconds = 10,
+    this.mediaCdnRegion = '',
+    this.mediaCdnCustomIp = '',
     this.useHorizontalSearchCards = true,
     this.searchCardsPerRow = 2,
     this.useCompactSearchCards = true,
@@ -169,6 +171,8 @@ class AppSettings {
   final String dohCustomUrl;
   final String dohBootstrapIps;
   final int dohTimeoutSeconds;
+  final String mediaCdnRegion;
+  final String mediaCdnCustomIp;
   final bool useHorizontalSearchCards;
   final int searchCardsPerRow;
   final bool useCompactSearchCards;
@@ -281,6 +285,8 @@ class AppSettings {
         'dohCustomUrl': dohCustomUrl,
         'dohBootstrapIps': dohBootstrapIps,
         'dohTimeoutSeconds': dohTimeoutSeconds,
+        'mediaCdnRegion': mediaCdnRegion,
+        'mediaCdnCustomIp': mediaCdnCustomIp,
         'useHorizontalSearchCards': useHorizontalSearchCards,
         'searchCardsPerRow': searchCardsPerRow,
         'useCompactSearchCards': useCompactSearchCards,
@@ -317,7 +323,7 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
         themeMode: _themeMode(json['themeMode'] as String?),
-        baseUrl: json['baseUrl'] as String? ?? 'https://hanime1.com',
+        baseUrl: json['baseUrl'] as String? ?? 'https://hanime1.me',
         preferredQuality: json['preferredQuality'] as int? ?? 720,
         resumePlayback: json['resumePlayback'] as bool? ?? true,
         autoPlayOnOpen: json['autoPlayOnOpen'] as bool? ?? true,
@@ -350,7 +356,7 @@ class AppSettings {
         commentsEnabled: json['commentsEnabled'] as bool? ?? true,
         blockedCommentKeywords: (json['blockedCommentKeywords'] as List? ?? const []).whereType<String>().toList(),
         comicMode: json['comicMode'] as bool? ?? false,
-        videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.com' : json['baseUrl'] as String? ?? 'https://hanime1.com'),
+        videoBaseUrl: json['videoBaseUrl'] as String? ?? (json['baseUrl'] == 'https://hanimeone.me' ? 'https://hanime1.me' : json['baseUrl'] as String? ?? 'https://hanime1.me'),
         useBuiltInHosts: json['useBuiltInHosts'] as bool? ?? Platform.isWindows || Platform.isLinux || Platform.isMacOS,
         useCustomMirrorSite: json['useCustomMirrorSite'] as bool? ?? false,
         customMirrorSite: _mirrorUrl(json['customMirrorSite'] as String?),
@@ -360,6 +366,8 @@ class AppSettings {
         dohCustomUrl: json['dohCustomUrl'] as String? ?? '',
         dohBootstrapIps: json['dohBootstrapIps'] as String? ?? '',
         dohTimeoutSeconds: (json['dohTimeoutSeconds'] as int? ?? 10).clamp(1, 60) as int,
+        mediaCdnRegion: json['mediaCdnRegion'] as String? ?? '',
+        mediaCdnCustomIp: json['mediaCdnCustomIp'] as String? ?? '',
         useHorizontalSearchCards: json['useHorizontalSearchCards'] as bool? ?? true,
         searchCardsPerRow: (json['searchCardsPerRow'] as int? ?? 2).clamp(1, 3) as int,
         useCompactSearchCards: json['useCompactSearchCards'] as bool? ?? true,
@@ -484,6 +492,8 @@ class AppSettings {
     String? dohCustomUrl,
     String? dohBootstrapIps,
     int? dohTimeoutSeconds,
+    String? mediaCdnRegion,
+    String? mediaCdnCustomIp,
     bool? useHorizontalSearchCards,
     int? searchCardsPerRow,
     bool? useCompactSearchCards,
@@ -562,6 +572,8 @@ class AppSettings {
         dohCustomUrl: dohCustomUrl ?? this.dohCustomUrl,
         dohBootstrapIps: dohBootstrapIps ?? this.dohBootstrapIps,
         dohTimeoutSeconds: dohTimeoutSeconds ?? this.dohTimeoutSeconds,
+        mediaCdnRegion: mediaCdnRegion ?? this.mediaCdnRegion,
+        mediaCdnCustomIp: mediaCdnCustomIp ?? this.mediaCdnCustomIp,
         useHorizontalSearchCards: useHorizontalSearchCards ?? this.useHorizontalSearchCards,
         searchCardsPerRow: searchCardsPerRow ?? this.searchCardsPerRow,
         useCompactSearchCards: useCompactSearchCards ?? this.useCompactSearchCards,

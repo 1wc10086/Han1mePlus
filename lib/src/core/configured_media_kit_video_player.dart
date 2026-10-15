@@ -11,6 +11,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 import 'settings.dart';
 import 'shader_assets.dart';
 import 'shader_service.dart';
+import 'app_log.dart';
 
 class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   static AppSettings settings = const AppSettings();
@@ -113,6 +114,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
         Media(resource, httpHeaders: dataSource.httpHeaders),
         play: false,
       );
+      AppLog.log('视频播放: $resource');
       return textureId;
     } catch (_) {
       if (textureId != null && identical(_players[textureId], player)) {
@@ -355,6 +357,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     );
     streamSubscriptions.add(
       player.stream.error.listen((event) async {
+        AppLog.log('视频错误: $event');
         await completer.future;
         if (isActive()) {
           streamController.addError(PlatformException(code: '', message: event));
