@@ -3339,6 +3339,38 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Title'**
   String get playlistSortByName;
+  String get diagnosticLog;
+  String logSummary(int requests, int engine);
+  String get copy;
+  String get logsCopied;
+  String get logsCleared;
+  String get echEngineLogs;
+  String get refresh;
+  String get mediaCdnRegionNode;
+  String get mediaCdnAuto;
+  String get mediaCdnAutoDescription;
+  String get mediaCdnCustomIp;
+  String get mediaCdnCustomIpHint;
+  String get mediaCdnCustomIpPriority;
+  String get mediaCdnMeasure;
+  String get mediaCdnMeasuring;
+  String get mediaCdnUnreachable;
+  String mediaCdnLatencyMs(int ms);
+  String get mediaCdnNodesHint;
+  String get regionJapan;
+  String get regionHongKong;
+  String get regionTaiwan;
+  String get regionRussia;
+  String get regionUnitedStates;
+  String get regionEurope;
+  String get regionSingapore;
+  String get echDirect;
+  String get echDirectStatus;
+  String get echNotLoaded;
+  String get echEnabledHint;
+  String get echUnavailable;
+  String get echNoLogs;
+
 }
 
 class _AppLocalizationsDelegate

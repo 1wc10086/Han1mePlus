@@ -13,6 +13,7 @@ import '../../core/platform_service.dart';
 import '../../core/route_observer.dart';
 import '../../core/settings.dart';
 import '../../core/video_player_shutdown.dart';
+import '../../core/video_metrics.dart';
 import '../../data/local/keyframe_repository.dart';
 import '../../data/local/watch_repository.dart';
 import '../../data/remote/han1me_api.dart';
@@ -368,7 +369,8 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (ref.read(settingsProvider).valueOrNull?.incognitoPlayback == true) return;
     if (DateTime.now().difference(_lastSaved).inSeconds < 5) return;
     _lastSaved = DateTime.now();
-    ref.read(watchProvider.notifier).progress(id: widget.video.id, title: widget.video.title, coverUrl: widget.video.coverUrl, positionMs: value.position.inMilliseconds, durationMs: value.duration.inMilliseconds);
+    final durationMs = value.duration > Duration.zero ? value.duration.inMilliseconds : (parseVideoDuration(widget.video.duration)?.inMilliseconds ?? 0);
+    ref.read(watchProvider.notifier).progress(id: widget.video.id, title: widget.video.title, coverUrl: widget.video.coverUrl, positionMs: value.position.inMilliseconds, durationMs: durationMs);
   }
 
   void _recordWatch() {
@@ -408,9 +410,6 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     }
   }
 
-  // Stops and releases the active controller right away (used when leaving
-  // the player entirely from fullscreen); deferring here would keep audio
-  // playing if the route unwinds out of order.
   void _disposeActiveController() {
     final controller = _controllerNotifier.value;
     _controllerNotifier.value = null;
@@ -445,8 +444,6 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     if (identical(VideoPlayerShutdown.pipActive, controller)) VideoPlayerShutdown.pipActive = null;
     if (controller != null) {
       if (_fullscreenOpen) {
-        // Disposal is deferred until the fullscreen route unwinds, but playback
-        // must stop immediately (e.g. navigating home while in fullscreen).
         if (controller.value.isInitialized) {
           unawaited(controller.pause().catchError((_) {}));
         }
@@ -524,27 +521,32 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
         ),
       );
     }
-    final ratio = controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio;
     final viewport = MediaQuery.sizeOf(context).height;
     final aspect = ref.watch(settingsProvider.select((value) => value.valueOrNull?.videoAspectRatio ?? VideoAspectRatio.auto));
     final fill = aspect == VideoAspectRatio.crop || aspect == VideoAspectRatio.stretch;
     final surface = VideoPlayerSurface(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, fullscreen: false, onFullscreen: _fullscreen, onBack: widget.onBack, onHome: widget.onHome, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected, onReload: _reload);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
-        final reserved = fill ? 220.0 : 120.0;
-        final cap = viewport - reserved;
-        final available = constraints.maxHeight.isFinite && constraints.maxHeight < cap ? constraints.maxHeight : cap;
-        final maxHeight = available < 160 ? 160.0 : available;
-        final natural = width / ratio;
-        final height = fill ? maxHeight : (natural < maxHeight ? natural : maxHeight);
-        return ColoredBox(
-          color: Colors.black,
-          child: SizedBox(
-            width: double.infinity,
-            height: height,
-            child: fill ? surface : Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
-          ),
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        final ratio = videoAspectRatio(value);
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+            final reserved = fill ? 220.0 : 120.0;
+            final cap = viewport - reserved;
+            final available = constraints.maxHeight.isFinite && constraints.maxHeight < cap ? constraints.maxHeight : cap;
+            final maxHeight = available < 160 ? 160.0 : available;
+            final natural = width / ratio;
+            final height = fill ? maxHeight : (natural < maxHeight ? natural : maxHeight);
+            return ColoredBox(
+              color: Colors.black,
+              child: SizedBox(
+                width: double.infinity,
+                height: height,
+                child: fill ? surface : Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
+              ),
+            );
+          },
         );
       },
     );
@@ -587,10 +589,10 @@ class _FullscreenPlayer extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       endDrawer: VideoKeyframeDrawer(video: video, controller: controller),
-      body: SafeArea(child: Stack(children: [
+      body: Stack(children: [
         Positioned.fill(child: Builder(builder: (scaffoldContext) => VideoPlayerSurface(controller: controller, quality: quality, video: video, onQualitySelected: onQualitySelected, onSuperResolutionSelected: onSuperResolutionSelected, fullscreen: true, onFullscreen: () async => Navigator.of(context).pop(), onBack: () => Navigator.of(context).pop(), onHome: onHome, onEpisodeSelected: onEpisodeSelected, onNext: onNext, onReload: onReload, keyframes: enabled ? keyframes : const [], onKeyframes: enabled ? () => Scaffold.of(scaffoldContext).openEndDrawer() : null, onAddKeyframe: enabled ? () => _addKeyframe(context, ref) : null))),
         if (showFloatingBar) Positioned(right: 8, bottom: 104, child: VideoActionBar(video: video, vertical: true)),
-      ])),
+      ]),
     );
   }
 

@@ -94,6 +94,22 @@ class VideoSource {
   final String? type;
 }
 
+Duration? parseVideoDuration(String? value) {
+  final parts = value?.trim().split(':') ?? const <String>[];
+  if (parts.length < 2 || parts.length > 3) return null;
+  final numbers = <int>[];
+  for (final part in parts) {
+    final number = int.tryParse(part.trim());
+    if (number == null || number < 0) return null;
+    numbers.add(number);
+  }
+  var seconds = 0;
+  for (final number in numbers) {
+    seconds = seconds * 60 + number;
+  }
+  return seconds <= 0 ? null : Duration(seconds: seconds);
+}
+
 class VideoDetail {
   const VideoDetail({
     required this.id,

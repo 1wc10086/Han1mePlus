@@ -53,9 +53,6 @@ class DownloadController extends AsyncNotifier<DownloadState> {
   @override
   Future<DownloadState> build() async {
     ref.listen<AsyncValue<AppSettings>>(settingsProvider, (previous, next) {
-      // Only re-initialize when the user actually changes the download path;
-      // the initial settings load (previous == null) must not invalidate this
-      // provider, or anything awaiting it hangs while it is being rebuilt.
       final previousPath = previous?.valueOrNull?.downloadPath;
       if (previousPath != null && previousPath != next.valueOrNull?.downloadPath) {
         ref.invalidateSelf();

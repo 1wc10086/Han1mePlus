@@ -38,10 +38,11 @@ class VideoPlayerControls extends StatelessWidget {
         valueListenable: controller,
         builder: (context, value, _) {
           final l10n = AppLocalizations.of(context)!;
-          final progress = value.duration == Duration.zero ? 0.0 : value.position.inMilliseconds / value.duration.inMilliseconds;
-          if (!fullscreen) return SizedBox(height: 48, child: Row(children: [IconButton(color: Colors.white, tooltip: value.isPlaying ? l10n.pause : l10n.play, visualDensity: VisualDensity.compact, onPressed: () { value.isPlaying ? controller.pause() : controller.play(); onInteraction(); }, icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow)), Expanded(child: SliderTheme(data: const SliderThemeData(year2023: true), child: Slider(value: progress.clamp(0, 1).toDouble(), onChanged: (next) { controller.seekTo(Duration(milliseconds: (next * value.duration.inMilliseconds).round())); onInteraction(); }))), SizedBox(width: 112, child: Text('${_formatDuration(value.position)}/${_formatDuration(value.duration)}', maxLines: 1, textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()]))), IconButton(color: Colors.white, tooltip: l10n.fullscreenPlayback, visualDensity: VisualDensity.compact, onPressed: onFullscreen, icon: const Icon(Icons.fullscreen))]));
+          final duration = value.duration > Duration.zero ? value.duration : (parseVideoDuration(video.duration) ?? Duration.zero);
+          final progress = duration == Duration.zero ? 0.0 : value.position.inMilliseconds / duration.inMilliseconds;
+          if (!fullscreen) return SizedBox(height: 48, child: Row(children: [IconButton(color: Colors.white, tooltip: value.isPlaying ? l10n.pause : l10n.play, visualDensity: VisualDensity.compact, onPressed: () { value.isPlaying ? controller.pause() : controller.play(); onInteraction(); }, icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow)), Expanded(child: SliderTheme(data: const SliderThemeData(year2023: true), child: Slider(value: progress.clamp(0, 1).toDouble(), onChanged: (next) { controller.seekTo(Duration(milliseconds: (next * duration.inMilliseconds).round())); onInteraction(); }))), SizedBox(width: 112, child: Text('${_formatDuration(value.position)}/${_formatDuration(duration)}', maxLines: 1, textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()]))), IconButton(color: Colors.white, tooltip: l10n.fullscreenPlayback, visualDensity: VisualDensity.compact, onPressed: onFullscreen, icon: const Icon(Icons.fullscreen))]));
           return Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [SizedBox(width: 48, child: Text(_formatDuration(value.position), style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()]))), Expanded(child: SliderTheme(data: const SliderThemeData(year2023: true), child: Slider(value: progress.clamp(0, 1).toDouble(), onChanged: (next) { controller.seekTo(Duration(milliseconds: (next * value.duration.inMilliseconds).round())); onInteraction(); }))), SizedBox(width: 48, child: Text(_formatDuration(value.duration), textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()])))]),
+            Row(children: [SizedBox(width: 48, child: Text(_formatDuration(value.position), style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()]))), Expanded(child: SliderTheme(data: const SliderThemeData(year2023: true), child: Slider(value: progress.clamp(0, 1).toDouble(), onChanged: (next) { controller.seekTo(Duration(milliseconds: (next * duration.inMilliseconds).round())); onInteraction(); }))), SizedBox(width: 48, child: Text(_formatDuration(duration), textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontFeatures: [FontFeature.tabularFigures()])))]),
             SizedBox(height: 40, child: Row(children: [IconButton(color: Colors.white, tooltip: value.isPlaying ? l10n.pause : l10n.play, visualDensity: VisualDensity.compact, onPressed: () { value.isPlaying ? controller.pause() : controller.play(); onInteraction(); }, icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow)), if (onNext != null) IconButton(color: Colors.white, tooltip: l10n.autoPlayNext, visualDensity: VisualDensity.compact, onPressed: onNext, icon: const Icon(Icons.skip_next)), const Spacer(), _AspectMenu(), if (onEpisodeSelected != null && video.playlist.isNotEmpty) _EpisodeMenu(video: video, onSelected: onEpisodeSelected!), _Anime4KMenu(onSelected: onSuperResolutionSelected), if (video.sources.isNotEmpty) _QualityMenu(sources: video.sources, quality: quality, onSelected: onQualitySelected), _SpeedMenu(controller: controller, onInteraction: onInteraction), AndroidCastButton(sources: video.sources, quality: quality), IconButton(color: Colors.white, tooltip: l10n.exitFullscreen, visualDensity: VisualDensity.compact, onPressed: onFullscreen, icon: const Icon(Icons.fullscreen_exit))])),
           ]);
         },
@@ -51,16 +52,29 @@ class VideoPlayerControls extends StatelessWidget {
 }
 
 class VideoPlayerSkipButton extends ConsumerWidget {
-  const VideoPlayerSkipButton({required this.controller, required this.onInteraction, super.key});
+  const VideoPlayerSkipButton({required this.controller, required this.onInteraction, this.fallbackDuration, super.key});
   final VideoPlayerController controller;
   final VoidCallback onInteraction;
+  final Duration? fallbackDuration;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seconds = ref.watch(settingsProvider).valueOrNull?.skipSeconds ?? 80;
     return GestureDetector(
       onLongPress: () => _configure(context, ref, seconds),
-      child: IconButton(color: Colors.white, tooltip: AppLocalizations.of(context)!.seconds(seconds), visualDensity: VisualDensity.compact, onPressed: () { final value = controller.value; final target = (value.position.inSeconds + seconds).clamp(0, value.duration.inSeconds); controller.seekTo(Duration(seconds: target)); onInteraction(); }, icon: const Icon(Icons.forward_10)),
+      child: IconButton(
+        color: Colors.white,
+        tooltip: AppLocalizations.of(context)!.seconds(seconds),
+        visualDensity: VisualDensity.compact,
+        onPressed: () {
+          final value = controller.value;
+          final total = value.duration > Duration.zero ? value.duration : (fallbackDuration ?? Duration.zero);
+          final target = value.position.inSeconds + seconds;
+          controller.seekTo(Duration(seconds: total == Duration.zero ? target : target.clamp(0, total.inSeconds)));
+          onInteraction();
+        },
+        icon: const Icon(Icons.forward_10),
+      ),
     );
   }
 

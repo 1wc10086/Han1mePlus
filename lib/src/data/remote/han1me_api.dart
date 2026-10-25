@@ -5,9 +5,9 @@ import 'package:dio/dio.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 
+import '../../core/logging/app_log.dart';
+import '../../core/network/network_policy.dart';
 import '../../core/site_url.dart';
-import '../../core/app_log.dart';
-import '../../core/ech_domain_config.dart';
 import '../../domain/models/account.dart';
 import '../../domain/models/library.dart';
 import '../../domain/models/video.dart';
@@ -15,8 +15,7 @@ import 'han1me_http_client.dart';
 
 class CloudflareChallengeException implements Exception {
   CloudflareChallengeException(this.url) {
-    // 挑战出现时留痕，供调试日志页定位（哪个请求被 CF 拦下）
-    AppLog.log('CF 挑战: $url');
+    AppLog.log('cloudflare challenge', url: url);
   }
 
   final String url;
@@ -208,7 +207,7 @@ class Han1meApi {
     final title = (document.querySelector('meta[property="og:title"]')?.attributes['content'] ?? document.querySelector('title')?.text ?? '').trim();
     final finalTitle = title.contains('- Hanime1.me') || title.contains('- H\u52d5\u6f2b/\u88cf\u756a') || title.contains('- Javchu.com') ? title.split(' - ').first.trim() : title;
     final cover = _absolute(baseUrl, player?.attributes['poster'] ?? document.querySelector('meta[property="og:image"]')?.attributes['content']);
-    final duration = _formatDuration(int.tryParse(document.querySelector('meta[property="og:video:duration"]')?.attributes['content'] ?? ''));
+    final duration = _formatDuration(_durationSeconds(document, body));
     final downloadUrl = _absolute(baseUrl, document.querySelector('#downloadBtn')?.attributes['href']);
     final descriptionPanel = document.querySelector('div.video-description-panel');
     final uploaderRow = descriptionPanel?.children.where((element) => (element.attributes['style'] ?? '').contains('display: flex')).firstOrNull;
@@ -532,28 +531,54 @@ class Han1meApi {
   }
 
   Future<void> _form(String url, Map<String, String> data, String token) async {
-    final origin = _resolvedOrigin(url);
-    final requestUrl = _atOrigin(url, origin);
-    final currentToken = await _csrfToken(origin) ?? token;
-    final formData = {...data, '_token': currentToken};
-    final response = await _http.post(
-      requestUrl,
-      formData,
-      headers: {'X-CSRF-TOKEN': currentToken, 'Referer': '$origin/'},
-    );
+    var origin = _resolvedOrigin(url);
+    var currentToken = await _csrfToken(origin) ?? token;
+    origin = _resolvedOrigin(origin);
+    var response = await _submitForm(url, origin, data, currentToken);
+    if (response.statusCode == 419) {
+      AppLog.log('csrf token rejected, retrying', method: 'POST', url: url, statusCode: 419);
+      currentToken = await _csrfToken(origin, fresh: true) ?? token;
+      origin = _resolvedOrigin(origin);
+      response = await _submitForm(url, origin, data, currentToken, useEch: false);
+    }
     if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(url);
     if (Uri.tryParse(response.url)?.path == '/login') {
       throw DioException(requestOptions: RequestOptions(path: url), message: 'Authentication expired');
     }
-    if (response.statusCode >= 400 && response.statusCode != 302) throw DioException(requestOptions: RequestOptions(path: url), message: 'Request failed: HTTP ${response.statusCode}');
+    if (response.statusCode >= 400 && response.statusCode != 302) {
+      AppLog.log('form request failed', method: 'POST', url: url, statusCode: response.statusCode);
+      throw DioException(requestOptions: RequestOptions(path: url), message: 'Request failed: HTTP ${response.statusCode}');
+    }
   }
 
-  Future<String?> _csrfToken(String baseUrl) async {
-    final response = await _http.get(siteHomeUrl(baseUrl), headers: {'Referer': siteHomeUrl(baseUrl)});
+  Future<Han1meHttpResponse> _submitForm(String url, String origin, Map<String, String> data, String token, {bool useEch = true}) => _http.post(
+        _atOrigin(url, origin),
+        {...data, '_token': token},
+        useEch: useEch,
+        headers: {
+          'X-CSRF-TOKEN': token,
+          'Referer': '$origin/',
+          'Origin': origin,
+          'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      );
+
+  Future<String?> _csrfToken(String baseUrl, {bool fresh = false}) async {
+    final home = Uri.parse(siteHomeUrl(baseUrl));
+    final requestUri = fresh
+        ? home.replace(queryParameters: {...home.queryParameters, '_': '${DateTime.now().millisecondsSinceEpoch}'})
+        : home;
+    final response = await _http.get(requestUri.toString(), headers: {'Referer': home.toString()});
     if (isCloudflareResponse(response.statusCode, response.headers, response.body)) throw CloudflareChallengeException(baseUrl);
     if (response.statusCode >= 400) return null;
+    final resolvedOrigin = Uri.tryParse(response.url)?.origin;
+    if (resolvedOrigin != null && resolvedOrigin.isNotEmpty) _resolvedOrigins[home.origin] = resolvedOrigin;
     final document = html_parser.parse(response.body);
-    return document.querySelector('meta[name="csrf-token"]')?.attributes['content'] ?? document.querySelector('input[name="_token"]')?.attributes['value'];
+    final value = (document.querySelector('meta[name="csrf-token"]')?.attributes['content'] ??
+            document.querySelector('input[name="_token"]')?.attributes['value'])
+        ?.trim();
+    return value == null || value.isEmpty ? null : value;
   }
 
   String _resolvedOrigin(String url) => _resolvedOrigins[Uri.parse(url).origin] ?? Uri.parse(url).origin;
@@ -678,9 +703,7 @@ class Han1meApi {
 
   String _absolute(String baseUrl, String? path) {
     if (path == null || path.isEmpty) return '';
-    final resolved = Uri.parse(baseUrl).resolve(path).toString();
-    // 媒体 URL 统一改写：AV 站 CDN 节点 tXX→t33、图片 CDN 备用域（移动按 SNI 封锁）
-    return rewriteMediaUrl(resolved);
+    return rewriteMediaUrl(Uri.parse(baseUrl).resolve(path).toString());
   }
 
   String _mergeCookies(String? current, String next) {
@@ -724,6 +747,43 @@ class Han1meApi {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final remainingSeconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return duration.inHours > 0 ? '${duration.inHours}:$minutes:$remainingSeconds' : '$minutes:$remainingSeconds';
+  }
+
+  int? _durationSeconds(dom.Document document, String body) {
+    final meta = int.tryParse(document.querySelector('meta[property="og:video:duration"]')?.attributes['content'] ?? '');
+    if (meta != null && meta > 0) return meta;
+    final iso = document.querySelector('meta[itemprop="duration"]')?.attributes['content'] ??
+        RegExp(r'''["']duration["']\s*:\s*["']([^"']+)["']''').firstMatch(body)?.group(1);
+    final isoSeconds = _isoDurationSeconds(iso);
+    if (isoSeconds != null) return isoSeconds;
+    for (final selector in ['#video-duration', '.video-duration', '.video-title .duration', '.video-description-panel .duration']) {
+      final seconds = _durationLabelSeconds(document.querySelector(selector)?.text);
+      if (seconds != null) return seconds;
+    }
+    return null;
+  }
+
+  int? _durationLabelSeconds(String? value) {
+    final parts = value?.trim().split(':') ?? const <String>[];
+    if (parts.length < 2 || parts.length > 3) return null;
+    var seconds = 0;
+    for (final part in parts) {
+      final number = int.tryParse(part.trim());
+      if (number == null || number < 0) return null;
+      seconds = seconds * 60 + number;
+    }
+    return seconds > 0 ? seconds : null;
+  }
+
+  int? _isoDurationSeconds(String? value) {
+    final match = RegExp(r'^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$').firstMatch(value?.trim() ?? '');
+    if (match == null) return null;
+    final days = int.tryParse(match.group(1) ?? '') ?? 0;
+    final hours = int.tryParse(match.group(2) ?? '') ?? 0;
+    final minutes = int.tryParse(match.group(3) ?? '') ?? 0;
+    final seconds = int.tryParse(match.group(4) ?? '') ?? 0;
+    final total = days * 86400 + hours * 3600 + minutes * 60 + seconds;
+    return total > 0 ? total : null;
   }
 
   int _javaStringHash(String text) {

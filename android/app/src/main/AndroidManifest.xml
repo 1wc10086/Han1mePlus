@@ -8,6 +8,7 @@
     <application
         android:label="Han1me+"
         android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true">
         <activity

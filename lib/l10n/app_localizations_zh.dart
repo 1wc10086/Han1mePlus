@@ -1762,6 +1762,103 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get landscapeFloatingBarDescription => '横屏时显示浮动操作栏,并跟随播放控制条一起显示或隐藏。';
+  @override
+  String get diagnosticLog => '诊断日志';
+
+  @override
+  String logSummary(int requests, int engine) {
+    return '$requests 条请求 · $engine 条引擎日志';
+  }
+
+  @override
+  String get copy => '复制';
+
+  @override
+  String get logsCopied => '日志已复制';
+
+  @override
+  String get logsCleared => '日志已清空';
+
+  @override
+  String get echEngineLogs => 'ECH 引擎日志';
+
+  @override
+  String get refresh => '刷新';
+
+  @override
+  String get mediaCdnRegionNode => '媒体 CDN 区域节点';
+
+  @override
+  String get mediaCdnAuto => '自动（系统解析）';
+
+  @override
+  String get mediaCdnAutoDescription => '不指定边缘节点';
+
+  @override
+  String get mediaCdnCustomIp => '自定义 IP';
+
+  @override
+  String get mediaCdnCustomIpHint => '例如 156.146.44.89，多个用逗号分隔';
+
+  @override
+  String get mediaCdnCustomIpPriority => '优先于所选区域';
+
+  @override
+  String get mediaCdnMeasure => '测速';
+
+  @override
+  String get mediaCdnMeasuring => '测速中…';
+
+  @override
+  String get mediaCdnUnreachable => '不可达';
+
+  @override
+  String mediaCdnLatencyMs(int ms) {
+    return '$ms 毫秒';
+  }
+
+  @override
+  String get mediaCdnNodesHint => '节点为 CDN77 边缘，延迟为真实 TLS 握手耗时。';
+
+  @override
+  String get regionJapan => '日本';
+
+  @override
+  String get regionHongKong => '香港';
+
+  @override
+  String get regionTaiwan => '中国台湾';
+
+  @override
+  String get regionRussia => '俄罗斯';
+
+  @override
+  String get regionUnitedStates => '美国';
+
+  @override
+  String get regionEurope => '欧洲';
+
+  @override
+  String get regionSingapore => '新加坡';
+
+  @override
+  String get echDirect => 'ECH 直连';
+
+  @override
+  String get echDirectStatus => 'ECH 直连状态';
+
+  @override
+  String get echNotLoaded => '原生引擎未加载（缺少 libech_http.so），请求使用普通通道。';
+
+  @override
+  String get echEnabledHint => '共享 ECH 配置 + Cloudflare 边缘 IP 直连，零 DNS / 零 DoH。';
+
+  @override
+  String get echUnavailable => '原生引擎不可用，请求使用普通通道';
+
+  @override
+  String get echNoLogs => '暂无 ECH 请求。';
+
 }
 
 class AppLocalizationsZhTw extends AppLocalizationsZh {
@@ -3521,4 +3618,101 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get landscapeFloatingBarDescription => '橫屏時顯示浮動操作列,並跟隨播放控制列一起顯示或隱藏。';
+  @override
+  String get diagnosticLog => '診斷日誌';
+
+  @override
+  String logSummary(int requests, int engine) {
+    return '$requests 筆請求 · $engine 筆引擎日誌';
+  }
+
+  @override
+  String get copy => '複製';
+
+  @override
+  String get logsCopied => '日誌已複製';
+
+  @override
+  String get logsCleared => '日誌已清空';
+
+  @override
+  String get echEngineLogs => 'ECH 引擎日誌';
+
+  @override
+  String get refresh => '重新整理';
+
+  @override
+  String get mediaCdnRegionNode => '媒體 CDN 區域節點';
+
+  @override
+  String get mediaCdnAuto => '自動（系統解析）';
+
+  @override
+  String get mediaCdnAutoDescription => '不指定邊緣節點';
+
+  @override
+  String get mediaCdnCustomIp => '自訂 IP';
+
+  @override
+  String get mediaCdnCustomIpHint => '例如 156.146.44.89，多個以逗號分隔';
+
+  @override
+  String get mediaCdnCustomIpPriority => '優先於所選區域';
+
+  @override
+  String get mediaCdnMeasure => '測速';
+
+  @override
+  String get mediaCdnMeasuring => '測速中…';
+
+  @override
+  String get mediaCdnUnreachable => '無法連線';
+
+  @override
+  String mediaCdnLatencyMs(int ms) {
+    return '$ms 毫秒';
+  }
+
+  @override
+  String get mediaCdnNodesHint => '節點為 CDN77 邊緣，延遲為真實 TLS 握手耗時。';
+
+  @override
+  String get regionJapan => '日本';
+
+  @override
+  String get regionHongKong => '香港';
+
+  @override
+  String get regionTaiwan => '台灣';
+
+  @override
+  String get regionRussia => '俄羅斯';
+
+  @override
+  String get regionUnitedStates => '美國';
+
+  @override
+  String get regionEurope => '歐洲';
+
+  @override
+  String get regionSingapore => '新加坡';
+
+  @override
+  String get echDirect => 'ECH 直連';
+
+  @override
+  String get echDirectStatus => 'ECH 直連狀態';
+
+  @override
+  String get echNotLoaded => '原生引擎未載入（缺少 libech_http.so），請求使用一般通道。';
+
+  @override
+  String get echEnabledHint => '共享 ECH 設定 + Cloudflare 邊緣 IP 直連，零 DNS / 零 DoH。';
+
+  @override
+  String get echUnavailable => '原生引擎無法使用，請求使用一般通道';
+
+  @override
+  String get echNoLogs => '尚無 ECH 請求。';
+
 }

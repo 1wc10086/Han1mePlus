@@ -48,6 +48,8 @@ class MainActivity : FlutterActivity() {
         const val dohCustomUrlKey = "doh_custom_url"
         const val dohBootstrapIpsKey = "doh_bootstrap_ips"
         const val dohTimeoutSecondsKey = "doh_timeout_seconds"
+        const val mediaCdnRegionKey = "media_cdn_region"
+        const val mediaCdnCustomIpKey = "media_cdn_custom_ip"
 
         fun saveCookies(context: Context, cookies: String, url: String) {
             val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
@@ -408,6 +410,8 @@ class MainActivity : FlutterActivity() {
             dohCustomUrl = preferences.getString(dohCustomUrlKey, "").orEmpty(),
             dohBootstrapIps = preferences.getString(dohBootstrapIpsKey, "").orEmpty(),
             dohTimeoutSeconds = preferences.getInt(dohTimeoutSecondsKey, 10).coerceIn(1, 60),
+            mediaCdnRegion = preferences.getString(mediaCdnRegionKey, "").orEmpty(),
+            mediaCdnCustomIp = preferences.getString(mediaCdnCustomIpKey, "").orEmpty(),
         )
     }
 
@@ -419,6 +423,8 @@ class MainActivity : FlutterActivity() {
             .putString(dohCustomUrlKey, settings.dohCustomUrl)
             .putString(dohBootstrapIpsKey, settings.dohBootstrapIps)
             .putInt(dohTimeoutSecondsKey, settings.dohTimeoutSeconds)
+            .putString(mediaCdnRegionKey, settings.mediaCdnRegion)
+            .putString(mediaCdnCustomIpKey, settings.mediaCdnCustomIp)
             .apply()
     }
 
@@ -438,8 +444,6 @@ private data class NetworkSettings(
 private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns {
     override fun lookup(hostname: String): List<java.net.InetAddress> {
         val current = settings()
-        // 媒体 CDN 节点：手动选择区域 / 自定义 IP 时，媒体两域直接解析到指定节点
-        // （对齐 Han1meViewer resolve：vdownload 域与备用域内容等价，共用同一套节点）
         if (hostname.equals(MEDIA_CDN_HOST, true) || hostname.equals(MEDIA_BACKUP_HOST, true)) {
             val nodeIps = mediaNodeIps(current)
             if (nodeIps.isNotEmpty()) {
@@ -519,19 +523,17 @@ private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns
             "2606:4700:3035::ac43:bb8d", "2606:4700:3030::6815:746", "2606:4700:3030::6815:714",
         )
 
-        // 媒体 CDN 两域（替换前后等价，共用同一套 CDN77 节点）
         const val MEDIA_CDN_HOST = "vdownload.hembed.com"
         const val MEDIA_BACKUP_HOST = "1497203185.rsc.cdn77.org"
 
-        // CDN77 区域边缘节点（与 Han1meViewer CDN_REGION_NODES 同源）
         val CDN_REGION_NODES = mapOf(
-            "日本" to listOf("178.249.213.26"),
-            "香港" to listOf("156.146.44.89", "156.146.44.90"),
-            "中国台湾" to listOf("203.211.9.12"),
-            "俄罗斯" to listOf("37.19.202.45"),
-            "美国" to listOf("156.146.43.178", "156.146.53.36", "143.244.51.58", "89.187.187.19", "89.187.187.18", "84.17.63.146"),
-            "欧洲" to listOf("95.173.197.105", "95.173.197.104", "79.127.138.30", "79.112.216.203", "79.127.211.90", "212.102.56.179", "195.181.175.40", "195.181.172.3", "89.222.120.8", "84.17.50.8", "84.17.50.9", "109.61.92.54", "212.102.44.18"),
-            "新加坡" to listOf("79.127.235.6", "79.127.235.2"),
+            "japan" to listOf("178.249.213.26"),
+            "hongKong" to listOf("156.146.44.89", "156.146.44.90"),
+            "taiwan" to listOf("203.211.9.12"),
+            "russia" to listOf("37.19.202.45"),
+            "unitedStates" to listOf("156.146.43.178", "156.146.53.36", "143.244.51.58", "89.187.187.19", "89.187.187.18", "84.17.63.146"),
+            "europe" to listOf("95.173.197.105", "95.173.197.104", "79.127.138.30", "79.112.216.203", "79.127.211.90", "212.102.56.179", "195.181.175.40", "195.181.172.3", "89.222.120.8", "84.17.50.8", "84.17.50.9", "109.61.92.54", "212.102.44.18"),
+            "singapore" to listOf("79.127.235.6", "79.127.235.2"),
         )
 
         fun address(hostname: String, value: String) = InetAddress.getByAddress(hostname, InetAddress.getByName(value).address)

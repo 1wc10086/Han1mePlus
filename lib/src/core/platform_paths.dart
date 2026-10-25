@@ -15,8 +15,6 @@ Future<Directory> appStorageDirectory() async {
 
 Future<Directory> downloadStorageDirectory() async {
   if (Platform.isIOS) {
-    // Documents is exposed in the Files app ("On My iPad > Han1me+") via
-    // UIFileSharingEnabled, so downloads stay user-visible.
     final documents = await getApplicationDocumentsDirectory();
     return Directory(path.join(documents.path, 'Download'));
   }

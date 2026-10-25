@@ -58,7 +58,9 @@ final class HttpMethodChannelHandler {
                 dohPreset: args["dohPreset"] as? String ?? "alidns",
                 dohCustomUrl: args["dohCustomUrl"] as? String ?? "",
                 dohBootstrapIps: args["dohBootstrapIps"] as? String ?? "",
-                dohTimeoutSeconds: min(max(args["dohTimeoutSeconds"] as? Int ?? 10, 1), 60)
+                dohTimeoutSeconds: min(max(args["dohTimeoutSeconds"] as? Int ?? 10, 1), 60),
+                mediaCdnRegion: args["mediaCdnRegion"] as? String ?? "",
+                mediaCdnCustomIp: args["mediaCdnCustomIp"] as? String ?? ""
             )
             client.setNetworkSettings(settings)
             result(nil)

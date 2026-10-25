@@ -1821,4 +1821,101 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get landscapeFloatingBarDescription =>
       'Show the floating action bar in landscape, following the player controls\' visibility.';
+  @override
+  String get diagnosticLog => 'Diagnostic Log';
+
+  @override
+  String logSummary(int requests, int engine) {
+    return '$requests requests · $engine engine lines';
+  }
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get logsCopied => 'Logs copied';
+
+  @override
+  String get logsCleared => 'Logs cleared';
+
+  @override
+  String get echEngineLogs => 'ECH engine logs';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get mediaCdnRegionNode => 'Media CDN Region Node';
+
+  @override
+  String get mediaCdnAuto => 'Automatic (system DNS)';
+
+  @override
+  String get mediaCdnAutoDescription => 'Do not pin an edge node';
+
+  @override
+  String get mediaCdnCustomIp => 'Custom IP';
+
+  @override
+  String get mediaCdnCustomIpHint => 'e.g. 156.146.44.89, comma-separated';
+
+  @override
+  String get mediaCdnCustomIpPriority => 'Overrides the selected region';
+
+  @override
+  String get mediaCdnMeasure => 'Measure latency';
+
+  @override
+  String get mediaCdnMeasuring => 'Measuring…';
+
+  @override
+  String get mediaCdnUnreachable => 'Unreachable';
+
+  @override
+  String mediaCdnLatencyMs(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get mediaCdnNodesHint => 'Nodes are CDN77 edges; latency is measured by a real TLS handshake.';
+
+  @override
+  String get regionJapan => 'Japan';
+
+  @override
+  String get regionHongKong => 'Hong Kong';
+
+  @override
+  String get regionTaiwan => 'Taiwan';
+
+  @override
+  String get regionRussia => 'Russia';
+
+  @override
+  String get regionUnitedStates => 'United States';
+
+  @override
+  String get regionEurope => 'Europe';
+
+  @override
+  String get regionSingapore => 'Singapore';
+
+  @override
+  String get echDirect => 'ECH Direct';
+
+  @override
+  String get echDirectStatus => 'ECH Direct Status';
+
+  @override
+  String get echNotLoaded => 'Native engine not loaded (libech_http.so is missing); requests use the standard channel.';
+
+  @override
+  String get echEnabledHint => 'Shared ECH config with direct Cloudflare edge IPs; no DNS and no DoH.';
+
+  @override
+  String get echUnavailable => 'Native engine unavailable; requests use the standard channel';
+
+  @override
+  String get echNoLogs => 'No ECH requests yet.';
+
 }

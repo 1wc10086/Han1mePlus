@@ -13,5 +13,7 @@ Future<void> bootstrapDesktopNetwork([AppSettings? settings]) async {
     dohCustomUrl: resolved.dohCustomUrl,
     dohBootstrapIps: resolved.dohBootstrapIps,
     dohTimeoutSeconds: resolved.dohTimeoutSeconds,
+    mediaCdnRegion: resolved.mediaCdnRegion,
+    mediaCdnCustomIp: resolved.mediaCdnCustomIp,
   );
 }

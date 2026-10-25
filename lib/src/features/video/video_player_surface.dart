@@ -15,6 +15,7 @@ import '../../core/platform_service.dart';
 import '../../core/settings.dart';
 import '../../core/video_player_shutdown.dart';
 import '../../domain/models/video.dart';
+import '../../core/video_metrics.dart';
 import '../settings/settings_controller.dart';
 import 'player_controls_visibility.dart';
 import 'video_player_controls.dart';
@@ -122,8 +123,14 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     } catch (_) {}
   }
 
+  Duration _playbackDuration(VideoPlayerController controller) {
+    final value = controller.value.duration;
+    if (value > Duration.zero) return value;
+    return parseVideoDuration(widget.video.duration) ?? Duration.zero;
+  }
+
   void _keyboardSeek(VideoPlayerController controller, int direction) {
-    final duration = controller.value.duration;
+    final duration = _playbackDuration(controller);
     if (duration == Duration.zero) return;
     final from = controller.value.position.inMilliseconds;
     final target = (from + direction * _keyboardSeekStep.inMilliseconds).clamp(0, duration.inMilliseconds);
@@ -263,7 +270,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
     final size = context.size ?? MediaQuery.sizeOf(context);
     final direction = _dragDirection ??= details.delta.dx.abs() > details.delta.dy.abs() ? _DragDirection.horizontal : _DragDirection.vertical;
     if (direction == _DragDirection.horizontal) {
-      final duration = controller.value.duration;
+      final duration = _playbackDuration(controller);
       final sensitivity = ref.read(settingsProvider).valueOrNull?.seekSensitivity ?? .35;
       if (duration != Duration.zero) {
         final position = (controller.value.position.inMilliseconds + details.delta.dx / size.width * duration.inMilliseconds * sensitivity).round().clamp(0, duration.inMilliseconds).toInt();
@@ -318,7 +325,10 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
               onPanEnd: _dragEnd,
               child: Stack(fit: StackFit.expand, children: [
                 const ColoredBox(color: Colors.black),
-                _VideoViewport(controller: controller),
+                ValueListenableBuilder<VideoPlayerValue>(
+                  valueListenable: controller,
+                  builder: (context, value, _) => _VideoViewport(controller: controller, value: value),
+                ),
                 _BufferingOverlay(controller: controller, onReload: widget.onReload),
                 ValueListenableBuilder<VideoPlayerValue>(valueListenable: controller, builder: (context, value, _) => _showControls && !_locked ? VideoPlayerControls(controller: controller, fullscreen: widget.fullscreen, onFullscreen: widget.onFullscreen, onInteraction: _restartTimer, video: widget.video, quality: widget.quality, onQualitySelected: widget.onQualitySelected, onSuperResolutionSelected: widget.onSuperResolutionSelected, onNext: widget.onNext, onEpisodeSelected: widget.onEpisodeSelected) : const SizedBox.shrink()),
                 if (_locked) Align(alignment: Alignment.centerLeft, child: IconButton(color: Colors.white, tooltip: l10n.unlockControls, onPressed: () { setState(() => _locked = false); _restartTimer(); _applyControlsVisibility(); }, icon: const Icon(Icons.lock))),
@@ -341,7 +351,7 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        VideoPlayerSkipButton(controller: controller, onInteraction: _restartTimer),
+                        VideoPlayerSkipButton(controller: controller, onInteraction: _restartTimer, fallbackDuration: parseVideoDuration(widget.video.duration)),
                         if (Platform.isAndroid) IconButton(color: Colors.white, tooltip: l10n.pictureInPicture, visualDensity: VisualDensity.compact, onPressed: () => _enterPictureInPicture(controller), icon: const Icon(Icons.picture_in_picture_alt_outlined)),
                         widget.fullscreen
                             ? VideoPlayerFullscreenMoreMenu(sources: widget.video.sources, quality: widget.quality)
@@ -381,18 +391,20 @@ class _VideoPlayerSurfaceState extends ConsumerState<VideoPlayerSurface> {
 }
 
 class _VideoViewport extends ConsumerWidget {
-  const _VideoViewport({required this.controller});
+  const _VideoViewport({required this.controller, required this.value});
   final VideoPlayerController controller;
+  final VideoPlayerValue value;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final aspect = ref.watch(settingsProvider).valueOrNull?.videoAspectRatio ?? VideoAspectRatio.auto;
-    final ratio = controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio;
+    final ratio = videoAspectRatio(value);
+    final viewport = SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller));
     return switch (aspect) {
       VideoAspectRatio.auto => Center(child: AspectRatio(aspectRatio: ratio, child: VideoPlayer(controller))),
-      VideoAspectRatio.ratio4x3 => Center(child: AspectRatio(aspectRatio: 4 / 3, child: FittedBox(fit: BoxFit.contain, child: SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller))))),
-      VideoAspectRatio.crop => Positioned.fill(child: FittedBox(fit: BoxFit.cover, clipBehavior: Clip.hardEdge, child: SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller)))),
-      VideoAspectRatio.stretch => Positioned.fill(child: FittedBox(fit: BoxFit.fill, clipBehavior: Clip.hardEdge, child: SizedBox(width: ratio * 1000, height: 1000, child: VideoPlayer(controller)))),
+      VideoAspectRatio.ratio4x3 => Center(child: AspectRatio(aspectRatio: 4 / 3, child: FittedBox(fit: BoxFit.contain, child: viewport))),
+      VideoAspectRatio.crop => Positioned.fill(child: FittedBox(fit: BoxFit.cover, alignment: Alignment.bottomCenter, clipBehavior: Clip.hardEdge, child: viewport)),
+      VideoAspectRatio.stretch => Positioned.fill(child: FittedBox(fit: BoxFit.fill, clipBehavior: Clip.hardEdge, child: viewport)),
     };
   }
 }

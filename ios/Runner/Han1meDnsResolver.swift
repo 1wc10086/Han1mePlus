@@ -5,6 +5,10 @@ enum Han1meDnsResolver {
     private static var cachedResolverKey: String?
 
     static func resolve(hostname: String, settings: Han1meNetworkSettings) throws -> [String]? {
+        if Han1meHttpStore.mediaCdnHosts.contains(hostname.lowercased()) {
+            let nodes = settings.mediaCdnNodes
+            if !nodes.isEmpty { return nodes }
+        }
         if settings.useBuiltInHosts && !settings.useDoh && Han1meHttpStore.hanimeHosts.contains(hostname) {
             return Han1meHttpStore.builtInAddresses
         }

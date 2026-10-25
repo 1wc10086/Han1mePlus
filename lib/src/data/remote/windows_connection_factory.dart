@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../core/network/media_cdn.dart';
+import '../../core/network/network_policy.dart';
+
 class WindowsConnectionFactory {
   static var _nextAddress = 0;
 
@@ -24,6 +27,8 @@ class WindowsConnectionFactory {
     required this.dohCustomUrl,
     required this.dohBootstrapIps,
     required this.dohTimeoutSeconds,
+    this.mediaCdnRegion = '',
+    this.mediaCdnCustomIp = '',
   });
 
   final bool useBuiltInHosts;
@@ -32,12 +37,18 @@ class WindowsConnectionFactory {
   final String dohCustomUrl;
   final String dohBootstrapIps;
   final int dohTimeoutSeconds;
+  final String mediaCdnRegion;
+  final String mediaCdnCustomIp;
 
   Duration get _timeout => Duration(seconds: dohTimeoutSeconds);
 
   Future<ConnectionTask<Socket>> call(Uri uri, String? proxyHost, int? proxyPort) async {
     if (proxyHost != null) return Socket.startConnect(proxyHost, proxyPort ?? uri.port);
     final port = uri.hasPort ? uri.port : (uri.isScheme('https') ? 443 : 80);
+    if (kMediaCdnHosts.contains(uri.host)) {
+      final nodes = mediaCdnNodesFor(region: mediaCdnRegion, customIp: mediaCdnCustomIp);
+      if (nodes.isNotEmpty) return _connect(uri, nodes, port);
+    }
     if (useBuiltInHosts && hanimeHosts.contains(uri.host)) {
       return _connect(uri, [...builtInAddresses, uri.host], port);
     }

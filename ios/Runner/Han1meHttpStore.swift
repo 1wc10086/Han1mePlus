@@ -9,9 +9,25 @@ enum Han1meHttpStore {
     static let dohCustomUrlKey = "doh_custom_url"
     static let dohBootstrapIpsKey = "doh_bootstrap_ips"
     static let dohTimeoutSecondsKey = "doh_timeout_seconds"
+    static let mediaCdnRegionKey = "media_cdn_region"
+    static let mediaCdnCustomIpKey = "media_cdn_custom_ip"
 
     static let hanimeHosts: Set<String> = [
-        "hanime1.me", "hanime1.com", "hanimeone.me", "javchu.com",
+        "hanime1.me", "hanime1.com", "hanimeone.me", "javchu.com", "hanime169.net", "www.hanime169.net",
+    ]
+
+    static let mediaCdnHosts: Set<String> = [
+        "vdownload.hembed.com", "1497203185.rsc.cdn77.org",
+    ]
+
+    static let cdnRegionNodes: [String: [String]] = [
+        "japan": ["178.249.213.26"],
+        "hongKong": ["156.146.44.89", "156.146.44.90"],
+        "taiwan": ["203.211.9.12"],
+        "russia": ["37.19.202.45"],
+        "unitedStates": ["156.146.43.178", "156.146.53.36", "143.244.51.58", "89.187.187.19", "89.187.187.18", "84.17.63.146"],
+        "europe": ["95.173.197.105", "95.173.197.104", "79.127.138.30", "79.112.216.203", "79.127.211.90", "212.102.56.179", "195.181.175.40", "195.181.172.3", "89.222.120.8", "84.17.50.8", "84.17.50.9", "109.61.92.54", "212.102.44.18"],
+        "singapore": ["79.127.235.6", "79.127.235.2"],
     ]
 
     static let builtInAddresses: [String] = [
@@ -76,7 +92,9 @@ enum Han1meHttpStore {
             dohPreset: defaults.string(forKey: dohPresetKey) ?? "alidns",
             dohCustomUrl: defaults.string(forKey: dohCustomUrlKey) ?? "",
             dohBootstrapIps: defaults.string(forKey: dohBootstrapIpsKey) ?? "",
-            dohTimeoutSeconds: min(max(defaults.integer(forKey: dohTimeoutSecondsKey), 1), 60)
+            dohTimeoutSeconds: min(max(defaults.integer(forKey: dohTimeoutSecondsKey), 1), 60),
+            mediaCdnRegion: defaults.string(forKey: mediaCdnRegionKey) ?? "",
+            mediaCdnCustomIp: defaults.string(forKey: mediaCdnCustomIpKey) ?? ""
         )
     }
 
@@ -87,6 +105,8 @@ enum Han1meHttpStore {
         defaults.set(settings.dohCustomUrl, forKey: dohCustomUrlKey)
         defaults.set(settings.dohBootstrapIps, forKey: dohBootstrapIpsKey)
         defaults.set(settings.dohTimeoutSeconds, forKey: dohTimeoutSecondsKey)
+        defaults.set(settings.mediaCdnRegion, forKey: mediaCdnRegionKey)
+        defaults.set(settings.mediaCdnCustomIp, forKey: mediaCdnCustomIpKey)
     }
 }
 
@@ -97,7 +117,18 @@ struct Han1meNetworkSettings: Equatable {
     var dohCustomUrl = ""
     var dohBootstrapIps = ""
     var dohTimeoutSeconds = 10
+    var mediaCdnRegion = ""
+    var mediaCdnCustomIp = ""
 
+    var mediaCdnNodes: [String] {
+        let custom = mediaCdnCustomIp
+            .split { $0 == "," || $0 == ";" || $0 == " " || $0 == "\n" }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !custom.isEmpty { return custom }
+        guard !mediaCdnRegion.isEmpty else { return [] }
+        return Han1meHttpStore.cdnRegionNodes[mediaCdnRegion] ?? []
+    }
     var dohUrl: String? {
         guard useDoh else { return nil }
         switch dohPreset {

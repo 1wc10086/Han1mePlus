@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -11,7 +12,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 import 'settings.dart';
 import 'shader_assets.dart';
 import 'shader_service.dart';
-import 'app_log.dart';
+import 'logging/app_log.dart';
 
 class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
   static AppSettings settings = const AppSettings();
@@ -114,7 +115,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
         Media(resource, httpHeaders: dataSource.httpHeaders),
         play: false,
       );
-      AppLog.log('视频播放: $resource');
+      AppLog.log('play $resource');
       return textureId;
     } catch (_) {
       if (textureId != null && identical(_players[textureId], player)) {
@@ -266,39 +267,61 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     int? width;
     int? height;
     Duration? duration;
+    Size? lastSize;
+    Duration? lastDuration;
 
     bool isActive() => identical(_streamControllers[textureId], streamController) &&
         !streamController.isClosed;
 
-    void emitInitialized() {
-      if (isActive() && !completer.isCompleted) {
-        streamController.add(
-          VideoEvent(
-            eventType: VideoEventType.initialized,
-            size: Size((width ?? 0) * 1.0, (height ?? 0) * 1.0),
-            duration: duration ?? player.state.duration,
-          ),
-        );
+    void emitInitialized({bool force = false}) {
+      if (!isActive()) return;
+      final size = _resolvedVideoSize(width, height);
+      final value = duration ?? player.state.duration;
+      if (!force) {
+        if (lastSize == size && lastDuration == value) return;
+        if (!completer.isCompleted && (duration == null || width == null || height == null)) return;
+        if (completer.isCompleted && kDebugMode) return;
+      }
+      lastSize = size;
+      lastDuration = value;
+      streamController.add(
+        VideoEvent(
+          eventType: VideoEventType.initialized,
+          size: size,
+          duration: value,
+        ),
+      );
+      if (!completer.isCompleted) {
         completer.complete();
         _initializationTimers.remove(textureId)?.cancel();
       }
     }
 
-    _initializationTimers[textureId] = Timer(const Duration(seconds: 8), emitInitialized);
+    _initializationTimers[textureId] = Timer(const Duration(seconds: 8), () => emitInitialized(force: true));
 
     streamSubscriptions.add(
       player.stream.duration.listen((event) {
         if (event > Duration.zero) {
           duration = event;
-          if (!completer.isCompleted) emitInitialized();
+          emitInitialized();
         }
       }),
     );
     streamSubscriptions.add(
       player.stream.videoParams.listen((event) {
-        width = event.dw;
-        height = event.dh;
-        if (duration != null && !completer.isCompleted) emitInitialized();
+        final displayWidth = event.dw ?? 0;
+        final displayHeight = event.dh ?? 0;
+        final codedWidth = event.w ?? 0;
+        final codedHeight = event.h ?? 0;
+        if (codedWidth <= 0 || codedHeight <= 0) return;
+        if (displayWidth > 0 && displayHeight > 0) {
+          width = displayWidth;
+          height = displayHeight;
+        } else {
+          width = codedWidth;
+          height = codedHeight;
+        }
+        emitInitialized();
       }),
     );
     streamSubscriptions.add(
@@ -357,7 +380,7 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
     );
     streamSubscriptions.add(
       player.stream.error.listen((event) async {
-        AppLog.log('视频错误: $event');
+        AppLog.log('player error: $event');
         await completer.future;
         if (isActive()) {
           streamController.addError(PlatformException(code: '', message: event));
@@ -365,4 +388,13 @@ class ConfiguredMediaKitVideoPlayer extends VideoPlayerPlatform {
       }),
     );
   }
+}
+
+Size _resolvedVideoSize(int? width, int? height) {
+  final resolvedWidth = width ?? 0;
+  final resolvedHeight = height ?? 0;
+  if (resolvedWidth <= 0 || resolvedHeight <= 0) return const Size(1920, 1080);
+  final ratio = resolvedWidth / resolvedHeight;
+  if (ratio < 0.1 || ratio > 10) return const Size(1920, 1080);
+  return Size(resolvedWidth.toDouble(), resolvedHeight.toDouble());
 }

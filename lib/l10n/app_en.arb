@@ -862,5 +862,53 @@
   "libraryTabOrderDescription": "Reorder the tabs shown in My Collection.",
   "restoreDefaultOrder": "Restore default order",
   "landscapeFloatingBar": "Show Floating Bar in Landscape",
-  "landscapeFloatingBarDescription": "Show the floating action bar in landscape, following the player controls' visibility."
+  "landscapeFloatingBarDescription": "Show the floating action bar in landscape, following the player controls' visibility.",
+  "diagnosticLog": "Diagnostic Log",
+  "logSummary": "{requests} requests · {engine} engine lines",
+  "copy": "Copy",
+  "logsCopied": "Logs copied",
+  "logsCleared": "Logs cleared",
+  "echEngineLogs": "ECH engine logs",
+  "refresh": "Refresh",
+  "mediaCdnRegionNode": "Media CDN Region Node",
+  "mediaCdnAuto": "Automatic (system DNS)",
+  "mediaCdnAutoDescription": "Do not pin an edge node",
+  "mediaCdnCustomIp": "Custom IP",
+  "mediaCdnCustomIpHint": "e.g. 156.146.44.89, comma-separated",
+  "mediaCdnCustomIpPriority": "Overrides the selected region",
+  "mediaCdnMeasure": "Measure latency",
+  "mediaCdnMeasuring": "Measuring…",
+  "mediaCdnUnreachable": "Unreachable",
+  "mediaCdnLatencyMs": "{ms} ms",
+  "mediaCdnNodesHint": "Nodes are CDN77 edges; latency is measured by a real TLS handshake.",
+  "regionJapan": "Japan",
+  "regionHongKong": "Hong Kong",
+  "regionTaiwan": "Taiwan",
+  "regionRussia": "Russia",
+  "regionUnitedStates": "United States",
+  "regionEurope": "Europe",
+  "regionSingapore": "Singapore",
+  "echDirect": "ECH Direct",
+  "echDirectStatus": "ECH Direct Status",
+  "echNotLoaded": "Native engine not loaded (libech_http.so is missing); requests use the standard channel.",
+  "echEnabledHint": "Shared ECH config with direct Cloudflare edge IPs; no DNS and no DoH.",
+  "echUnavailable": "Native engine unavailable; requests use the standard channel",
+  "echNoLogs": "No ECH requests yet.",
+  "@logSummary": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "engine": {
+        "type": "int"
+      }
+    }
+  },
+  "@mediaCdnLatencyMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -12,6 +12,8 @@ class WindowsHttpOverrides extends HttpOverrides {
     required this.dohCustomUrl,
     required this.dohBootstrapIps,
     required this.dohTimeoutSeconds,
+    this.mediaCdnRegion = '',
+    this.mediaCdnCustomIp = '',
   });
 
   final String proxy;
@@ -21,6 +23,8 @@ class WindowsHttpOverrides extends HttpOverrides {
   final String dohCustomUrl;
   final String dohBootstrapIps;
   final int dohTimeoutSeconds;
+  final String mediaCdnRegion;
+  final String mediaCdnCustomIp;
 
   static Future<String> systemProxy() async {
     final environmentProxy = Platform.environment['HTTPS_PROXY'] ??
@@ -64,7 +68,7 @@ class WindowsHttpOverrides extends HttpOverrides {
     final client = super.createHttpClient(context)
       ..connectionTimeout = const Duration(seconds: 20)
       ..idleTimeout = const Duration(seconds: 30);
-    if (useBuiltInHosts || useDoh) {
+    if (useBuiltInHosts || useDoh || mediaCdnRegion.isNotEmpty || mediaCdnCustomIp.trim().isNotEmpty) {
       client.connectionFactory = WindowsConnectionFactory(
         useBuiltInHosts: useBuiltInHosts,
         useDoh: useDoh,
@@ -72,6 +76,8 @@ class WindowsHttpOverrides extends HttpOverrides {
         dohCustomUrl: dohCustomUrl,
         dohBootstrapIps: dohBootstrapIps,
         dohTimeoutSeconds: dohTimeoutSeconds,
+        mediaCdnRegion: mediaCdnRegion,
+        mediaCdnCustomIp: mediaCdnCustomIp,
       ).call;
     }
     client.findProxy = (_) => proxy;
