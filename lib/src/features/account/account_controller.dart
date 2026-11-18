@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../../core/network/cloudflare_session.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/local/account_store.dart';
 import '../../domain/models/account.dart';
@@ -47,6 +48,7 @@ class AccountController extends AsyncNotifier<Account?> {
   }
 
   Future<void> saveCloudflareCookie(String cookie) async {
+    CloudflareSession.markVerified();
     final settings = await ref.read(settingsProvider.future);
     ref.read(han1meRepositoryProvider).setCloudflareCookie(cookie);
     await ref.read(han1meHttpClientProvider).saveCookies(cookie, url: settings.resolvedBaseUrl);

@@ -893,5 +893,11 @@
   "echNotLoaded": "原生引擎未載入（缺少 libech_http.so），請求使用一般通道。",
   "echEnabledHint": "共享 ECH 設定 + Cloudflare 邊緣 IP 直連，零 DNS / 零 DoH。",
   "echUnavailable": "原生引擎無法使用，請求使用一般通道",
-  "echNoLogs": "尚無 ECH 請求。"
+  "echNoLogs": "尚無 ECH 請求。",
+  "hideVideoActionsOnScroll": "上滑隱藏操作列",
+  "hideVideoActionsOnScrollDescription": "上滑時收藏、下載等按鈕自動收起，下滑或觸碰後重新顯示。",
+  "ech": "ECH 加密直連",
+  "echSwitchDescription": "使用原生 ECH 通道傳送站點請求",
+  "echDisabled": "ECH 已關閉，請求使用一般通道",
+  "finishedVerification": "我已完成驗證"
 }

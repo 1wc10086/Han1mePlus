@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../data/remote/webview_environment.dart';
 import '../account/account_controller.dart';
 import '../settings/settings_controller.dart';
 
@@ -88,6 +89,7 @@ class _TagEditorPageState extends ConsumerState<TagEditorPage> {
         appBar: AppBar(title: Text(title)),
         body: InAppWebView(
           initialUrlRequest: URLRequest(url: WebUri(_url!)),
+          webViewEnvironment: ref.watch(webViewEnvironmentProvider).valueOrNull,
           initialSettings: InAppWebViewSettings(javaScriptEnabled: true, domStorageEnabled: true, thirdPartyCookiesEnabled: true, userAgent: Han1meApi.userAgent),
           onLoadStart: (controller, url) {
             _opened = false;

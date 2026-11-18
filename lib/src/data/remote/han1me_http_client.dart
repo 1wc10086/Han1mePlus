@@ -3,12 +3,13 @@ import 'dart:io';
 
 import 'package:charset/charset.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 
 import '../../core/desktop_platform.dart';
 import '../../core/logging/app_log.dart';
+import '../../core/network/user_agent.dart';
 import '../../core/site_hosts.dart';
 import 'ech/ech_static_client.dart';
+import 'webview_cookie_bridge.dart';
 import 'windows_http_overrides.dart';
 
 class Han1meHttpResponse {
@@ -28,7 +29,7 @@ class Han1meHttpClient {
 
   static bool get _isDesktop => isDesktopHttpPlatform;
 
-  static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
+  static String get userAgent => siteUserAgent;
 
   Future<void> saveCookies(String cookies, {String? url}) async {
     final host = Uri.tryParse(url ?? '')?.host;
@@ -62,8 +63,7 @@ class Han1meHttpClient {
 
   Future<String> webViewCookies(String url) async {
     if (!_isDesktop) return await _channel.invokeMethod<String>('webViewCookies', {'url': url}) ?? '';
-    final cookies = await webview.CookieManager.instance().getCookies(url: webview.WebUri(url));
-    final value = cookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+    final value = await WebViewCookieBridge.read([url]);
     if (value.isNotEmpty) await saveCookies(value, url: url);
     return value;
   }
@@ -81,7 +81,7 @@ class Han1meHttpClient {
       await _channel.invokeMethod<void>('clearWebViewCookies');
       return;
     }
-    await webview.CookieManager.instance().deleteAllCookies();
+    await WebViewCookieBridge.clear();
     await clearCookies();
   }
 
@@ -225,6 +225,7 @@ class Han1meHttpClient {
     final host = uri.host;
     final baseHost = host.startsWith('www.') ? host.substring(4) : host;
     if (!hanimeSiteHosts.contains(host) && !hanimeSiteHosts.contains(baseHost)) return null;
+    if (!EchStaticClient.enabled) return null;
     final ech = EchStaticClient.instance;
     if (ech == null) return null;
     if ((_echFailures[host] ?? 0) >= _echFailureThreshold) {

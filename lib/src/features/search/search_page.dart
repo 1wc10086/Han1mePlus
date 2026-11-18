@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../data/assets/search_option_catalog.dart';
 import '../../data/remote/han1me_api.dart' show SearchResult;
 import '../../domain/models/search_query.dart';
+import '../../domain/models/video.dart';
 import '../settings/settings_controller.dart';
 import '../shared/compact_video_card.dart';
 import '../shared/video_card.dart';
@@ -48,6 +49,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  void _openResult(VideoCard video) {
+    if (video.id.isNotEmpty) {
+      context.push('/video/${video.id}');
+      return;
+    }
+    final query = (video.artistQuery ?? video.uploadTime ?? '').trim();
+    if (query.isEmpty) return;
+    final notifier = ref.read(searchQueryProvider(widget.request).notifier);
+    notifier.artist(query);
+    _textController.value = _textController.value.copyWith(text: query, selection: TextSelection.collapsed(offset: query.length));
   }
 
   Future<void> _showHistory(BuildContext context, WidgetRef ref, SearchQueryNotifier notifier) async {
@@ -127,7 +140,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           itemBuilder: (context, index, video) => CompactVideoCard(
                             video: video,
-                            onTap: video.id.isEmpty ? null : () => context.push('/video/${video.id}'),
+                            onTap: () => _openResult(video),
                           ),
                         )
                       : VideoCardGrid(
@@ -136,7 +149,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           itemBuilder: (context, index, video, horizontal) => VideoCardTile(
                             video: video,
                             horizontal: horizontal,
-                            onTap: video.id.isEmpty ? null : () => context.push('/video/${video.id}'),
+                            onTap: () => _openResult(video),
                           ),
                         ),
             ),

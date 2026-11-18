@@ -41,13 +41,14 @@ class NetworkSettingsPage extends ConsumerWidget {
               SettingsCardItem(title: l10n.customMirrorSite, subtitle: settings.mirrorActive ? settings.customMirrorSite : l10n.customMirrorSiteHint, leading: const Icon(Icons.link_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _editMirror(context, ref, settings, controller)),
               SettingsCardItem(title: l10n.useBuiltInHosts, subtitle: l10n.useBuiltInHostsDescription, leading: const Icon(Icons.dns_outlined), trailing: Switch(value: settings.useBuiltInHosts, onChanged: (value) => controller.saveChanges((current) => current.copyWith(useBuiltInHosts: value, useDoh: value ? false : current.useDoh)))),
               SettingsCardItem(title: l10n.doh, subtitle: _dohSummary(l10n, settings), leading: const Icon(Icons.security_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _editDoh(context, settings, controller)),
+              SettingsCardItem(title: l10n.ech, subtitle: _echSwitchSummary(l10n, settings), leading: const Icon(Icons.enhanced_encryption_outlined), trailing: Switch(value: settings.useEch, onChanged: (value) => controller.saveChanges((current) => current.copyWith(useEch: value)))),
             ],
           ),
           SettingsCardList(
             title: l10n.network,
             children: [
               SettingsCardItem(title: l10n.mediaCdnRegionNode, subtitle: _mediaCdnSummary(l10n, settings), leading: const Icon(Icons.storage_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => _editMediaCdn(context, settings, controller)),
-              SettingsCardItem(title: l10n.echDirect, subtitle: _echSummary(l10n), leading: const Icon(Icons.enhanced_encryption_outlined), trailing: const Icon(Icons.chevron_right), onTap: () => showEchStatusDialog(context)),
+              SettingsCardItem(title: l10n.echDirect, subtitle: _echSummary(l10n, settings), leading: const Icon(Icons.travel_explore_outlined), trailing: const Icon(Icons.chevron_right), onTap: settings.useEch ? () => showEchStatusDialog(context) : null, enabled: settings.useEch),
             ],
           ),
           SettingsCardList(
@@ -76,7 +77,14 @@ class NetworkSettingsPage extends ConsumerWidget {
     return l10n.mediaCdnAuto;
   }
 
-  String _echSummary(AppLocalizations l10n) {
+  String _echSwitchSummary(AppLocalizations l10n, AppSettings settings) {
+    if (!settings.useEch) return l10n.echDisabled;
+    if (EchStaticClient.instance == null) return l10n.echUnavailable;
+    return l10n.echSwitchDescription;
+  }
+
+  String _echSummary(AppLocalizations l10n, AppSettings settings) {
+    if (!settings.useEch) return l10n.echDisabled;
     final ech = EchStaticClient.instance;
     if (ech == null) return l10n.echUnavailable;
     return ech.logs.firstOrNull ?? l10n.echEnabledHint;

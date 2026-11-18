@@ -9,6 +9,7 @@ import '../../data/local/library_repository.dart';
 import '../../data/remote/han1me_api.dart';
 import '../../domain/models/video.dart';
 import '../account/account_controller.dart';
+import '../settings/settings_controller.dart';
 import 'player_controls_visibility.dart';
 import 'video_actions.dart';
 import 'video_comments.dart';
@@ -259,8 +260,10 @@ class _FloatingControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!landscapeFloatingBarVisible(ref, landscape: landscape)) return const SizedBox.shrink();
-    final showComment = ref.watch(videoTabProvider(video.id)) == 1 && ref.watch(accountProvider).valueOrNull != null;
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final followScroll = landscape ? landscapeFloatingBarVisible(ref, landscape: true) : (settings?.hideActionsOnScroll ?? true);
+    if (landscape && !followScroll) return const SizedBox.shrink();
+    final showComment = (settings?.commentsEnabled ?? false) && ref.watch(videoTabProvider(video.id)) == 1 && ref.watch(accountProvider).valueOrNull != null;
     final actionColumn = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -271,6 +274,8 @@ class _FloatingControls extends ConsumerWidget {
         VideoActionBar(video: video, vertical: vertical),
       ],
     );
+    final aligned = vertical ? Align(alignment: Alignment.bottomRight, child: actionColumn) : Center(child: actionColumn);
+    if (!followScroll) return ExcludeFocus(excluding: isDesktopPlatformService, child: aligned);
     return ListenableBuilder(
       listenable: scrollBehavior.state,
       builder: (context, child) {
@@ -286,9 +291,7 @@ class _FloatingControls extends ConsumerWidget {
           ),
         );
       },
-      child: vertical
-          ? Align(alignment: Alignment.bottomRight, child: actionColumn)
-          : Center(child: actionColumn),
+      child: aligned,
     );
   }
 }
@@ -306,79 +309,187 @@ class _VideoTabsView extends ConsumerStatefulWidget {
   ConsumerState<_VideoTabsView> createState() => _VideoTabsViewState();
 }
 
-class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTickerProviderStateMixin {
-  late final TabController _controller;
-  final _playerCollapse = ValueNotifier(0.0);
-  var _isPlaying = false;
+class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with TickerProviderStateMixin {
+  static const _settleDuration = Duration(milliseconds: 140);
+  static const _fallbackExtent = 240.0;
+  static const _expandBarHeight = 40.0;
+  static const _barRevealStart = .86;
+  TabController? _controller;
+  int _tabCount = 0;
+  final _playerKey = GlobalKey();
+  late final AnimationController _collapse = AnimationController(vsync: this, duration: _settleDuration, value: 0);
+  var _expandedExtent = _fallbackExtent;
+
+  bool get _commentsEnabled => ref.read(settingsProvider).valueOrNull?.commentsEnabled ?? false;
+
+  int _clampIndex(int value, int count) => value < 0 ? 0 : (value >= count ? count - 1 : value);
 
   @override
-  void initState() {
-    super.initState();
-    _controller = TabController(length: 3, vsync: this, initialIndex: ref.read(videoTabProvider(widget.video.id)));
-    _controller.addListener(_syncTab);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureController();
   }
 
   @override
   void didUpdateWidget(_VideoTabsView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.video.id != widget.video.id) {
-      _controller.index = ref.read(videoTabProvider(widget.video.id));
-      _playerCollapse.value = 0;
-      _isPlaying = false;
+      _collapse.value = 0;
+      _expandedExtent = _fallbackExtent;
+    }
+  }
+
+  void _ensureController() {
+    final count = _commentsEnabled ? 3 : 2;
+    if (_controller != null && _tabCount == count) return;
+    final previous = _controller;
+    final stored = ref.read(videoTabProvider(widget.video.id));
+    _tabCount = count;
+    _controller = TabController(length: count, vsync: this, initialIndex: _clampIndex(stored, count));
+    _controller!.addListener(_syncTab);
+    if (previous != null) {
+      previous.removeListener(_syncTab);
+      WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
     }
   }
 
   void _syncTab() {
-    if (_controller.indexIsChanging) return;
-    ref.read(videoTabProvider(widget.video.id).notifier).state = _controller.index;
+    final controller = _controller;
+    if (controller == null || controller.indexIsChanging) return;
+    ref.read(videoTabProvider(widget.video.id).notifier).state = controller.index;
     widget.scrollBehavior.state
       ..contentOffset = 0
       ..offset = 0;
   }
 
+  void _setCollapsed(bool collapsed) {
+    _collapse.animateTo(collapsed ? 1 : 0, duration: _settleDuration, curve: Curves.easeOut);
+  }
+
   bool _handleScroll(ScrollNotification notification) {
-    if (!widget.showPlayer || notification.metrics.axis != Axis.vertical) return false;
-    if (notification is ScrollUpdateNotification && notification.scrollDelta != null) {
-      final delta = notification.scrollDelta!;
-      if (delta > 0 && _isPlaying) return false;
-      final next = (_playerCollapse.value + delta / 240).clamp(0.0, 1.0).toDouble();
-      if (next != _playerCollapse.value) _playerCollapse.value = next;
+    if (!widget.showPlayer) return false;
+    if (notification is ScrollEndNotification) _settleCollapse();
+    if (notification is OverscrollNotification && notification.overscroll < 0) {
+      if (_collapse.value > 0) _collapseBy(-notification.overscroll);
     }
     return false;
   }
 
+  void _settleCollapse() {
+    final value = _collapse.value;
+    if (value <= 0 || value >= 1) return;
+    _collapse.animateTo(value >= .5 ? 1 : 0, duration: _settleDuration, curve: Curves.easeOut);
+  }
+
+  double _collapseBy(double delta) {
+    if (delta == 0 || !widget.showPlayer) return 0;
+    _measureExpandedExtent();
+    if (delta > 0) {
+      if (_collapse.value >= 1) return 0;
+      final remaining = (1 - _collapse.value) * _expandedExtent;
+      final take = delta < remaining ? delta : remaining;
+      _applyCollapse(_collapse.value + take / _expandedExtent);
+      return take;
+    }
+    if (_collapse.value <= 0) return 0;
+    final available = _collapse.value * _expandedExtent;
+    final take = -delta < available ? -delta : available;
+    _applyCollapse(_collapse.value - take / _expandedExtent);
+    return take;
+  }
+
+  void _measureExpandedExtent() {
+    final size = _playerKey.currentContext?.size;
+    if (size != null && size.height > 80) _expandedExtent = size.height;
+  }
+
+  void _applyCollapse(double value) {
+    _collapse.value = value < 0 ? 0.0 : (value > 1 ? 1.0 : value);
+  }
+
   @override
   void dispose() {
-    _controller.removeListener(_syncTab);
-    _controller.dispose();
-    _playerCollapse.dispose();
+    _controller?.removeListener(_syncTab);
+    _controller?.dispose();
+    _collapse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(settingsProvider.select((value) => value.valueOrNull?.commentsEnabled ?? false));
+    _ensureController();
+    final controller = _controller!;
     final selected = ref.watch(videoTabProvider(widget.video.id));
-    if (_controller.index != selected && !_controller.indexIsChanging) _controller.index = selected;
+    final target = _clampIndex(selected, controller.length);
+    if (!controller.indexIsChanging && controller.index != target) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final active = _controller;
+        if (active == null || active.index == target || active.indexIsChanging) return;
+        active.index = target;
+      });
+    }
     final l10n = AppLocalizations.of(context)!;
+    final commentsEnabled = _commentsEnabled;
     return Column(
       children: [
         if (widget.showPlayer)
-          ValueListenableBuilder<double>(
-            valueListenable: _playerCollapse,
-            child: RepaintBoundary(child: VideoPlayerPanel(key: ValueKey(widget.video.id), video: widget.video, onBack: () => Navigator.maybePop(context), onHome: () => context.go(widget.homeTarget), onNext: () => _playNext(widget.onEpisodeSelected, widget.video), onEpisodeSelected: widget.onEpisodeSelected, onPlayingChanged: _setPlaying)),
-            builder: (context, collapse, player) => Column(children: [ClipRect(child: Align(heightFactor: 1 - collapse, alignment: Alignment.topCenter, child: player)), if (collapse >= .99) SizedBox(height: 40, width: double.infinity, child: TextButton.icon(onPressed: () => _playerCollapse.value = 0, icon: const Icon(Icons.play_arrow), label: Text(l10n.play)))]),
+          Column(
+            children: [
+              AnimatedBuilder(
+                animation: _collapse,
+                child: RepaintBoundary(
+                  key: _playerKey,
+                  child: VideoPlayerPanel(
+                    key: ValueKey(widget.video.id),
+                    video: widget.video,
+                    onBack: () => Navigator.maybePop(context),
+                    onHome: () => context.go(widget.homeTarget),
+                    onNext: () => _playNext(widget.onEpisodeSelected, widget.video),
+                    onEpisodeSelected: widget.onEpisodeSelected,
+                  ),
+                ),
+                builder: (context, player) {
+                  final progress = _collapse.value;
+                  final playerFactor = progress >= .99 ? 0.0 : 1 - progress;
+                  final barFactor = progress <= _barRevealStart ? 0.0 : ((progress - _barRevealStart) / (1 - _barRevealStart)).clamp(0.0, 1.0).toDouble();
+                  return Column(
+                    children: [
+                      ClipRect(child: Align(heightFactor: playerFactor, alignment: Alignment.topCenter, child: player)),
+                      ClipRect(
+                        child: Align(
+                          heightFactor: barFactor,
+                          alignment: Alignment.bottomCenter,
+                          child: SizedBox(
+                            height: _expandBarHeight,
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: () => _setCollapsed(false),
+                              icon: const Icon(Icons.expand_more),
+                              label: Text(l10n.play),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
         ExcludeFocus(
           excluding: isDesktopPlatformService,
           child: Padding(
             padding: EdgeInsets.fromLTRB(16, widget.showPlayer ? 12 : 8, 16, 4),
             child: TabBar(
-              controller: _controller,
+              controller: controller,
               isScrollable: !widget.showPlayer,
               tabAlignment: !widget.showPlayer ? TabAlignment.start : null,
               tabs: [
                 Tab(text: l10n.description),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Text(l10n.comments), if (widget.video.commentCount case final count?) ...[const SizedBox(width: 5), Badge(label: Text('$count'))]])),
+                if (commentsEnabled)
+                  Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [Text(l10n.comments), if (widget.video.commentCount case final count?) ...[const SizedBox(width: 5), Badge(label: Text('$count'))]])),
                 Tab(text: l10n.relatedVideos),
               ],
             ),
@@ -387,16 +498,40 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
         Expanded(
           child: ExcludeFocus(
             excluding: isDesktopPlatformService,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _handleScroll,
-              child: TabBarView(
-                controller: _controller,
-                children: [
-                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video, onEpisodeSelected: widget.onEpisodeSelected)),
-                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoCommentsView(video: widget.video)),
-                  M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: RelatedVideosView(videos: widget.video.related)),
-                ],
+            child: AnimatedBuilder(
+              animation: _collapse,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleScroll,
+                child: TabBarView(
+                  controller: controller,
+                  children: [
+                    M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoDescriptionView(video: widget.video, onEpisodeSelected: widget.onEpisodeSelected)),
+                    if (commentsEnabled) M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: VideoCommentsView(video: widget.video)),
+                    M3EFloatingToolbarScrollWrapper(behavior: widget.scrollBehavior, child: RelatedVideosView(videos: widget.video.related)),
+                  ],
+                ),
               ),
+              builder: (context, child) {
+                if (!widget.showPlayer || _collapse.value >= 1) return child!;
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(physics: const NeverScrollableScrollPhysics()),
+                        child: child!,
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragUpdate: _dragCollapse,
+                        onVerticalDragEnd: _endCollapseDrag,
+                        onVerticalDragCancel: () => _settleCollapse(),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -404,11 +539,7 @@ class _VideoTabsViewState extends ConsumerState<_VideoTabsView> with SingleTicke
     );
   }
 
-  void _setPlaying(bool value) {
-    if (_isPlaying == value) return;
-    setState(() {
-      _isPlaying = value;
-      if (value && _playerCollapse.value > 0) _playerCollapse.value = 0;
-    });
-  }
+  void _dragCollapse(DragUpdateDetails details) => _collapseBy(-details.delta.dy);
+
+  void _endCollapseDrag(DragEndDetails details) => _settleCollapse();
 }

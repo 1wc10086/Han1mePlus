@@ -8,10 +8,10 @@ import android.app.Activity
 import android.app.PictureInPictureParams
 import android.media.AudioManager
 import android.os.Build
-import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.webkit.CookieManager
+import android.webkit.WebView
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -20,10 +20,8 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.Dns
 import okhttp3.FormBody
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.dnsoverhttps.DnsOverHttps
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,9 +31,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.net.InetAddress
 import java.nio.charset.Charset
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
 
 @Keep
 class MainActivity : FlutterActivity() {
@@ -79,7 +75,10 @@ class MainActivity : FlutterActivity() {
 
     private val channelName = "com.liar.han1meplus/http"
     private val platformChannelName = "com.liar.han1meplus/platform"
-    private val userAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36"
+    @Volatile private var webViewUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36"
+
+    private val userAgent: String
+        get() = webViewUserAgent
     private val responseCookies = mutableMapOf<String, List<Cookie>>()
     @Volatile private var networkSettings = NetworkSettings()
     private var emergencyExitEnabled = false
@@ -109,12 +108,15 @@ class MainActivity : FlutterActivity() {
 
     private fun createClient() = OkHttpClient.Builder()
         .dns(ConfigurableDns { networkSettings })
-        .addInterceptor(CloudflareInterceptor(applicationContext))
         .cookieJar(cookieJar)
         .build()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        runCatching { WebView(this).settings.userAgentString }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { webViewUserAgent = it }
         networkSettings = loadNetworkSettings()
         client = createClient()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
@@ -537,45 +539,5 @@ private class ConfigurableDns(private val settings: () -> NetworkSettings) : Dns
         )
 
         fun address(hostname: String, value: String) = InetAddress.getByAddress(hostname, InetAddress.getByName(value).address)
-    }
-}
-
-private object CloudflareVerification {
-    private const val cooldownMillis = 5_000L
-    private val lock = ReentrantLock()
-    @Volatile private var lastRunAt = 0L
-
-    fun await(context: Context, url: String) {
-        lock.lock()
-        try {
-            val now = SystemClock.elapsedRealtime()
-            if (lastRunAt != 0L && now - lastRunAt < cooldownMillis) return
-            lastRunAt = now
-            val latch = CountDownLatch(1)
-            CloudflareActivity.onFinished = { latch.countDown() }
-            try {
-                context.startActivity(
-                    Intent(context, CloudflareActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .putExtra(CloudflareActivity.requestUrlKey, url),
-                )
-                latch.await(3, TimeUnit.MINUTES)
-            } catch (_: Exception) {
-                CloudflareActivity.onFinished?.invoke()
-            }
-        } finally {
-            lock.unlock()
-        }
-    }
-}
-
-private class CloudflareInterceptor(private val context: Context) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val request = chain.request()
-        val response = chain.proceed(request)
-        if (response.code != 403 || response.header("cf-mitigated")?.equals("challenge", true) != true) return response
-        response.close()
-        CloudflareVerification.await(context, request.url.toString())
-        return chain.proceed(request)
     }
 }

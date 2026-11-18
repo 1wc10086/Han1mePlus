@@ -3371,6 +3371,42 @@ abstract class AppLocalizations {
   String get echUnavailable;
   String get echNoLogs;
 
+  /// No description provided for @hideVideoActionsOnScroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Action Bar While Scrolling'**
+  String get hideVideoActionsOnScroll;
+
+  /// No description provided for @hideVideoActionsOnScrollDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites, downloads and other actions slide away when you scroll up; hover or scroll down brings them back.'**
+  String get hideVideoActionsOnScrollDescription;
+
+  /// No description provided for @ech.
+  ///
+  /// In en, this message translates to:
+  /// **'ECH'**
+  String get ech;
+
+  /// No description provided for @echSwitchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Send site requests through the native ECH channel'**
+  String get echSwitchDescription;
+
+  /// No description provided for @echDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'ECH is turned off; requests use the standard channel'**
+  String get echDisabled;
+
+  /// No description provided for @finishedVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Finished'**
+  String get finishedVerification;
+
 }
 
 class _AppLocalizationsDelegate

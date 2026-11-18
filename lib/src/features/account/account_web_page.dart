@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/site_url.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../data/remote/webview_environment.dart';
 import '../settings/settings_controller.dart';
 
 class AccountWebPage extends ConsumerWidget {
@@ -15,9 +16,11 @@ class AccountWebPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final baseUrl = ref.watch(settingsProvider).valueOrNull?.resolvedBaseUrl ?? 'https://hanime1.me';
+    final webViewEnvironment = ref.watch(webViewEnvironmentProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: InAppWebView(
+        webViewEnvironment: webViewEnvironment,
         initialUrlRequest: URLRequest(url: WebUri(siteEndpointUrl(baseUrl, path))),
         initialSettings: InAppWebViewSettings(
           javaScriptEnabled: true,

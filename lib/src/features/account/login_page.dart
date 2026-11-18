@@ -11,6 +11,7 @@ import '../../core/site_hosts.dart';
 import '../../core/site_url.dart';
 import '../../data/han1me_repository.dart';
 import '../../data/remote/han1me_api.dart';
+import '../../data/remote/webview_cookie_bridge.dart';
 import '../../data/remote/webview_environment.dart';
 import '../settings/settings_controller.dart';
 import 'account_controller.dart';
@@ -200,6 +201,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             onWebViewCreated: (controller) async {
               _controller = controller;
+              await WebViewCookieBridge.clear();
               await ref.read(han1meHttpClientProvider).clearWebViewCookies();
               if (!mounted) return;
               await controller.loadUrl(urlRequest: URLRequest(url: WebUri(siteEndpointUrl(baseUrl, 'login'))));

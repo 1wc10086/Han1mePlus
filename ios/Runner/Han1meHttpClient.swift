@@ -29,7 +29,9 @@ final class Han1meSessionDelegate: NSObject, URLSessionDelegate, URLSessionTaskD
 final class Han1meHttpClient {
     static let shared = Han1meHttpClient()
 
-    let userAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36"
+    var userAgent: String {
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1"
+    }
 
     private let delegate = Han1meSessionDelegate()
     private lazy var session: URLSession = {
@@ -138,8 +140,8 @@ final class Han1meHttpClient {
                 storeResponseCookies(from: http, host: host, url: requestURL.absoluteString)
                 if http.statusCode == 403,
                    http.value(forHTTPHeaderField: "cf-mitigated")?.caseInsensitiveCompare("challenge") == .orderedSame,
-                   allowCloudflareRetry {
-                    CloudflareViewController.waitForChallenge(url: originalURL.absoluteString)
+                   allowCloudflareRetry,
+                   CloudflareViewController.waitForChallenge(url: originalURL.absoluteString) {
                     return try rawBody(urlString: urlString, headers: headers, allowCloudflareRetry: false)
                 }
                 guard (200..<300).contains(http.statusCode) else {
@@ -198,16 +200,17 @@ final class Han1meHttpClient {
                 if http.statusCode == 403,
                    http.value(forHTTPHeaderField: "cf-mitigated")?.caseInsensitiveCompare("challenge") == .orderedSame,
                    allowCloudflareRetry {
-                    CloudflareViewController.waitForChallenge(url: originalURL.absoluteString)
-                    return try performRequest(
-                        urlString: urlString,
-                        method: method,
-                        data: data,
-                        headers: headers,
-                        responseCharset: responseCharset,
-                        json: json,
-                        allowCloudflareRetry: false
-                    )
+                    if CloudflareViewController.waitForChallenge(url: originalURL.absoluteString) {
+                        return try performRequest(
+                            urlString: urlString,
+                            method: method,
+                            data: data,
+                            headers: headers,
+                            responseCharset: responseCharset,
+                            json: json,
+                            allowCloudflareRetry: false
+                        )
+                    }
                 }
 
                 let body = decodeBody(bodyData, charsetName: responseCharset)

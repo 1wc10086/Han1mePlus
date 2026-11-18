@@ -5,8 +5,6 @@ import '../../core/network/media_cdn.dart';
 import '../../core/network/network_policy.dart';
 
 class WindowsConnectionFactory {
-  static var _nextAddress = 0;
-
   static const hanimeHosts = {'hanime1.me', 'hanime1.com', 'hanimeone.me', 'javchu.com'};
 
   static const builtInAddresses = [
@@ -67,7 +65,7 @@ class WindowsConnectionFactory {
 
   Future<ConnectionTask<Socket>> _connect(Uri uri, List<String> addresses, int port) async {
     final allowBadCertificate = useBuiltInHosts && hanimeHosts.contains(uri.host);
-    final start = _nextAddress++ % addresses.length;
+    final start = 0;
     Object? lastError;
     StackTrace? lastStackTrace;
     for (var offset = 0; offset < addresses.length; offset++) {

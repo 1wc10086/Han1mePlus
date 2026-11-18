@@ -1918,4 +1918,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get echNoLogs => 'No ECH requests yet.';
 
+  @override
+  String get hideVideoActionsOnScroll => 'Hide Action Bar While Scrolling';
+  @override
+  String get hideVideoActionsOnScrollDescription => 'Favorites, downloads and other actions slide away when you scroll up; hover or scroll down brings them back.';
+  @override
+  String get ech => 'ECH';
+  @override
+  String get echSwitchDescription => 'Send site requests through the native ECH channel';
+  @override
+  String get echDisabled => 'ECH is turned off; requests use the standard channel';
+  @override
+  String get finishedVerification => 'Verification Finished';
 }

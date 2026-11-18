@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../../core/network/network_policy.dart';
+import '../../../core/network/user_agent.dart';
 import '../../../core/site_hosts.dart';
 import 'ech_ffi_bindings.dart';
 
@@ -35,8 +36,7 @@ class EchStaticResponse {
 class EchStaticClient {
   EchStaticClient._(this._client);
 
-  static const String _userAgent =
-      'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
+  static String get _userAgent => siteUserAgent;
 
   final EchFfiClient _client;
   final List<String> _logs = <String>[];
@@ -45,6 +45,7 @@ class EchStaticClient {
 
   static EchStaticClient? _instance;
   static bool _initialized = false;
+  static bool enabled = true;
 
   static EchStaticClient? get instance {
     if (_initialized) return _instance;

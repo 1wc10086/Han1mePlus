@@ -910,5 +910,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "hideVideoActionsOnScroll": "Hide Action Bar While Scrolling",
+  "hideVideoActionsOnScrollDescription": "Favorites, downloads and other actions slide away when you scroll up; hover or scroll down brings them back.",
+  "ech": "ECH",
+  "echSwitchDescription": "Send site requests through the native ECH channel",
+  "echDisabled": "ECH is turned off; requests use the standard channel",
+  "finishedVerification": "Verification Finished"
 }

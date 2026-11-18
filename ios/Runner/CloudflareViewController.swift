@@ -5,7 +5,7 @@ final class CloudflareViewController: UIViewController {
     static let requestUrlKey = "request_url"
     static var onFinished: (() -> Void)?
 
-    private let userAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36"
+    private let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1"
     private var webView: WKWebView!
     private var pollTimer: Timer?
     private var initialClearance: String?
@@ -59,6 +59,7 @@ final class CloudflareViewController: UIViewController {
             let current = Self.clearanceCookie(from: cookies, url: self.requestUrl)
             guard let current, current != self.initialClearance else { return }
             self.completed = true
+            Self.lastVerifiedAt = Date()
             let header = cookies
                 .filter { cookie in
                     guard let host = URL(string: self.requestUrl)?.host else { return false }
@@ -91,6 +92,9 @@ final class CloudflareViewController: UIViewController {
         }
     }
 
+    private static var presenting = false
+    private static var lastVerifiedAt: Date?
+
     static func present(for url: String) {
         DispatchQueue.main.async {
             guard let presenter = topViewController() else {
@@ -98,15 +102,28 @@ final class CloudflareViewController: UIViewController {
                 onFinished = nil
                 return
             }
-            presenter.present(CloudflareViewController(requestUrl: url), animated: true)
+            let controller = CloudflareViewController(requestUrl: url)
+            controller.modalPresentationStyle = .fullScreen
+            presenter.present(controller, animated: true)
         }
     }
 
-    static func waitForChallenge(url: String) {
+    static func waitForChallenge(url: String) -> Bool {
+        if let lastVerifiedAt, Date().timeIntervalSince(lastVerifiedAt) < 30 { return true }
+        if presenting { return false }
+        presenting = true
         let semaphore = DispatchSemaphore(value: 0)
-        onFinished = { semaphore.signal() }
+        onFinished = {
+            semaphore.signal()
+            onFinished = nil
+        }
         present(for: url)
-        semaphore.wait()
+        let outcome = semaphore.wait(timeout: .now() + 180)
+        presenting = false
+        if outcome == .success {
+            lastVerifiedAt = Date()
+        }
+        return outcome == .success
     }
 
     private static func clearanceCookie(from cookies: [HTTPCookie], url: String) -> String? {

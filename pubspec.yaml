@@ -1,7 +1,7 @@
 name: han1me_plus
 description: Flutter client for browsing Han1me content.
 publish_to: 'none'
-version: 1.2.4+25
+version: 1.2.5+26
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -44,6 +44,9 @@ dependencies:
   ffi: ^2.1.4
   flutter_localizations:
     sdk: flutter
+
+dependency_overrides:
+  video_player_avfoundation: 2.12.1
 
 dev_dependencies:
   flutter_test:

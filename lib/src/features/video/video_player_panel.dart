@@ -385,9 +385,12 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
     final controller = _controllerNotifier.value;
     if (controller == null || _fullscreenOpen) return;
     _fullscreenOpen = true;
+    final portraitVideo = isPortraitVideo(controller.value);
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+      await SystemChrome.setPreferredOrientations(
+        portraitVideo ? const [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown] : const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight],
+      );
       if (mounted) await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _FullscreenPlayer(controller: _controllerNotifier, quality: _qualityNotifier, video: widget.video, onQualitySelected: _changeQuality, onSuperResolutionSelected: _changeSuperResolution, onReload: _reload, onEpisodeSelected: widget.onEpisodeSelected == null ? null : (episode) { Navigator.of(context).pop(); widget.onEpisodeSelected!(episode); }, onNext: widget.onNext == null ? null : () { Navigator.of(context).pop(); widget.onNext!(); }, onHome: widget.onHome == null ? null : () { Navigator.of(context).pop(); _disposeActiveController(); widget.onHome?.call(); })));
     } finally {
       _fullscreenOpen = false;
@@ -537,14 +540,13 @@ class _VideoPlayerPanelState extends ConsumerState<VideoPlayerPanel> with RouteA
             final available = constraints.maxHeight.isFinite && constraints.maxHeight < cap ? constraints.maxHeight : cap;
             final maxHeight = available < 160 ? 160.0 : available;
             final natural = width / ratio;
-            final height = fill ? maxHeight : (natural < maxHeight ? natural : maxHeight);
-            return ColoredBox(
-              color: Colors.black,
-              child: SizedBox(
-                width: double.infinity,
-                height: height,
-                child: fill ? surface : Center(child: AspectRatio(aspectRatio: ratio, child: surface)),
-              ),
+            final portraitLimit = playerHeightLimit(viewport);
+            final limit = isPortraitVideoAspectRatio(ratio) && portraitLimit < maxHeight ? portraitLimit : maxHeight;
+            final height = fill ? maxHeight : (natural < limit ? natural : limit);
+            return SizedBox(
+              width: double.infinity,
+              height: height,
+              child: surface,
             );
           },
         );

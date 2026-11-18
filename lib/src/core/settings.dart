@@ -87,6 +87,7 @@ class AppSettings {
     this.customMirrorSite = '',
     this.appendCustomMirrorPath = true,
     this.useDoh = false,
+    this.useEch = true,
     this.dohPreset = 'alidns',
     this.dohCustomUrl = '',
     this.dohBootstrapIps = '',
@@ -117,6 +118,7 @@ class AppSettings {
     this.loopPlayback = false,
     this.autoPictureInPicture = false,
     this.landscapeFloatingBar = false,
+    this.hideActionsOnScroll = true,
     this.videoAspectRatio = VideoAspectRatio.auto,
     this.skipSeconds = 80,
     this.webDavEnabled = false,
@@ -167,6 +169,7 @@ class AppSettings {
   final String customMirrorSite;
   final bool appendCustomMirrorPath;
   final bool useDoh;
+  final bool useEch;
   final String dohPreset;
   final String dohCustomUrl;
   final String dohBootstrapIps;
@@ -197,6 +200,7 @@ class AppSettings {
   final bool loopPlayback;
   final bool autoPictureInPicture;
   final bool landscapeFloatingBar;
+  final bool hideActionsOnScroll;
   final VideoAspectRatio videoAspectRatio;
   final int skipSeconds;
   final bool webDavEnabled;
@@ -281,6 +285,7 @@ class AppSettings {
         'customMirrorSite': customMirrorSite,
         'appendCustomMirrorPath': appendCustomMirrorPath,
         'useDoh': useDoh,
+        'useEch': useEch,
         'dohPreset': dohPreset,
         'dohCustomUrl': dohCustomUrl,
         'dohBootstrapIps': dohBootstrapIps,
@@ -311,6 +316,7 @@ class AppSettings {
         'loopPlayback': loopPlayback,
         'autoPictureInPicture': autoPictureInPicture,
         'landscapeFloatingBar': landscapeFloatingBar,
+        'hideActionsOnScroll': hideActionsOnScroll,
         'videoAspectRatio': videoAspectRatio.name,
         'skipSeconds': skipSeconds,
         'webDavEnabled': webDavEnabled,
@@ -362,6 +368,7 @@ class AppSettings {
         customMirrorSite: _mirrorUrl(json['customMirrorSite'] as String?),
         appendCustomMirrorPath: json['appendCustomMirrorPath'] as bool? ?? true,
         useDoh: json['useDoh'] as bool? ?? false,
+        useEch: json['useEch'] as bool? ?? true,
         dohPreset: _dohPreset(json['dohPreset'] as String?),
         dohCustomUrl: json['dohCustomUrl'] as String? ?? '',
         dohBootstrapIps: json['dohBootstrapIps'] as String? ?? '',
@@ -392,6 +399,7 @@ class AppSettings {
         loopPlayback: json['loopPlayback'] as bool? ?? false,
         autoPictureInPicture: json['autoPictureInPicture'] as bool? ?? false,
         landscapeFloatingBar: json['landscapeFloatingBar'] as bool? ?? false,
+        hideActionsOnScroll: json['hideActionsOnScroll'] as bool? ?? true,
         videoAspectRatio: _enumByName(VideoAspectRatio.values, json['videoAspectRatio'] as String?) ?? VideoAspectRatio.auto,
         skipSeconds: (json['skipSeconds'] as int? ?? 80).clamp(1, 3600) as int,
         webDavEnabled: json['webDavEnabled'] as bool? ?? false,
@@ -488,6 +496,7 @@ class AppSettings {
     String? customMirrorSite,
     bool? appendCustomMirrorPath,
     bool? useDoh,
+    bool? useEch,
     String? dohPreset,
     String? dohCustomUrl,
     String? dohBootstrapIps,
@@ -518,6 +527,7 @@ class AppSettings {
     bool? loopPlayback,
     bool? autoPictureInPicture,
     bool? landscapeFloatingBar,
+    bool? hideActionsOnScroll,
     VideoAspectRatio? videoAspectRatio,
     int? skipSeconds,
     bool? webDavEnabled,
@@ -568,6 +578,7 @@ class AppSettings {
         customMirrorSite: customMirrorSite ?? this.customMirrorSite,
         appendCustomMirrorPath: appendCustomMirrorPath ?? this.appendCustomMirrorPath,
         useDoh: useDoh ?? this.useDoh,
+        useEch: useEch ?? this.useEch,
         dohPreset: dohPreset ?? this.dohPreset,
         dohCustomUrl: dohCustomUrl ?? this.dohCustomUrl,
         dohBootstrapIps: dohBootstrapIps ?? this.dohBootstrapIps,
@@ -598,6 +609,7 @@ class AppSettings {
         loopPlayback: loopPlayback ?? this.loopPlayback,
         autoPictureInPicture: autoPictureInPicture ?? this.autoPictureInPicture,
         landscapeFloatingBar: landscapeFloatingBar ?? this.landscapeFloatingBar,
+        hideActionsOnScroll: hideActionsOnScroll ?? this.hideActionsOnScroll,
         videoAspectRatio: videoAspectRatio ?? this.videoAspectRatio,
         skipSeconds: skipSeconds ?? this.skipSeconds,
         webDavEnabled: webDavEnabled ?? this.webDavEnabled,

@@ -7,6 +7,7 @@ import 'package:html/dom.dart' as dom;
 
 import '../../core/logging/app_log.dart';
 import '../../core/network/network_policy.dart';
+import '../../core/network/user_agent.dart';
 import '../../core/site_url.dart';
 import '../../domain/models/account.dart';
 import '../../domain/models/library.dart';
@@ -41,7 +42,7 @@ class Han1meApi {
   static const _upcomingGenre = '新番預告';
   static const _maxPages = 20;
 
-  static const userAgent = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36';
+  static String get userAgent => siteUserAgent;
 
   void setCookie(String value) => _cookie = _mergeCookies(_cookie, value);
   void replaceCookie(String value) => _cookie = value;
@@ -121,13 +122,13 @@ class Han1meApi {
         : document.querySelectorAll('.search-artist-card').map((card) {
             final title = card.querySelector('.search-artist-title')?.text.trim() ?? '';
             final href = card.querySelector('a.overlay')?.attributes['href'];
-            final artistQuery = Uri.tryParse(href ?? '')?.queryParameters['query'] ?? title;
+            final artistQuery = (Uri.tryParse(href ?? '')?.queryParameters['query'] ?? title).trim();
             return VideoCard(
               id: '',
               title: title,
               coverUrl: _absolute(baseUrl, card.querySelector('img[style*="object-fit"]')?.attributes['src']),
               artist: card.querySelector('.search-artist-count')?.text.trim(),
-              uploadTime: artistQuery,
+              artistQuery: artistQuery,
             );
           }).where((artist) => artist.title.isNotEmpty && artist.coverUrl.isNotEmpty).toList(growable: false);
     final pagination = document.querySelectorAll('ul.pagination li.page-item > a.page-link');

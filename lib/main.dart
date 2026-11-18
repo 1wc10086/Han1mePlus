@@ -12,6 +12,7 @@ import 'src/core/settings.dart';
 import 'src/core/shader_service.dart';
 import 'src/data/local/json_store.dart';
 import 'src/data/local/update_installer.dart';
+import 'src/data/remote/desktop_network_bootstrap.dart';
 import 'src/features/settings/settings_controller.dart';
 
 Future<void> main() async {
@@ -33,6 +34,9 @@ Future<void> main() async {
   }
   try {
     MediaPlayerInitializer.bootstrap(settings);
+  } catch (_) {}
+  try {
+    await bootstrapDesktopNetwork(settings).timeout(const Duration(seconds: 8));
   } catch (_) {}
   runApp(
     LiquidGlassWidgets.wrap(

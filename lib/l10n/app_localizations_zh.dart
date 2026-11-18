@@ -1859,6 +1859,24 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get echNoLogs => '暂无 ECH 请求。';
 
+  @override
+  String get hideVideoActionsOnScroll => '上滑隐藏操作栏';
+
+  @override
+  String get hideVideoActionsOnScrollDescription => '上滑时收藏、下载等按钮自动收起，下滑或触摸后重新显示。';
+
+  @override
+  String get ech => 'ECH 加密直连';
+
+  @override
+  String get echSwitchDescription => '使用原生 ECH 通道发送站点请求';
+
+  @override
+  String get echDisabled => 'ECH 已关闭，请求使用一般通道';
+
+  @override
+  String get finishedVerification => '我已完成验证';
+
 }
 
 class AppLocalizationsZhTw extends AppLocalizationsZh {
@@ -3715,4 +3733,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get echNoLogs => '尚無 ECH 請求。';
 
+  @override
+  String get hideVideoActionsOnScroll => '上滑隱藏操作列';
+
+  @override
+  String get hideVideoActionsOnScrollDescription => '上滑時收藏、下載等按鈕自動收起，下滑或觸碰後重新顯示。';
+
+  @override
+  String get ech => 'ECH 加密直連';
+
+  @override
+  String get echSwitchDescription => '使用原生 ECH 通道傳送站點請求';
+
+  @override
+  String get echDisabled => 'ECH 已關閉，請求使用一般通道';
+
+  @override
+  String get finishedVerification => '我已完成驗證';
 }

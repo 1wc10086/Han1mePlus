@@ -6,6 +6,7 @@ import '../../core/media_player_initializer.dart';
 import '../../core/playback_speed_policy.dart';
 import '../../core/settings.dart';
 import '../../data/local/json_store.dart';
+import '../../data/remote/ech/ech_static_client.dart';
 import '../../data/remote/han1me_http_client.dart';
 
 final settingsStoreProvider = Provider((_) => SettingsStore(JsonStore()));
@@ -67,9 +68,13 @@ class SettingsController extends AsyncNotifier<AppSettings> {
       current.dohBootstrapIps != next.dohBootstrapIps ||
       current.dohTimeoutSeconds != next.dohTimeoutSeconds ||
       current.mediaCdnRegion != next.mediaCdnRegion ||
-      current.mediaCdnCustomIp != next.mediaCdnCustomIp;
+      current.mediaCdnCustomIp != next.mediaCdnCustomIp ||
+      current.useEch != next.useEch;
 
-  Future<void> _syncNetworkSettings(AppSettings settings) => Han1meHttpClient().setNetworkSettings(useBuiltInHosts: settings.useBuiltInHosts, useDoh: settings.useDoh, dohPreset: settings.dohPreset, dohCustomUrl: settings.dohCustomUrl, dohBootstrapIps: settings.dohBootstrapIps, dohTimeoutSeconds: settings.dohTimeoutSeconds, mediaCdnRegion: settings.mediaCdnRegion, mediaCdnCustomIp: settings.mediaCdnCustomIp);
+  Future<void> _syncNetworkSettings(AppSettings settings) async {
+    EchStaticClient.enabled = settings.useEch;
+    await Han1meHttpClient().setNetworkSettings(useBuiltInHosts: settings.useBuiltInHosts, useDoh: settings.useDoh, dohPreset: settings.dohPreset, dohCustomUrl: settings.dohCustomUrl, dohBootstrapIps: settings.dohBootstrapIps, dohTimeoutSeconds: settings.dohTimeoutSeconds, mediaCdnRegion: settings.mediaCdnRegion, mediaCdnCustomIp: settings.mediaCdnCustomIp);
+  }
 
   Future<void> setPreferredQuality(String quality) async {
     await saveChanges((current) => current.copyWith(preferredQuality: _qualityInt(quality)));
